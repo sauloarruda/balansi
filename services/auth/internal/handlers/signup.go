@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/services"
 	"services/auth/internal/testhelpers"
@@ -36,7 +36,7 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 	var signupReq models.SignupRequest
 	if err := json.Unmarshal([]byte(req.Body), &signupReq); err != nil {
 		// Log detailed error for debugging but return generic message to client
-		log.Printf("❌ Invalid request body: %v", err)
+		logger.Error("Invalid request body: %v", err)
 		return errorResponse(400, "invalid_request", "Invalid request body"), nil
 	}
 
@@ -53,7 +53,7 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 			return errorResponse(409, "user_exists", "User with this email already exists"), nil
 		default:
 			// Log the actual error for debugging but return generic message to client
-			log.Printf("❌ Signup service error: %v", err)
+			logger.Error("Signup service error: %v", err)
 			return errorResponse(500, "internal_error", "Internal server error"), nil
 		}
 	}
@@ -68,7 +68,7 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 
 	body, err := json.Marshal(response)
 	if err != nil {
-		log.Printf("Failed to marshal response: %v", err)
+		logger.Error("Failed to marshal response: %v", err)
 		return errorResponse(500, "internal_error", "Failed to marshal response"), nil
 	}
 

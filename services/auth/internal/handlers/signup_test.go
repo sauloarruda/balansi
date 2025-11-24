@@ -12,25 +12,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// MockSignupService is a mock implementation of SignupServiceInterface.
-type MockSignupService struct {
-	mock.Mock
-}
-
-func (m *MockSignupService) Signup(ctx context.Context, name, email string) (*models.SignupOutcome, error) {
-	args := m.Called(ctx, name, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.SignupOutcome), args.Error(1)
-}
-
 func TestSignupHandler_Handle_Success(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -74,7 +60,7 @@ func TestSignupHandler_Handle_Success(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_PendingConfirmation(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -115,7 +101,7 @@ func TestSignupHandler_Handle_PendingConfirmation(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_InvalidJSON(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -144,7 +130,7 @@ func TestSignupHandler_Handle_InvalidJSON(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_MissingName(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -173,7 +159,7 @@ func TestSignupHandler_Handle_MissingName(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_MissingEmail(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -202,7 +188,7 @@ func TestSignupHandler_Handle_MissingEmail(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_DuplicateEmail(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -234,7 +220,7 @@ func TestSignupHandler_Handle_DuplicateEmail(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_ServiceError(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
@@ -266,7 +252,7 @@ func TestSignupHandler_Handle_ServiceError(t *testing.T) {
 }
 
 func TestSignupHandler_Handle_EmptyBody(t *testing.T) {
-	mockService := new(MockSignupService)
+	mockService := new(testhelpers.MockSignupService)
 	handler := NewSignupHandlerWithService(mockService)
 
 	ctx := context.Background()
