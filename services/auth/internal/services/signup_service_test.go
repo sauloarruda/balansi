@@ -5,9 +5,11 @@ import (
 	"errors"
 	"testing"
 
+	"services/auth/internal/encryption"
 	"services/auth/internal/models"
 	"services/auth/internal/testhelpers"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -432,4 +434,77 @@ func TestGenerateTemporaryPassword_Error(t *testing.T) {
 	password, err := generateTemporaryPassword(32)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, password)
+}
+
+func TestSignupService_Confirm_Idempotency_UserAlreadyConfirmedInCognito(t *testing.T) {
+	mockRepo := new(testhelpers.MockUserRepository)
+	mockCognito := new(testhelpers.MockCognitoClient)
+
+	service := NewSignupServiceWithInterfaces(
+		mockRepo,
+		mockCognito,
+		"test-secret-key-1234567890123456",
+	)
+
+	ctx := context.Background()
+	userID := int64(1)
+	code := "123456"
+	cognitoID := testCognitoID
+	username := testCognitoUser
+	email := testUserEmail
+	secret := "test-secret-key-1234567890123456"
+
+	// Encrypt a test password
+	testPassword := "TestPassword123!"
+	encryptedPassword, err := encryption.Encrypt(testPassword, secret)
+	require.NoError(t, err, "Failed to encrypt test password")
+
+	// User exists in DB but status is pending_confirmation (stale state)
+	user := &models.User{
+		ID:                1,
+		Name:              testUserName,
+		Email:             email,
+		CognitoID:         &cognitoID,
+		Status:            models.UserStatusPendingConfirmation,
+		TemporaryPassword: &encryptedPassword,
+	}
+
+	// Mock: ConfirmSignUp returns NotAuthorizedException indicating user already confirmed
+	notAuthorizedErr := &types.NotAuthorizedException{
+		Message: aws.String("User is already confirmed."),
+	}
+
+	// Setup mocks
+	mockRepo.On("FindByID", ctx, userID).Return(user, nil)
+	mockCognito.On("GetUsernameByUserSub", ctx, cognitoID, []string{email}).Return(username, nil)
+	mockCognito.On("ConfirmSignUp", ctx, cognitoID, code, []string{username}).Return(notAuthorizedErr)
+	// Verify user is actually confirmed in Cognito
+	mockCognito.On("IsUserConfirmed", ctx, email).Return(true, username, cognitoID, nil)
+	// Update DB status to confirmed
+	mockRepo.On("Update", ctx, mock.MatchedBy(func(u *models.User) bool {
+		return u.ID == 1 && u.Status == models.UserStatusConfirmed
+	})).Return(nil)
+	// Decrypt password and login - should use the decrypted test password
+	mockCognito.On("InitiateAuth", ctx, username, testPassword).Return(&types.AuthenticationResultType{
+		AccessToken:  aws.String("access-token"),
+		IdToken:      aws.String("id-token"),
+		RefreshToken: aws.String("refresh-token"),
+		ExpiresIn:    3600,
+		TokenType:    aws.String("Bearer"),
+	}, nil)
+
+	// Execute
+	result, err := service.Confirm(ctx, userID, code)
+
+	// Assert
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, "access-token", result.AccessToken)
+	assert.Equal(t, "id-token", result.IDToken)
+	assert.Equal(t, "refresh-token", result.RefreshToken)
+	assert.Equal(t, int32(3600), result.ExpiresIn)
+	assert.Equal(t, "Bearer", result.TokenType)
+
+	mockRepo.AssertExpectations(t)
+	mockCognito.AssertExpectations(t)
 }

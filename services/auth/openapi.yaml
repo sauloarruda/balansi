@@ -100,6 +100,59 @@ paths:
                     code: "internal_error"
                     message: "Internal server error"
 
+  /auth/confirm:
+    post:
+      summary: Confirm user account
+      description: |
+        Confirms a user's account using the code sent via email.
+        Returns authentication tokens upon successful confirmation.
+      operationId: confirmSignUp
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmRequest"
+      responses:
+        "200":
+          description: Account confirmed successfully. Returns JWT tokens.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "404":
+          description: User not found or invalid userId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Invalid request or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User is already confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid or expired confirmation code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     SignupRequest:
@@ -164,6 +217,10 @@ components:
             - invalid_request
             - missing_fields
             - user_exists
+            - user_not_found
+            - user_already_confirmed
+            - invalid_code
+            - expired_code
             - internal_error
           description: |
             Standardized error code to facilitate frontend error handling.
@@ -175,6 +232,48 @@ components:
             Error message in English (backend default).
             The frontend should use the `code` to translate the message.
           example: "User with this email already exists"
+
+    ConfirmRequest:
+      type: object
+      required:
+        - userId
+        - code
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: The user ID returned during sign up
+          example: 1
+        code:
+          type: string
+          description: The confirmation code sent to the user's email
+          example: "123456"
+
+    TokenResponse:
+      type: object
+      required:
+        - accessToken
+        - idToken
+        - refreshToken
+        - expiresIn
+        - tokenType
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token
+        idToken:
+          type: string
+          description: JWT ID Token
+        refreshToken:
+          type: string
+          description: Refresh Token
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+        tokenType:
+          type: string
+          description: Token type (usually Bearer)
+          example: "Bearer"
 
   securitySchemes:
     # For future use when implementing authentication

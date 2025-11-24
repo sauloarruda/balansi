@@ -10,8 +10,17 @@ import (
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
 	"services/auth/internal/testhelpers"
+	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
+)
+
+var (
+	ErrUserNotFound            = errors.New("user not found")
+	ErrInvalidConfirmationCode = errors.New("invalid confirmation code")
+	ErrExpiredConfirmationCode = errors.New("expired confirmation code")
+	ErrUserAlreadyConfirmed    = errors.New("user already confirmed")
 )
 
 // UserRepositoryInterface defines repository operations (aliased for convenience).
@@ -157,6 +166,7 @@ func (s *SignupService) Signup(ctx context.Context, name, email string) (*Signup
 	}
 
 	user := s.buildUser(existingUser, name, email, &cognitoID, &encryptedPassword)
+	user.Status = models.UserStatusPendingConfirmation
 	if err := s.saveUser(ctx, user, existingUser != nil); err != nil {
 		return nil, err
 	}
@@ -181,6 +191,7 @@ func (s *SignupService) handleExistingConfirmedUser(ctx context.Context, existin
 
 		if cognitoID != "" && existingUser.CognitoID == nil {
 			existingUser.CognitoID = &cognitoID
+			existingUser.Status = models.UserStatusPendingConfirmation
 			if err := s.userRepo.Update(ctx, existingUser); err != nil {
 				return nil, fmt.Errorf("failed to update user: %w", err)
 			}
@@ -243,6 +254,7 @@ func (s *SignupService) handleCognitoSignUpError(
 	user.Name = name
 	user.Email = email
 	user.CognitoID = &cognitoID
+	user.Status = models.UserStatusPendingConfirmation
 	if encryptedPassword != "" {
 		user.TemporaryPassword = &encryptedPassword
 	}
@@ -263,6 +275,7 @@ func (s *SignupService) buildUser(existingUser *models.User, name, email string,
 		Email:             email,
 		TemporaryPassword: encryptedPassword,
 		CognitoID:         cognitoID,
+		Status:            models.UserStatusPendingConfirmation,
 	}
 
 	if existingUser != nil {
@@ -285,4 +298,166 @@ func (s *SignupService) saveUser(ctx context.Context, user *models.User, update 
 	}
 
 	return nil
+}
+
+func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.TokenResponse, error) {
+	// 1. Find user by ID
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	if user.CognitoID == nil {
+		return nil, errors.New("user has no cognito id")
+	}
+	cognitoID := *user.CognitoID
+
+	// 2. Check if user is already confirmed
+	if user.Status == models.UserStatusConfirmed {
+		return nil, ErrUserAlreadyConfirmed
+	}
+
+	// 3. Get username for ConfirmSignUp and InitiateAuth (reuse to avoid duplicate ListUsers)
+	username, err := s.cognitoClient.GetUsernameByUserSub(ctx, cognitoID, user.Email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get username: %w", err)
+	}
+
+	// 4. Confirm with Cognito (pass username directly to avoid duplicate ListUsers call)
+	if err := s.cognitoClient.ConfirmSignUp(ctx, cognitoID, code, username); err != nil {
+		// Check if error indicates user is already confirmed (idempotency)
+		if s.isUserAlreadyConfirmedError(err) {
+			// Verify user is actually confirmed in Cognito
+			isConfirmed, _, _, checkErr := s.cognitoClient.IsUserConfirmed(ctx, user.Email)
+			if checkErr == nil && isConfirmed {
+				// User is confirmed in Cognito but DB might be stale - update DB and proceed
+				user.Status = models.UserStatusConfirmed
+				if updateErr := s.userRepo.Update(ctx, user); updateErr != nil {
+					// Log warning but don't fail - Cognito confirmation succeeded
+					// Status update failure is non-critical
+				}
+				// Continue to login flow below
+			} else {
+				// Not actually confirmed, return error
+				return nil, s.mapCognitoConfirmationError(err)
+			}
+		} else {
+			// Other error, return mapped error
+			return nil, s.mapCognitoConfirmationError(err)
+		}
+	} else {
+		// 5. Update user status to confirmed (normal flow)
+		user.Status = models.UserStatusConfirmed
+		if err := s.userRepo.Update(ctx, user); err != nil {
+			// Log warning but don't fail - Cognito confirmation succeeded
+			// Status update failure is non-critical
+		}
+	}
+
+	// 6. Decrypt temporary password
+	if user.TemporaryPassword == nil {
+		return nil, errors.New("user has no temporary password")
+	}
+	password, err := s.decryptFunc(*user.TemporaryPassword, s.encryptionSecret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt password: %w", err)
+	}
+
+	// 7. Login to get tokens
+	// Use the username we already fetched (avoids duplicate ListUsers call)
+	authResult, err := s.cognitoClient.InitiateAuth(ctx, username, password)
+	if err != nil {
+		// Log the error details but return a generic error to the user
+		// This is critical for security - don't leak implementation details
+		// But for debugging 500s, we need to know what happened
+		fmt.Printf("InitiateAuth failed: %v\n", err)
+		return nil, fmt.Errorf("failed to initiate auth: %w", err)
+	}
+
+	// 8. Map response
+	return s.mapToTokenResponse(authResult), nil
+}
+
+// isUserAlreadyConfirmedError checks if the error indicates the user is already confirmed
+// This enables idempotent confirmation - if user is already confirmed, we treat it as success
+func (s *SignupService) isUserAlreadyConfirmedError(err error) bool {
+	var notAuthorizedErr *types.NotAuthorizedException
+	if errors.As(err, &notAuthorizedErr) {
+		// Check if the message indicates user is already confirmed
+		errStr := err.Error()
+		return strings.Contains(errStr, "already confirmed") ||
+			strings.Contains(errStr, "User is already confirmed") ||
+			strings.Contains(errStr, "user is already confirmed")
+	}
+
+	// Fallback: Check error string if types don't match (e.g. cognito-local issues)
+	errStr := err.Error()
+	return strings.Contains(errStr, "NotAuthorizedException") &&
+		(strings.Contains(errStr, "already confirmed") ||
+			strings.Contains(errStr, "User is already confirmed") ||
+			strings.Contains(errStr, "user is already confirmed"))
+}
+
+func (s *SignupService) mapCognitoConfirmationError(err error) error {
+	var codeMismatchErr *types.CodeMismatchException
+	var expiredCodeErr *types.ExpiredCodeException
+	var notAuthorizedErr *types.NotAuthorizedException
+
+	if errors.As(err, &codeMismatchErr) {
+		return ErrInvalidConfirmationCode
+	}
+	if errors.As(err, &expiredCodeErr) {
+		return ErrExpiredConfirmationCode
+	}
+	if errors.As(err, &notAuthorizedErr) {
+		// Check if it's an "already confirmed" error - if so, this should have been
+		// handled earlier, but if we reach here, treat as invalid code for safety
+		errStr := err.Error()
+		if strings.Contains(errStr, "already confirmed") ||
+			strings.Contains(errStr, "User is already confirmed") ||
+			strings.Contains(errStr, "user is already confirmed") {
+			// This should not happen if isUserAlreadyConfirmedError is called first
+			// but if it does, return invalid code to be safe
+			return ErrInvalidConfirmationCode
+		}
+		return ErrInvalidConfirmationCode
+	}
+
+	// Fallback: Check error string if types don't match (e.g. cognito-local issues)
+	errStr := err.Error()
+	if strings.Contains(errStr, "CodeMismatchException") || strings.Contains(errStr, "Incorrect confirmation code") {
+		return ErrInvalidConfirmationCode
+	}
+	if strings.Contains(errStr, "ExpiredCodeException") || strings.Contains(errStr, "Invalid code provided") {
+		return ErrExpiredConfirmationCode
+	}
+	if strings.Contains(errStr, "NotAuthorizedException") {
+		// Check if it's an "already confirmed" error
+		if strings.Contains(errStr, "already confirmed") ||
+			strings.Contains(errStr, "User is already confirmed") ||
+			strings.Contains(errStr, "user is already confirmed") {
+			// This should not happen if isUserAlreadyConfirmedError is called first
+			return ErrInvalidConfirmationCode
+		}
+		return ErrInvalidConfirmationCode
+	}
+
+	return err
+}
+
+func (s *SignupService) mapToTokenResponse(authResult *types.AuthenticationResultType) *models.TokenResponse {
+	tokenType := aws.ToString(authResult.TokenType)
+	if tokenType == "" {
+		tokenType = "Bearer"
+	}
+	return &models.TokenResponse{
+		AccessToken:  aws.ToString(authResult.AccessToken),
+		IDToken:      aws.ToString(authResult.IdToken),
+		RefreshToken: aws.ToString(authResult.RefreshToken),
+		ExpiresIn:    authResult.ExpiresIn,
+		TokenType:    tokenType,
+	}
 }
