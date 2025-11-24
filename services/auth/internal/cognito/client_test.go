@@ -86,9 +86,18 @@ func assertArgumentError(t *testing.T, err error, expectedArgument string) {
 // mockCognitoClient is a mock implementation of cognitoClientInterface for testing.
 type mockCognitoClient struct {
 	mock.Mock
+	SignUpFunc                 func(ctx context.Context, params *cognitoidentityprovider.SignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.SignUpOutput, error)
+	ListUsersFunc              func(ctx context.Context, params *cognitoidentityprovider.ListUsersInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ListUsersOutput, error)
+	AdminGetUserFunc           func(ctx context.Context, params *cognitoidentityprovider.AdminGetUserInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.AdminGetUserOutput, error)
+	ResendConfirmationCodeFunc func(ctx context.Context, params *cognitoidentityprovider.ResendConfirmationCodeInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ResendConfirmationCodeOutput, error)
+	ConfirmSignUpFunc          func(ctx context.Context, params *cognitoidentityprovider.ConfirmSignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmSignUpOutput, error)
+	InitiateAuthFunc           func(ctx context.Context, params *cognitoidentityprovider.InitiateAuthInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.InitiateAuthOutput, error)
 }
 
 func (m *mockCognitoClient) SignUp(ctx context.Context, params *cognitoidentityprovider.SignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.SignUpOutput, error) {
+	if m.SignUpFunc != nil {
+		return m.SignUpFunc(ctx, params, optFns...)
+	}
 	args := m.Called(ctx, params)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -97,6 +106,9 @@ func (m *mockCognitoClient) SignUp(ctx context.Context, params *cognitoidentityp
 }
 
 func (m *mockCognitoClient) ListUsers(ctx context.Context, params *cognitoidentityprovider.ListUsersInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ListUsersOutput, error) {
+	if m.ListUsersFunc != nil {
+		return m.ListUsersFunc(ctx, params, optFns...)
+	}
 	args := m.Called(ctx, params)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -104,7 +116,18 @@ func (m *mockCognitoClient) ListUsers(ctx context.Context, params *cognitoidenti
 	return args.Get(0).(*cognitoidentityprovider.ListUsersOutput), args.Error(1)
 }
 
+func (m *mockCognitoClient) AdminGetUser(ctx context.Context, params *cognitoidentityprovider.AdminGetUserInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.AdminGetUserOutput, error) {
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*cognitoidentityprovider.AdminGetUserOutput), args.Error(1)
+}
+
 func (m *mockCognitoClient) ResendConfirmationCode(ctx context.Context, params *cognitoidentityprovider.ResendConfirmationCodeInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ResendConfirmationCodeOutput, error) {
+	if m.ResendConfirmationCodeFunc != nil {
+		return m.ResendConfirmationCodeFunc(ctx, params, optFns...)
+	}
 	args := m.Called(ctx, params)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -113,11 +136,25 @@ func (m *mockCognitoClient) ResendConfirmationCode(ctx context.Context, params *
 }
 
 func (m *mockCognitoClient) ConfirmSignUp(ctx context.Context, params *cognitoidentityprovider.ConfirmSignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmSignUpOutput, error) {
+	if m.ConfirmSignUpFunc != nil {
+		return m.ConfirmSignUpFunc(ctx, params, optFns...)
+	}
 	args := m.Called(ctx, params)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*cognitoidentityprovider.ConfirmSignUpOutput), args.Error(1)
+}
+
+func (m *mockCognitoClient) InitiateAuth(ctx context.Context, params *cognitoidentityprovider.InitiateAuthInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.InitiateAuthOutput, error) {
+	if m.InitiateAuthFunc != nil {
+		return m.InitiateAuthFunc(ctx, params, optFns...)
+	}
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*cognitoidentityprovider.InitiateAuthOutput), args.Error(1)
 }
 
 // newClientWithMock creates a Client with a mocked AWS SDK client for testing.
@@ -280,9 +317,8 @@ func TestSignUp_Success(t *testing.T) {
 			// Assert
 			assert.NoError(t, err)
 			assert.NotEmpty(t, username)
-			if tt.useLocal {
-				assert.Equal(t, email, username, "Local endpoint should use email as username")
-			}
+			// Now SignUp returns UserSub, not username
+			assert.Equal(t, "test-user-sub", username, "SignUp should return UserSub")
 			mockAWSClient.AssertExpectations(t)
 		})
 	}
@@ -372,8 +408,9 @@ func TestIsUserConfirmed_Success(t *testing.T) {
 
 			email := "test@example.com"
 			username := "test-username"
+			userSub := "test-user-sub"
 
-			// Setup mock to return user
+			// Setup mock to return user with sub attribute
 			mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
 				return input != nil &&
 					aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
@@ -383,6 +420,12 @@ func TestIsUserConfirmed_Success(t *testing.T) {
 					{
 						Username:   aws.String(username),
 						UserStatus: tt.userStatus,
+						Attributes: []types.AttributeType{
+							{
+								Name:  aws.String("sub"),
+								Value: aws.String(userSub),
+							},
+						},
 					},
 				},
 			}, nil)
@@ -394,10 +437,63 @@ func TestIsUserConfirmed_Success(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectConfirmed, isConfirmed)
 			assert.Equal(t, username, retrievedUsername)
-			assert.Equal(t, username, cognitoID)
+			assert.Equal(t, userSub, cognitoID, "Should return UserSub, not username")
 			mockAWSClient.AssertExpectations(t)
 		})
 	}
+}
+
+// TestIsUserConfirmed_FallbackToAdminGetUser tests the fallback to AdminGetUser when sub attribute is not in ListUsers response.
+func TestIsUserConfirmed_FallbackToAdminGetUser(t *testing.T) {
+	mockAWSClient := new(mockCognitoClient)
+	cfg := testConfig()
+	client := newClientWithMock(mockAWSClient, cfg)
+	ctx := context.Background()
+
+	email := "test@example.com"
+	username := "test-username"
+	userSub := "test-user-sub"
+
+	// Setup mock: ListUsers returns user without sub attribute
+	mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+		return input != nil &&
+			aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
+			aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+	})).Return(&cognitoidentityprovider.ListUsersOutput{
+		Users: []types.UserType{
+			{
+				Username:   aws.String(username),
+				UserStatus: types.UserStatusTypeConfirmed,
+				// No Attributes - will trigger AdminGetUser fallback
+			},
+		},
+	}, nil)
+
+	// Setup mock: AdminGetUser returns user with sub attribute
+	mockAWSClient.On("AdminGetUser", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.AdminGetUserInput) bool {
+		return input != nil &&
+			aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
+			aws.ToString(input.Username) == username
+	})).Return(&cognitoidentityprovider.AdminGetUserOutput{
+		Username:   aws.String(username),
+		UserStatus: types.UserStatusTypeConfirmed,
+		UserAttributes: []types.AttributeType{
+			{
+				Name:  aws.String("sub"),
+				Value: aws.String(userSub),
+			},
+		},
+	}, nil)
+
+	// Execute
+	isConfirmed, retrievedUsername, cognitoID, err := client.IsUserConfirmed(ctx, email)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.True(t, isConfirmed)
+	assert.Equal(t, username, retrievedUsername)
+	assert.Equal(t, userSub, cognitoID, "Should return UserSub from AdminGetUser fallback")
+	mockAWSClient.AssertExpectations(t)
 }
 
 // TestIsUserConfirmed_Errors tests handling of various errors.
@@ -596,7 +692,7 @@ func TestConfirmSignUp_Validation(t *testing.T) {
 	})
 
 	t.Run("empty confirmationCode", func(t *testing.T) {
-		err := client.ConfirmSignUp(ctx, "test@example.com", "")
+		err := client.ConfirmSignUp(ctx, "test-user-sub", "")
 		assertArgumentError(t, err, "confirmationCode")
 	})
 
@@ -640,14 +736,16 @@ func TestConfirmSignUp_Success(t *testing.T) {
 			client := newClientWithMock(mockAWSClient, cfg)
 			ctx := context.Background()
 
-			cognitoID := "test@example.com"
+			userSub := "test-user-sub"
+			username := "test-username-uuid" // AWS Cognito uses UUID as username
 			confirmationCode := "123456"
 
-			// Setup mock to return success
+			// No ListUsers mock needed - username is passed directly to ConfirmSignUp
+			// Setup mock: ConfirmSignUp to confirm with username
 			mockAWSClient.On("ConfirmSignUp", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmSignUpInput) bool {
 				valid := input != nil &&
 					aws.ToString(input.ClientId) == cfg.CognitoClientID &&
-					aws.ToString(input.Username) == cognitoID &&
+					aws.ToString(input.Username) == username &&
 					aws.ToString(input.ConfirmationCode) == confirmationCode
 
 				if tt.validateHash {
@@ -659,8 +757,8 @@ func TestConfirmSignUp_Success(t *testing.T) {
 				return valid
 			})).Return(&cognitoidentityprovider.ConfirmSignUpOutput{}, nil)
 
-			// Execute
-			err := client.ConfirmSignUp(ctx, cognitoID, confirmationCode)
+			// Execute (pass username directly to avoid ListUsers call in ConfirmSignUp)
+			err := client.ConfirmSignUp(ctx, userSub, confirmationCode, username)
 
 			// Assert
 			assert.NoError(t, err)
@@ -695,14 +793,21 @@ func TestConfirmSignUp_Errors(t *testing.T) {
 			client := newClientWithMock(mockAWSClient, cfg)
 			ctx := context.Background()
 
-			cognitoID := "test@example.com"
+			userSub := "test-user-sub"
+			username := "test-username-uuid" // AWS Cognito uses UUID as username
 			confirmationCode := "123456"
 
-			// Setup mock to return error
-			mockAWSClient.On("ConfirmSignUp", ctx, mock.Anything).Return(nil, tt.errType)
+			// No ListUsers mock needed - username is passed directly to ConfirmSignUp
+			// Setup mock: ConfirmSignUp to return error
+			mockAWSClient.On("ConfirmSignUp", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmSignUpInput) bool {
+				return input != nil &&
+					aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+					aws.ToString(input.Username) == username &&
+					aws.ToString(input.ConfirmationCode) == confirmationCode
+			})).Return(nil, tt.errType)
 
-			// Execute
-			err := client.ConfirmSignUp(ctx, cognitoID, confirmationCode)
+			// Execute (pass username directly to avoid ListUsers call in ConfirmSignUp)
+			err := client.ConfirmSignUp(ctx, userSub, confirmationCode, username)
 
 			// Assert
 			assert.Error(t, err)
