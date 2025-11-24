@@ -370,6 +370,10 @@ func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) 
 	// Use the username we already fetched (avoids duplicate ListUsers call)
 	authResult, err := s.cognitoClient.InitiateAuth(ctx, username, password)
 	if err != nil {
+		// Log the error details but return a generic error to the user
+		// This is critical for security - don't leak implementation details
+		// But for debugging 500s, we need to know what happened
+		fmt.Printf("InitiateAuth failed: %v\n", err)
 		return nil, fmt.Errorf("failed to initiate auth: %w", err)
 	}
 

@@ -66,7 +66,7 @@ dev: build-local
 	./bin/api
 
 # Deploy
-deploy:
+deploy: build
 	@STAGE=$${SERVERLESS_STAGE:-dev}; \
 	if [ -f .env.$$STAGE ]; then \
 		echo "Loading environment variables from .env.$$STAGE"; \
@@ -80,7 +80,7 @@ deploy:
 	serverless deploy --stage $$STAGE
 
 # Deploy function only
-deploy-function:
+deploy-function: build
 	@STAGE=$${SERVERLESS_STAGE:-dev}; \
 	if [ -f .env.$$STAGE ]; then \
 		echo "Loading environment variables from .env.$$STAGE"; \

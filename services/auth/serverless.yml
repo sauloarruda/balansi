@@ -28,6 +28,7 @@ provider:
             - cognito-idp:AdminGetUser
             - cognito-idp:ResendConfirmationCode
             - cognito-idp:ConfirmSignUp
+            - cognito-idp:InitiateAuth
           Resource:
             - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${env:COGNITO_USER_POOL_ID}
   httpApi:

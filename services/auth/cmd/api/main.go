@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"services/auth/internal/cognito"
 	"services/auth/internal/config"
 	"services/auth/internal/handlers"
@@ -75,8 +76,25 @@ func methodNotAllowedResponse() events.APIGatewayV2HTTPResponse {
 }
 
 func handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	log.Printf("Received request: RawPath='%s', Path='%s', Method='%s'",
+		req.RawPath, req.RequestContext.HTTP.Path, req.RequestContext.HTTP.Method)
+
 	// Simple routing based on path
-	switch req.RawPath {
+	path := req.RequestContext.HTTP.Path
+	if path == "" {
+		path = req.RawPath
+	}
+
+	// Strip stage from path if present
+	stage := os.Getenv("STAGE")
+	if stage != "" {
+		prefix := "/" + stage
+		if strings.HasPrefix(path, prefix) {
+			path = strings.TrimPrefix(path, prefix)
+		}
+	}
+
+	switch path {
 	case "/auth/sign-up":
 		if req.RequestContext.HTTP.Method == "POST" {
 			return signupHandler.Handle(ctx, req)
@@ -93,7 +111,7 @@ func handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 			Headers: map[string]string{
 				"Content-Type": "application/json",
 			},
-			Body: `{"error": "Not found"}`,
+			Body: `{"error": "Not found", "path": "` + path + `"}`,
 		}, nil
 	}
 }
