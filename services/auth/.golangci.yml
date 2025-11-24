@@ -1,4 +1,4 @@
-# golangci-lint configuration for Spendflix Auth Service
+# golangci-lint configuration for Balansi Auth Service
 # Documentation: https://golangci-lint.run/usage/configuration/
 
 version: 2

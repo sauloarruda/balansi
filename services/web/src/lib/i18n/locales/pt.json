@@ -8,8 +8,8 @@
 	},
 	"auth": {
 		"signup": {
-			"title": "Descubra, Organize, Realize",
-			"description": "Em menos de 20 minutos, você dará seu primeiro passo para descobrir para onde está indo seu dinheiro todo mês.",
+			"title": "Registre, Calcule, Avalie",
+			"description": "Vamos te ajudar a manter um registro diário de sua alimentação e exercícios do jeito mais fácil e rápido que você já viu.",
 			"fields": {
 				"name": {
 					"label": "Como podemos te chamar?",
@@ -42,7 +42,7 @@
 		}
 	},
 	"home": {
-		"welcome": "Bem-vindo ao Spendflix",
+		"welcome": "Bem-vindo ao Balansi",
 		"ready": "Você está autenticado e pronto para começar!"
 	},
 	"validation": {

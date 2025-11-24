@@ -8,8 +8,8 @@
 	},
 	"auth": {
 		"signup": {
-			"title": "Discover, Organize, Achieve",
-			"description": "In less than 20 minutes, you'll take your first step to discover where your money is going every month.",
+			"title": "Register, Calculate, Evaluate",
+			"description": "We will help you keep a daily record of your diet and exercises in the easiest and fastest way you have ever seen.",
 			"fields": {
 				"name": {
 					"label": "What should we call you?",
@@ -42,7 +42,7 @@
 		}
 	},
 	"home": {
-		"welcome": "Welcome to Spendflix",
+		"welcome": "Welcome to Balansi",
 		"ready": "You are authenticated and ready to start!"
 	},
 	"validation": {

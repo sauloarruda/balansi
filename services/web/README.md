@@ -1,4 +1,4 @@
-# Spendflix Web - Frontend SvelteKit
+# Balansi Web - Frontend SvelteKit
 
 Frontend application built with SvelteKit, TailwindCSS, and Preline UI components.
 
@@ -94,7 +94,7 @@ npx playwright install --with-deps chromium
 Make sure the API is properly configured in `services/auth/.env`:
 
 ```env
-DATABASE_URL=postgres://user:password@localhost:5432/spendflix?sslmode=disable
+DATABASE_URL=postgres://user:password@localhost:5432/balansi?sslmode=disable
 PORT=3000
 ENCRYPTION_SECRET=your-secret-key
 ```
@@ -304,7 +304,7 @@ VITE_API_URL=$(serverless info --stage dev | grep endpoint | sed 's/.*https:\/\/
 
 # Create Amplify app
 aws amplify create-app \
-  --name spendflix-web \
+  --name balansi-web \
   --platform WEB \
   --environment-variables VITE_API_URL=$VITE_API_URL \
   --region us-east-2
@@ -399,8 +399,8 @@ func createAmplifyApp() error {
     apiGatewayURL := "https://yrltx77a47.execute-api.us-east-2.amazonaws.com" // Replace with actual URL
 
     input := &amplify.CreateAppInput{
-        Name: aws.String("spendflix-web"),
-        Repository: aws.String("https://github.com/sauloarruda/spendflix.git"),
+        Name: aws.String("balansi-web"),
+        Repository: aws.String("https://github.com/sauloarruda/balansi.git"),
         Platform: aws.String("WEB"),
         EnvironmentVariables: map[string]*string{
             "VITE_API_URL": aws.String(apiGatewayURL),
@@ -455,8 +455,8 @@ For Infrastructure as Code, you can use Terraform or AWS CDK:
 # Extract base URL from endpoint output
 
 resource "aws_amplify_app" "web" {
-  name       = "spendflix-web"
-  repository = "https://github.com/sauloarruda/spendflix.git"
+  name       = "balansi-web"
+  repository = "https://github.com/sauloarruda/balansi.git"
   platform   = "WEB"
 
   environment_variables = {

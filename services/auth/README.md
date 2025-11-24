@@ -1,6 +1,6 @@
-# Spendflix Auth Service
+# Balansi Auth Service
 
-Spendflix authentication service in Go, deployed on AWS Lambda.
+Balansi authentication service in Go, deployed on AWS Lambda.
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ cp .env.example .env
 3. **Edit `.env` with your database credentials:**
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/spendflix_development?sslmode=disable
+DATABASE_URL=postgresql://user:password@localhost:5432/balansi_development?sslmode=disable
 ENCRYPTION_SECRET=your-secret-key-here
 ```
 
@@ -83,7 +83,7 @@ Create a `.env` file in the `services/auth/` directory with the following variab
 
 ```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/spendflix_development?sslmode=disable
+DATABASE_URL=postgresql://user:password@localhost:5432/balansi_development?sslmode=disable
 
 # Encryption (generate with: make generate-secret)
 ENCRYPTION_SECRET=your-32-character-secret-here

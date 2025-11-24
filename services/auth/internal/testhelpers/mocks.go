@@ -49,3 +49,8 @@ func (m *MockCognitoClient) ResendConfirmationCode(ctx context.Context, username
 	args := m.Called(ctx, username)
 	return args.Error(0)
 }
+
+func (m *MockCognitoClient) ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string) error {
+	args := m.Called(ctx, cognitoID, confirmationCode)
+	return args.Error(0)
+}

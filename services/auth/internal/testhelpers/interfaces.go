@@ -17,4 +17,5 @@ type CognitoClientInterface interface {
 	SignUp(ctx context.Context, email, password, name string) (string, error)
 	IsUserConfirmed(ctx context.Context, email string) (bool, string, string, error)
 	ResendConfirmationCode(ctx context.Context, username string) error
+	ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string) error
 }

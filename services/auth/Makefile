@@ -151,7 +151,7 @@ cognito-local-up:
 		exit 1; \
 	fi
 	@echo "Starting cognito-local..."
-	@npx cognito-local > /dev/null 2>&1 &
+	@CODE=123123 npx cognito-local > /dev/null 2>&1 &
 	@echo "Waiting for cognito-local to be ready..."
 	@sleep 3
 	@echo "cognito-local is ready on http://localhost:9229"
@@ -179,6 +179,17 @@ test:
 # Run unit tests only
 test-unit:
 	go test -v -short ./...
+
+# Run tests with better formatting using gotestsum
+# Install: go install gotest.tools/gotestsum@latest
+test-pretty:
+	@if command -v gotestsum > /dev/null; then \
+		gotestsum --format testname -- -short ./...; \
+	else \
+		echo "gotestsum not found. Install with: go install gotest.tools/gotestsum@latest"; \
+		echo "Falling back to standard go test..."; \
+		go test -v -short ./...; \
+	fi
 
 # Run integration tests (requires Docker and cognito-local)
 test-integration:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -19,6 +20,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// localTestConfig creates a configuration for cognito-local integration tests.
+// It reads from environment variables or uses default values from cognito-local setup.
+func localTestConfig() *config.Config {
+	// Try to get values from environment variables first (set by cognito-setup script)
+	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
+	if userPoolID == "" {
+		// Default value from cognito-local setup (can be found in .cognito/db/)
+		userPoolID = "local_6eLCsRav"
+	}
+
+	clientID := os.Getenv("COGNITO_CLIENT_ID")
+	if clientID == "" {
+		// Default value from cognito-local setup (can be found in .cognito/db/clients.json)
+		clientID = "2qdfneigub7f5h79cnej0i3fo"
+	}
+
+	clientSecret := os.Getenv("COGNITO_CLIENT_SECRET")
+	endpoint := os.Getenv("COGNITO_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "http://localhost:9229"
+	}
+
+	return &config.Config{
+		CognitoUserPoolID:   userPoolID,
+		CognitoClientID:     clientID,
+		CognitoClientSecret: clientSecret,
+		CognitoEndpoint:     endpoint,
+		EncryptionSecret:    "test-secret-key-1234567890123456",
+	}
+}
+
 func TestSignup_Integration_NewUser(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -31,13 +63,7 @@ func TestSignup_Integration_NewUser(t *testing.T) {
 	testhelpers.CreateUsersTable(t, pool)
 
 	// Setup Cognito client (using cognito-local if available)
-	cfg := &config.Config{
-		CognitoUserPoolID:   "local_test_pool",
-		CognitoClientID:     "test_client_id",
-		CognitoClientSecret: "",
-		CognitoEndpoint:     "http://localhost:9229",
-		EncryptionSecret:    "test-secret-key-1234567890123456",
-	}
+	cfg := localTestConfig()
 
 	cognitoClient, err := cognito.NewClient(cfg)
 	if err != nil {
@@ -94,13 +120,7 @@ func TestSignup_Integration_DuplicateEmail(t *testing.T) {
 	testhelpers.CreateUsersTable(t, pool)
 
 	// Setup Cognito client
-	cfg := &config.Config{
-		CognitoUserPoolID:   "local_test_pool",
-		CognitoClientID:     "test_client_id",
-		CognitoClientSecret: "",
-		CognitoEndpoint:     "http://localhost:9229",
-		EncryptionSecret:    "test-secret-key-1234567890123456",
-	}
+	cfg := localTestConfig()
 
 	cognitoClient, err := cognito.NewClient(cfg)
 	if err != nil {
@@ -158,13 +178,7 @@ func TestSignup_Integration_ConcurrentSignups(t *testing.T) {
 	testhelpers.CreateUsersTable(t, pool)
 
 	// Setup Cognito client
-	cfg := &config.Config{
-		CognitoUserPoolID:   "local_test_pool",
-		CognitoClientID:     "test_client_id",
-		CognitoClientSecret: "",
-		CognitoEndpoint:     "http://localhost:9229",
-		EncryptionSecret:    "test-secret-key-1234567890123456",
-	}
+	cfg := localTestConfig()
 
 	cognitoClient, err := cognito.NewClient(cfg)
 	if err != nil {

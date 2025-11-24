@@ -1,4 +1,4 @@
-service: spendflix-auth
+service: balansi-auth
 
 frameworkVersion: '4'
 
@@ -52,4 +52,3 @@ package:
   patterns:
     - '!**'
     - 'bootstrap'
-

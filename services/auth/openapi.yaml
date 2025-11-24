@@ -1,18 +1,18 @@
 openapi: 3.0.3
 info:
-  title: Spendflix Auth API
+  title: Balansi Auth API
   version: 1.0.0
   description: |
-    Spendflix authentication API.
+    Balansi authentication API.
 
     This API manages user registration and authentication.
 
 servers:
   - url: http://localhost:3000
     description: Local development server
-  - url: https://api.spendflix.com
+  - url: https://api.balansi.me
     description: Production server
-  - url: https://api-staging.spendflix.com
+  - url: https://api-staging.balansi.me
     description: Staging server
 
 paths:

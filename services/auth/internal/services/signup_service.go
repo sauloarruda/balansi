@@ -169,7 +169,7 @@ func (s *SignupService) Signup(ctx context.Context, name, email string) (*Signup
 }
 
 func (s *SignupService) handleExistingConfirmedUser(ctx context.Context, existingUser *models.User, email string) (*SignupResult, error) {
-	isConfirmed, username, userSub, checkErr := s.cognitoClient.IsUserConfirmed(ctx, email)
+	isConfirmed, username, cognitoID, checkErr := s.cognitoClient.IsUserConfirmed(ctx, email)
 	if checkErr != nil {
 		return nil, ErrUserAlreadyExists
 	}
@@ -179,8 +179,8 @@ func (s *SignupService) handleExistingConfirmedUser(ctx context.Context, existin
 			return nil, fmt.Errorf("failed to resend confirmation code: %w", resendErr)
 		}
 
-		if userSub != "" && existingUser.CognitoID == nil {
-			existingUser.CognitoID = &userSub
+		if cognitoID != "" && existingUser.CognitoID == nil {
+			existingUser.CognitoID = &cognitoID
 			if err := s.userRepo.Update(ctx, existingUser); err != nil {
 				return nil, fmt.Errorf("failed to update user: %w", err)
 			}
@@ -222,7 +222,7 @@ func (s *SignupService) handleCognitoSignUpError(
 		return nil, ErrSignupProviderUnavailable
 	}
 
-	isConfirmed, username, userSub, checkErr := s.cognitoClient.IsUserConfirmed(ctx, email)
+	isConfirmed, username, cognitoID, checkErr := s.cognitoClient.IsUserConfirmed(ctx, email)
 	if checkErr != nil {
 		return nil, ErrUserAlreadyExists
 	}
@@ -242,7 +242,7 @@ func (s *SignupService) handleCognitoSignUpError(
 
 	user.Name = name
 	user.Email = email
-	user.CognitoID = &userSub
+	user.CognitoID = &cognitoID
 	if encryptedPassword != "" {
 		user.TemporaryPassword = &encryptedPassword
 	}

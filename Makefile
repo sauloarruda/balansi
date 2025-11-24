@@ -5,7 +5,7 @@
 
 # Show help message
 help:
-	@echo "Spendflix Monorepo - Available commands:"
+	@echo "Balansi Monorepo - Available commands:"
 	@echo ""
 	@echo "  Development:"
 	@echo "    make dev              - Start both auth and web services in parallel"
@@ -127,4 +127,3 @@ clean-auth:
 clean-web:
 	@echo "Cleaning web service..."
 	@cd services/web && make clean
-

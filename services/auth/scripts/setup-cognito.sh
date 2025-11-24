@@ -22,7 +22,7 @@ echo ""
 # Create User Pool
 echo "Creating User Pool..."
 USER_POOL_RESPONSE=$(aws --endpoint-url=$COGNITO_ENDPOINT cognito-idp create-user-pool \
-  --pool-name spendflix-users \
+  --pool-name balansi-users \
   --region $REGION \
   --policies "PasswordPolicy={MinimumLength=8,RequireUppercase=true,RequireLowercase=true,RequireNumbers=true,RequireSymbols=true}" \
   --auto-verified-attributes email \
@@ -56,7 +56,7 @@ echo ""
 echo "Creating User Pool Client..."
 CLIENT_RESPONSE=$(aws --endpoint-url=$COGNITO_ENDPOINT cognito-idp create-user-pool-client \
   --user-pool-id $USER_POOL_ID \
-  --client-name spendflix-client \
+  --client-name balansi-client \
   --region $REGION \
   --generate-secret \
   --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH \
@@ -91,4 +91,3 @@ echo "=========================================="
 echo ""
 echo "Note: cognito-local is available at http://localhost:9229"
 echo "      Make sure cognito-local is running before starting the service"
-

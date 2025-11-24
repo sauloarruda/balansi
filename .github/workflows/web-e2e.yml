@@ -18,7 +18,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: spendflix_test
+          POSTGRES_DB: balansi_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -68,7 +68,7 @@ jobs:
 
       - name: Setup database
         env:
-          DATABASE_URL: postgres://test:test@localhost:5432/spendflix_test?sslmode=disable
+          DATABASE_URL: postgres://test:test@localhost:5432/balansi_test?sslmode=disable
         run: |
           cd services/auth
           go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
@@ -127,7 +127,7 @@ jobs:
               echo "Logs at attempt $ATTEMPT:"
               tail -5 cognito-local.log || true
             fi
-            
+
             # Try IPv6 first (as it seems to be what cognito-local prefers)
             # Accept any HTTP response (including 404) as success - means server is responding
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://[::1]:9229 2>/dev/null || echo "000")
@@ -153,7 +153,7 @@ jobs:
               COGNITO_ENDPOINT="http://localhost:9229"
               break
             fi
-            
+
             ATTEMPT=$((ATTEMPT + 1))
             if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
               echo "ERROR: cognito-local failed to start after $MAX_ATTEMPTS seconds"
@@ -245,7 +245,7 @@ jobs:
 
       - name: Run E2E tests
         env:
-          DATABASE_URL: postgres://test:test@localhost:5432/spendflix_test?sslmode=disable
+          DATABASE_URL: postgres://test:test@localhost:5432/balansi_test?sslmode=disable
           PORT: "3001"
           ENCRYPTION_SECRET: test-secret-key-for-ci-testing-only-32-chars
           AWS_REGION: us-east-1

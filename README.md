@@ -1,31 +1,28 @@
-# Spendflix
+# Balansi
 
-Spendflix is a personal finance management application designed to help users track their expenses, manage budgets, and gain insights into their spending habits. The platform provides an intuitive interface for users to monitor their financial health and make informed decisions about their money.
+Balansi is a fast, minimalist nutrition and training journal designed to give users clear daily feedback with almost no friction.
 
-## What Spendflix Does
+Instead of complex screens and heavy data entry, the user logs meals and workouts in free text and automatically receives macro calculations, calorie estimates, total protein, daily balance, and a score based on objective criteria.
 
-Spendflix empowers users to:
-- **Track Expenses**: Record and categorize daily expenses with ease
-- **Manage Budgets**: Set and monitor budgets for different spending categories
-- **Gain Insights**: Visualize spending patterns through charts and reports
-- **Control Finances**: Make data-driven decisions to improve financial well-being
+The goal is to turn daily tracking into something that takes seconds but still delivers meaningful clarity about the quality of the day.
 
-The application follows a modern architecture with a serverless backend and a responsive web frontend, ensuring scalability and a great user experience.
+
+## What Balansi Does
+
+The v1 is intentionally minimal: no charts, no weekly dashboards, no external integrations, and no full conversational AI.
+
+Just the core loop of logging, calculating, and evaluating. With a clean interface and an internal engine powered by LLMs to interpret free-text input, Balansi provides a reliable daily summary, practical guidance, and a streamlined experience that encourages consistency without hassle.
 
 ## Documentation
 
-For comprehensive project documentation, including requirements, use cases, and architecture details, please refer to our Notion documentation:
-
-- **[Full Documentation](https://www.notion.so/1e8f4163a77e80b9887ac59218dba7a4?v=1ebf4163a77e8006b152000ced8f3495)** - Complete project documentation
-- **[Software Requirements Specification (SRS)](https://www.notion.so/1e8f4163a77e80b9887ac59218dba7a4?v=1ebf4163a77e8006b152000ced8f3495)** - Detailed requirements and specifications
-- **[Use Cases](https://www.notion.so/1e8f4163a77e80b9887ac59218dba7a4?v=1ebf4163a77e8006b152000ced8f3495)** - User stories and use case scenarios
+- [Project Pitch](doc/PITCH-v1.md) - Vision, scope, and goals for Balansi v1
 
 ## Project Structure
 
 This repository is organized as a monorepo with the following services:
 
 ```
-spendflix-go/
+balansi/
 ├── services/
 │   ├── auth/          # Go backend service (AWS Lambda)
 │   └── web/           # SvelteKit frontend application
@@ -55,7 +52,7 @@ spendflix-go/
 
 ```bash
 git clone <repository-url>
-cd spendflix-go
+cd balansi
 ```
 
 2. **Install dependencies:**

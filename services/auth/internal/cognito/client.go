@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"services/auth/internal/config"
+	apperrors "services/auth/internal/errors"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -19,12 +20,27 @@ import (
 	"github.com/google/uuid"
 )
 
+// cognitoClientInterface defines the interface for Cognito Identity Provider operations.
+// This allows us to mock the AWS SDK client in tests.
+type cognitoClientInterface interface {
+	SignUp(ctx context.Context, params *cognitoidentityprovider.SignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.SignUpOutput, error)
+	ListUsers(ctx context.Context, params *cognitoidentityprovider.ListUsersInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ListUsersOutput, error)
+	ResendConfirmationCode(ctx context.Context, params *cognitoidentityprovider.ResendConfirmationCodeInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ResendConfirmationCodeOutput, error)
+	ConfirmSignUp(ctx context.Context, params *cognitoidentityprovider.ConfirmSignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmSignUpOutput, error)
+}
+
 type Client struct {
-	client       *cognitoidentityprovider.Client
+	client       cognitoClientInterface
 	clientID     string
 	clientSecret string
 	userPoolID   string
 	endpoint     string // Store endpoint to detect local vs AWS
+}
+
+// isLocalEndpoint checks if the client is configured to use cognito-local (localhost:9229).
+// This is useful for determining behavior differences between local development and AWS Cognito.
+func (c *Client) isLocalEndpoint() bool {
+	return c.endpoint != "" && strings.Contains(c.endpoint, "localhost:9229")
 }
 
 // calculateSecretHash calculates the SECRET_HASH for Cognito API calls
@@ -34,6 +50,16 @@ func calculateSecretHash(username, clientID, clientSecret string) string {
 	mac := hmac.New(sha256.New, []byte(clientSecret))
 	mac.Write([]byte(message))
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+}
+
+// getSecretHash returns the SECRET_HASH for the given username if client secret is configured.
+// Returns nil if no client secret is configured.
+func (c *Client) getSecretHash(username string) *string {
+	if c.clientSecret == "" {
+		return nil
+	}
+	secretHash := calculateSecretHash(username, c.clientID, c.clientSecret)
+	return aws.String(secretHash)
 }
 
 func NewClient(cfg *config.Config) (*Client, error) {
@@ -77,13 +103,22 @@ func NewClient(cfg *config.Config) (*Client, error) {
 }
 
 func (c *Client) SignUp(ctx context.Context, email, password, name string) (string, error) {
+	// Validate input parameters
+	if email == "" {
+		return "", apperrors.NewArgumentError("email", "cannot be empty")
+	}
+	if password == "" {
+		return "", apperrors.NewArgumentError("password", "cannot be empty")
+	}
+	if name == "" {
+		return "", apperrors.NewArgumentError("name", "cannot be empty")
+	}
+
 	// Determine username based on endpoint configuration
 	// - For cognito-local (endpoint contains localhost:9229): use email as username
 	// - For AWS Cognito with email alias: use UUID (AWS doesn't allow email format when email is alias)
 	var username string
-	isLocalEndpoint := c.endpoint != "" && strings.Contains(c.endpoint, "localhost:9229")
-
-	if isLocalEndpoint {
+	if c.isLocalEndpoint() {
 		// cognito-local requires email as username
 		username = email
 		log.Printf("Using email as username for cognito-local")
@@ -94,22 +129,15 @@ func (c *Client) SignUp(ctx context.Context, email, password, name string) (stri
 	}
 
 	input := &cognitoidentityprovider.SignUpInput{
-		ClientId: aws.String(c.clientID),
-		Username: aws.String(username),
-		Password: aws.String(password),
+		ClientId:   aws.String(c.clientID),
+		Username:   aws.String(username),
+		Password:   aws.String(password),
+		SecretHash: c.getSecretHash(username),
 		UserAttributes: []types.AttributeType{
 			{Name: aws.String("email"), Value: aws.String(email)},
 			{Name: aws.String("name"), Value: aws.String(name)},
 			{Name: aws.String("nickname"), Value: aws.String(name)},
 		},
-	}
-
-	// Add SECRET_HASH if client secret is configured
-	// SECRET_HASH uses the username (email for local, UUID for AWS)
-	if c.clientSecret != "" {
-		secretHash := calculateSecretHash(username, c.clientID, c.clientSecret)
-		input.SecretHash = aws.String(secretHash)
-		log.Printf("Using SECRET_HASH for SignUp (client has secret configured)")
 	}
 
 	log.Printf("Calling Cognito SignUp - Email: %s, ClientID: %s, UserPoolID: %s",
@@ -126,14 +154,21 @@ func (c *Client) SignUp(ctx context.Context, email, password, name string) (stri
 		return "", errors.New("cognito signup did not return user sub")
 	}
 
-	log.Printf("Cognito SignUp successful - UserSub: %s", *output.UserSub)
-	return *output.UserSub, nil
+	log.Printf("Cognito SignUp successful - Username: %s, UserSub: %s", username, *output.UserSub)
+	// Return username instead of UserSub, as ConfirmSignUp uses username as the key
+	return username, nil
 }
 
 // IsUserConfirmed checks if a user is confirmed in Cognito
 // It tries to find the user by email and checks their status
-// Returns: isConfirmed, username, userSub (CognitoID), error.
+// Returns: isConfirmed, username, cognitoId (username to be stored), error.
+// The cognitoId returned is the username, which is what we store in the database and use for ConfirmSignUp.
 func (c *Client) IsUserConfirmed(ctx context.Context, email string) (bool, string, string, error) {
+	// Validate input parameters
+	if email == "" {
+		return false, "", "", apperrors.NewArgumentError("email", "cannot be empty")
+	}
+
 	// First, try to find the user by listing users with the email attribute
 	// We'll search for users with matching email
 	input := &cognitoidentityprovider.ListUsersInput{
@@ -158,32 +193,30 @@ func (c *Client) IsUserConfirmed(ctx context.Context, email string) (bool, strin
 		username = *user.Username
 	}
 
-	// Get UserSub - try to find it in user attributes first
-	userSub := username // fallback to username
-	for _, attr := range user.Attributes {
-		if attr.Name != nil && *attr.Name == "sub" && attr.Value != nil {
-			userSub = *attr.Value
-			break
-		}
+	if username == "" {
+		return false, "", "", errors.New("user found but username is empty")
 	}
-	// If not found in attributes, use username (works for cognito-local where username is email)
 
 	// Check if user is confirmed
 	// UserStatus can be: UNCONFIRMED, CONFIRMED, ARCHIVED, COMPROMISED, UNKNOWN, RESET_REQUIRED, FORCE_CHANGE_PASSWORD
 	isConfirmed := user.UserStatus == types.UserStatusTypeConfirmed
 
-	log.Printf("User status check - Email: %s, Username: %s, UserSub: %s, Status: %s, Confirmed: %v",
-		email, username, userSub, user.UserStatus, isConfirmed)
+	log.Printf("User status check - Email: %s, Username: %s, Status: %s, Confirmed: %v",
+		email, username, user.UserStatus, isConfirmed)
 
-	return isConfirmed, username, userSub, nil
+	// Return username as cognitoId (third return value) - this is what we store in the database
+	return isConfirmed, username, username, nil
 }
 
 // ResendConfirmationCode resends the confirmation code to the user.
 func (c *Client) ResendConfirmationCode(ctx context.Context, username string) error {
-	// Check if we're using cognito-local (which doesn't support ResendConfirmationCode)
-	isLocalEndpoint := c.endpoint != "" && strings.Contains(c.endpoint, "localhost:9229")
+	// Validate input parameters
+	if username == "" {
+		return apperrors.NewArgumentError("username", "cannot be empty")
+	}
 
-	if isLocalEndpoint {
+	// Check if we're using cognito-local (which doesn't support ResendConfirmationCode)
+	if c.isLocalEndpoint() {
 		// cognito-local doesn't support ResendConfirmationCode operation
 		// In local development, we'll just log that the code would be resent
 		log.Printf("Local environment detected - ResendConfirmationCode not supported by cognito-local")
@@ -192,15 +225,9 @@ func (c *Client) ResendConfirmationCode(ctx context.Context, username string) er
 	}
 
 	input := &cognitoidentityprovider.ResendConfirmationCodeInput{
-		ClientId: aws.String(c.clientID),
-		Username: aws.String(username),
-	}
-
-	// Add SECRET_HASH if client secret is configured
-	if c.clientSecret != "" {
-		secretHash := calculateSecretHash(username, c.clientID, c.clientSecret)
-		input.SecretHash = aws.String(secretHash)
-		log.Printf("Using SECRET_HASH for ResendConfirmationCode")
+		ClientId:   aws.String(c.clientID),
+		Username:   aws.String(username),
+		SecretHash: c.getSecretHash(username),
 	}
 
 	log.Printf("Resending confirmation code - Username: %s, ClientID: %s",
@@ -213,5 +240,38 @@ func (c *Client) ResendConfirmationCode(ctx context.Context, username string) er
 	}
 
 	log.Printf("Confirmation code resent successfully - Username: %s", username)
+	return nil
+}
+
+// ConfirmSignUp confirms a user's signup with the provided confirmation code.
+// It accepts cognitoId (which is the username stored in the database) and confirmation code.
+// Returns an error if the code is invalid, expired, or if the user is already confirmed.
+func (c *Client) ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string) error {
+	// Validate input parameters
+	if cognitoID == "" {
+		return apperrors.NewArgumentError("cognitoId", "cannot be empty")
+	}
+	if confirmationCode == "" {
+		return apperrors.NewArgumentError("confirmationCode", "cannot be empty")
+	}
+
+	// cognitoID is the username that was returned from SignUp and stored in the database
+	input := &cognitoidentityprovider.ConfirmSignUpInput{
+		ClientId:         aws.String(c.clientID),
+		Username:         aws.String(cognitoID),
+		ConfirmationCode: aws.String(confirmationCode),
+		SecretHash:       c.getSecretHash(cognitoID),
+	}
+
+	log.Printf("Validating confirmation code - CognitoID: %s, ClientID: %s",
+		cognitoID, c.clientID)
+
+	_, err := c.client.ConfirmSignUp(ctx, input)
+	if err != nil {
+		log.Printf("Error validating confirmation code: %v", err)
+		return fmt.Errorf("failed to validate confirmation code: %w", err)
+	}
+
+	log.Printf("Confirmation code validated successfully - CognitoID: %s", cognitoID)
 	return nil
 }
