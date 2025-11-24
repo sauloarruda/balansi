@@ -2,14 +2,22 @@ package models
 
 import "time"
 
+type UserStatus string
+
+const (
+	UserStatusPendingConfirmation UserStatus = "pending_confirmation"
+	UserStatusConfirmed           UserStatus = "confirmed"
+)
+
 type User struct {
-	ID                int       `db:"id"`
-	Name              string    `db:"name"`
-	Email             string    `db:"email"`
-	TemporaryPassword *string   `db:"temporary_password"`
-	CognitoID         *string   `db:"cognito_id"`
-	CreatedAt         time.Time `db:"created_at"`
-	UpdatedAt         time.Time `db:"updated_at"`
+	ID                int        `db:"id"`
+	Name              string     `db:"name"`
+	Email             string     `db:"email"`
+	TemporaryPassword *string    `db:"temporary_password"`
+	CognitoID         *string    `db:"cognito_id"`
+	Status            UserStatus `db:"status"`
+	CreatedAt         time.Time  `db:"created_at"`
+	UpdatedAt         time.Time  `db:"updated_at"`
 }
 
 type SignupRequest struct {

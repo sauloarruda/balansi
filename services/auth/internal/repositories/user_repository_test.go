@@ -2,23 +2,51 @@ package repositories
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"services/auth/internal/models"
 	"services/auth/internal/testhelpers"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+var sharedDBPool *pgxpool.Pool
+var sharedCleanup func()
+
+func TestMain(m *testing.M) {
+	// Setup shared database for all tests
+	pool, cleanup, err := testhelpers.SetupTestDBWithoutT()
+	if err != nil {
+		os.Exit(1)
+	}
+	sharedDBPool = pool
+	sharedCleanup = cleanup
+
+	// Create users table once
+	if err := testhelpers.CreateUsersTableWithoutT(pool); err != nil {
+		cleanup()
+		os.Exit(1)
+	}
+
+	// Run tests
+	code := m.Run()
+
+	// Cleanup
+	if sharedCleanup != nil {
+		sharedCleanup()
+	}
+	os.Exit(code)
+}
+
 func TestUserRepository_FindByEmail(t *testing.T) {
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
+	// Clean table before each test
+	testhelpers.CleanupUsersTable(t, sharedDBPool)
 
-	testhelpers.CreateUsersTable(t, pool)
-
-	repo := NewUserRepository(pool)
+	repo := NewUserRepository(sharedDBPool)
 	ctx := context.Background()
 
 	t.Run("user not found", func(t *testing.T) {
@@ -52,12 +80,10 @@ func TestUserRepository_FindByEmail(t *testing.T) {
 }
 
 func TestUserRepository_Create(t *testing.T) {
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
+	// Clean table before each test
+	testhelpers.CleanupUsersTable(t, sharedDBPool)
 
-	testhelpers.CreateUsersTable(t, pool)
-
-	repo := NewUserRepository(pool)
+	repo := NewUserRepository(sharedDBPool)
 	ctx := context.Background()
 
 	t.Run("create new user", func(t *testing.T) {
@@ -112,12 +138,10 @@ func TestUserRepository_Create(t *testing.T) {
 }
 
 func TestUserRepository_Update(t *testing.T) {
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
+	// Clean table before each test
+	testhelpers.CleanupUsersTable(t, sharedDBPool)
 
-	testhelpers.CreateUsersTable(t, pool)
-
-	repo := NewUserRepository(pool)
+	repo := NewUserRepository(sharedDBPool)
 	ctx := context.Background()
 
 	t.Run("update existing user", func(t *testing.T) {
