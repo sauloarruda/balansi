@@ -27,6 +27,7 @@ provider:
             - cognito-idp:ListUsers
             - cognito-idp:AdminGetUser
             - cognito-idp:ResendConfirmationCode
+            - cognito-idp:ConfirmSignUp
           Resource:
             - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${env:COGNITO_USER_POOL_ID}
   httpApi:
@@ -46,6 +47,9 @@ functions:
     events:
       - httpApi:
           path: /auth/sign-up
+          method: post
+      - httpApi:
+          path: /auth/confirm
           method: post
 
 package:

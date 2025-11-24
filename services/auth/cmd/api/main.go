@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	signupHandler *handlers.SignupHandler
-	dbPool        *pgxpool.Pool
+	signupHandler  *handlers.SignupHandler
+	confirmHandler *handlers.ConfirmHandler
+	dbPool         *pgxpool.Pool
 )
 
 func init() {
@@ -53,12 +54,23 @@ func init() {
 
 	// Initialize handlers
 	signupHandler = handlers.NewSignupHandler(signupService)
+	confirmHandler = handlers.NewConfirmHandler(signupService)
 }
 
 func cleanup() {
 	if dbPool != nil {
 		log.Println("Closing database connection pool...")
 		dbPool.Close()
+	}
+}
+
+func methodNotAllowedResponse() events.APIGatewayV2HTTPResponse {
+	return events.APIGatewayV2HTTPResponse{
+		StatusCode: 405,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: `{"error": "Method not allowed"}`,
 	}
 }
 
@@ -69,13 +81,12 @@ func handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 		if req.RequestContext.HTTP.Method == "POST" {
 			return signupHandler.Handle(ctx, req)
 		}
-		return events.APIGatewayV2HTTPResponse{
-			StatusCode: 405,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body: `{"error": "Method not allowed"}`,
-		}, nil
+		return methodNotAllowedResponse(), nil
+	case "/auth/confirm":
+		if req.RequestContext.HTTP.Method == "POST" {
+			return confirmHandler.Handle(ctx, req)
+		}
+		return methodNotAllowedResponse(), nil
 	default:
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 404,
@@ -134,7 +145,7 @@ func startLocalServer() {
 		port = "3000"
 	}
 
-	http.HandleFunc("/auth/sign-up", func(w http.ResponseWriter, r *http.Request) {
+	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
 		// Handle CORS preflight
 		if r.Method == "OPTIONS" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -199,10 +210,14 @@ func startLocalServer() {
 		if _, writeErr := w.Write([]byte(resp.Body)); writeErr != nil {
 			log.Printf("Failed to write response: %v", writeErr)
 		}
-	})
+	}
+
+	http.HandleFunc("/auth/sign-up", handlerFunc)
+	http.HandleFunc("/auth/confirm", handlerFunc)
 
 	log.Printf("Server starting on port %s", port)
 	log.Printf("Test endpoint: POST http://localhost:%s/auth/sign-up", port)
+	log.Printf("Test endpoint: POST http://localhost:%s/auth/confirm", port)
 	server := &http.Server{
 		Addr:              ":" + port,
 		ReadHeaderTimeout: 5 * time.Second,

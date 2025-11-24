@@ -4,6 +4,7 @@ import (
 	"context"
 	"services/auth/internal/models"
 
+	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -14,6 +15,14 @@ type MockUserRepository struct {
 
 func (m *MockUserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
 	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
+func (m *MockUserRepository) FindByID(ctx context.Context, id int64) (*models.User, error) {
+	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -50,7 +59,41 @@ func (m *MockCognitoClient) ResendConfirmationCode(ctx context.Context, username
 	return args.Error(0)
 }
 
-func (m *MockCognitoClient) ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string) error {
-	args := m.Called(ctx, cognitoID, confirmationCode)
+func (m *MockCognitoClient) ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string, usernameOrEmail ...string) error {
+	args := m.Called(ctx, cognitoID, confirmationCode, usernameOrEmail)
 	return args.Error(0)
+}
+
+func (m *MockCognitoClient) GetUsernameByUserSub(ctx context.Context, userSub string, email ...string) (string, error) {
+	args := m.Called(ctx, userSub, email)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockCognitoClient) InitiateAuth(ctx context.Context, cognitoID, password string) (*types.AuthenticationResultType, error) {
+	args := m.Called(ctx, cognitoID, password)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.AuthenticationResultType), args.Error(1)
+}
+
+// MockSignupService is a mock implementation of SignupServiceInterface.
+type MockSignupService struct {
+	mock.Mock
+}
+
+func (m *MockSignupService) Signup(ctx context.Context, name, email string) (*models.SignupOutcome, error) {
+	args := m.Called(ctx, name, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.SignupOutcome), args.Error(1)
+}
+
+func (m *MockSignupService) Confirm(ctx context.Context, userID int64, code string) (*models.TokenResponse, error) {
+	args := m.Called(ctx, userID, code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.TokenResponse), args.Error(1)
 }
