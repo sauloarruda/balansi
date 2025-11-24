@@ -10,7 +10,7 @@ const (
 )
 
 type User struct {
-	ID                int        `db:"id"`
+	ID                int64      `db:"id"`
 	Name              string     `db:"name"`
 	Email             string     `db:"email"`
 	TemporaryPassword *string    `db:"temporary_password"`
@@ -38,7 +38,7 @@ type SignupOutcome struct {
 }
 
 type SignupResponse struct {
-	ID     int          `json:"id"`
+	ID     int64        `json:"id"`
 	Name   string       `json:"name"`
 	Email  string       `json:"email"`
 	Status SignupStatus `json:"status"`

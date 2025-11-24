@@ -127,7 +127,7 @@ func TestConfirm_Integration_Success(t *testing.T) {
 	assert.Equal(t, "Bearer", tokenResp.TokenType, "Token type should be Bearer")
 
 	// Verify user status was updated in database
-	confirmedUser, err := userRepo.FindByID(ctx, int64(userID))
+	confirmedUser, err := userRepo.FindByID(ctx, userID)
 	require.NoError(t, err)
 	require.NotNil(t, confirmedUser)
 	assert.Equal(t, models.UserStatusConfirmed, confirmedUser.Status, "User status should be confirmed")
@@ -381,7 +381,7 @@ func TestConfirm_Integration_EndToEnd(t *testing.T) {
 	assert.NotEmpty(t, tokenResp.RefreshToken)
 
 	// Verify user is confirmed in database
-	confirmedUser, err := userRepo.FindByID(ctx, int64(userID))
+	confirmedUser, err := userRepo.FindByID(ctx, userID)
 	require.NoError(t, err)
 	require.NotNil(t, confirmedUser)
 	assert.Equal(t, models.UserStatusConfirmed, confirmedUser.Status)

@@ -461,7 +461,7 @@ func TestSignupService_Confirm_Idempotency_UserAlreadyConfirmedInCognito(t *test
 
 	// User exists in DB but status is pending_confirmation (stale state)
 	user := &models.User{
-		ID:                1, // User.ID is int, not int64
+		ID:                1,
 		Name:              testUserName,
 		Email:             email,
 		CognitoID:         &cognitoID,
