@@ -94,7 +94,7 @@ test.describe("Signup Flow", () => {
 	});
 
 	test("should display signup form with floating inputs", async ({ page }) => {
-		await expect(page.getByRole("heading", { name: "Discover, Organize, Achieve" })).toBeVisible();
+		await expect(page.getByRole("heading", { name: "Register, Calculate, Evaluate" })).toBeVisible();
 
 		const { nameInput, emailInput, submitButton } = getFormElements(page);
 		await expect(nameInput).toBeVisible();
@@ -242,7 +242,7 @@ test.describe("Signup Flow", () => {
 
 		// Verify error is displayed and form is still visible
 		await expect(page.getByText(/This email is already registered/)).toBeVisible();
-		await expect(page.getByRole("heading", { name: "Discover, Organize, Achieve" })).toBeVisible();
+		await expect(page.getByRole("heading", { name: "Register, Calculate, Evaluate" })).toBeVisible();
 
 		const { nameInput, emailInput } = getFormElements(page);
 		await expect(nameInput).toBeVisible();
@@ -314,7 +314,7 @@ test.describe("Signup Flow", () => {
 		await expect(page.getByText(/Could not connect to the server/)).toBeVisible({ timeout: 5000 });
 
 		// Verify form is still visible and re-enabled
-		await expect(page.getByRole("heading", { name: "Discover, Organize, Achieve" })).toBeVisible();
+		await expect(page.getByRole("heading", { name: "Register, Calculate, Evaluate" })).toBeVisible();
 
 		const { nameInput, emailInput, submitButton } = getFormElements(page);
 		await expect(nameInput).toBeVisible();
