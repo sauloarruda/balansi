@@ -65,19 +65,50 @@ func cleanup() {
 	}
 }
 
-func methodNotAllowedResponse() events.APIGatewayV2HTTPResponse {
-	return events.APIGatewayV2HTTPResponse{
+// addCORSHeaders adds CORS headers to the response
+// When using credentials: 'include', we must use specific origin, not '*'
+func addCORSHeaders(resp events.APIGatewayV2HTTPResponse, origin string) events.APIGatewayV2HTTPResponse {
+	if resp.Headers == nil {
+		resp.Headers = make(map[string]string)
+	}
+
+	// Use the origin from request, or allow all if not specified
+	if origin == "" {
+		origin = "*"
+	}
+
+	resp.Headers["Access-Control-Allow-Origin"] = origin
+	resp.Headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+	resp.Headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+
+	// Only add credentials header if origin is not wildcard
+	if origin != "*" {
+		resp.Headers["Access-Control-Allow-Credentials"] = "true"
+	}
+
+	return resp
+}
+
+func methodNotAllowedResponse(origin string) events.APIGatewayV2HTTPResponse {
+	resp := events.APIGatewayV2HTTPResponse{
 		StatusCode: 405,
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
 		Body: `{"error": "Method not allowed"}`,
 	}
+	return addCORSHeaders(resp, origin)
 }
 
 func handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	log.Printf("Received request: RawPath='%s', Path='%s', Method='%s'",
 		req.RawPath, req.RequestContext.HTTP.Path, req.RequestContext.HTTP.Method)
+
+	// Get origin from request headers
+	origin := req.Headers["origin"]
+	if origin == "" {
+		origin = req.Headers["Origin"]
+	}
 
 	// Simple routing based on path
 	path := req.RequestContext.HTTP.Path
@@ -89,30 +120,47 @@ func handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	stage := os.Getenv("STAGE")
 	if stage != "" {
 		prefix := "/" + stage
-		if strings.HasPrefix(path, prefix) {
-			path = strings.TrimPrefix(path, prefix)
+		path = strings.TrimPrefix(path, prefix)
+	}
+
+	// Handle CORS preflight requests
+	if req.RequestContext.HTTP.Method == "OPTIONS" {
+		resp := events.APIGatewayV2HTTPResponse{
+			StatusCode: 200,
+			Headers:    make(map[string]string),
+			Body:       "",
 		}
+		return addCORSHeaders(resp, origin), nil
 	}
 
 	switch path {
 	case "/auth/sign-up":
 		if req.RequestContext.HTTP.Method == "POST" {
-			return signupHandler.Handle(ctx, req)
+			resp, err := signupHandler.Handle(ctx, req)
+			if err != nil {
+				return resp, err
+			}
+			return addCORSHeaders(resp, origin), nil
 		}
-		return methodNotAllowedResponse(), nil
+		return methodNotAllowedResponse(origin), nil
 	case "/auth/confirm":
 		if req.RequestContext.HTTP.Method == "POST" {
-			return confirmHandler.Handle(ctx, req)
+			resp, err := confirmHandler.Handle(ctx, req)
+			if err != nil {
+				return resp, err
+			}
+			return addCORSHeaders(resp, origin), nil
 		}
-		return methodNotAllowedResponse(), nil
+		return methodNotAllowedResponse(origin), nil
 	default:
-		return events.APIGatewayV2HTTPResponse{
+		resp := events.APIGatewayV2HTTPResponse{
 			StatusCode: 404,
 			Headers: map[string]string{
 				"Content-Type": "application/json",
 			},
 			Body: `{"error": "Not found", "path": "` + path + `"}`,
-		}, nil
+		}
+		return addCORSHeaders(resp, origin), nil
 	}
 }
 

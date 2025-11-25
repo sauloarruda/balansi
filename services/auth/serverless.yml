@@ -41,7 +41,6 @@ provider:
       allowedMethods:
         - POST
         - OPTIONS
-      allowCredentials: true
 
 functions:
   api:
