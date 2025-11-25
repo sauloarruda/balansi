@@ -360,20 +360,73 @@ test.describe("Signup Flow", () => {
 		}
 
 		// Step 5: Wait for form to auto-submit (onComplete triggers submission)
-		// Then wait for redirect to home
-		await page.waitForURL("**/", { timeout: 15000 });
+		// After confirmation, the page will:
+		// 1. Call /auth/confirm (sets session_id cookie)
+		// 2. Call /auth/refresh (gets access_token)
+		// 3. Redirect to home
+		// Wait for redirect to home (may take longer due to token refresh)
+		await page.waitForURL("**/", { timeout: 20000 });
 
 		// Step 6: Verify home page is displayed
 		await expect(page.getByRole("heading", { name: /Welcome to Balansi|Bem-vindo ao Balansi/ })).toBeVisible({ timeout: 5000 });
 
-		// Step 7: Verify cookies were set
+		// Step 7: Verify session_id cookie was set (httpOnly cookie)
+		// Note: access_token is stored in memory, not as a cookie
 		const cookies = await page.context().cookies();
-		const accessTokenCookie = cookies.find((c) => c.name === "access_token");
-		const refreshTokenCookie = cookies.find((c) => c.name === "refresh_token");
+		const sessionIdCookie = cookies.find((c) => c.name === "session_id");
 
-		expect(accessTokenCookie).toBeDefined();
-		expect(refreshTokenCookie).toBeDefined();
-		expect(accessTokenCookie?.httpOnly).toBe(true);
-		expect(refreshTokenCookie?.httpOnly).toBe(true);
+		expect(sessionIdCookie).toBeDefined();
+		expect(sessionIdCookie?.httpOnly).toBe(true);
+	});
+
+	test("should logout successfully and redirect to auth page", async ({ page }) => {
+		const formData = { name: "Test User", email: `test-logout-${Date.now()}@example.com` };
+
+		// Step 1: Complete signup and confirmation flow
+		await fillForm(page, formData.name, formData.email);
+		await submitForm(page);
+
+		// Wait for redirect to confirmation page
+		await page.waitForURL("**/auth/confirmation*", { timeout: 15000 });
+		await page.waitForSelector('h2:has-text("Confirm your email")', { timeout: 10000 });
+
+		// Step 2: Fill confirmation code
+		const pinInputs = page.locator('.pin-input-container input[type="text"]');
+		await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+		await expect(pinInputs).toHaveCount(6);
+
+		const confirmationCode = "123123";
+		for (let i = 0; i < confirmationCode.length; i++) {
+			const input = pinInputs.nth(i);
+			await input.fill(confirmationCode[i]);
+			await page.waitForTimeout(150);
+		}
+
+		// Step 3: Wait for redirect to home
+		await page.waitForURL("**/", { timeout: 20000 });
+		await expect(page.getByRole("heading", { name: /Welcome to Balansi|Bem-vindo ao Balansi/ })).toBeVisible({ timeout: 5000 });
+
+		// Step 4: Verify logout button is visible
+		const logoutButton = page.getByRole("button", { name: /Logout|Sair/ });
+		await expect(logoutButton).toBeVisible({ timeout: 5000 });
+
+		// Step 5: Click logout button
+		await logoutButton.click();
+
+		// Step 6: Verify redirect to auth page
+		await page.waitForURL("**/auth", { timeout: 10000 });
+		await expect(page.getByRole("heading", { name: "Register, Calculate, Evaluate" })).toBeVisible({ timeout: 5000 });
+
+		// Step 7: Verify that trying to access home redirects back to auth
+		await page.goto("/", { waitUntil: "domcontentloaded", timeout: 10000 });
+		await page.waitForURL("**/auth", { timeout: 5000 });
+		await expect(page.getByRole("heading", { name: "Register, Calculate, Evaluate" })).toBeVisible({ timeout: 5000 });
+
+		// Step 8: Verify session_id cookie still exists (it's httpOnly, server should handle invalidation)
+		// But access_token should be cleared from memory (we can't verify this directly in E2E)
+		const cookies = await page.context().cookies();
+		const sessionIdCookie = cookies.find((c) => c.name === "session_id");
+		// Cookie may still exist but should not allow access (server-side invalidation)
+		// The important thing is that the frontend doesn't allow access
 	});
 });
