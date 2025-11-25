@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Test helpers
 const getFormElements = (page: Page) => ({
@@ -326,5 +326,51 @@ test.describe("Signup Flow", () => {
 		// Verify form values are preserved
 		await expect(nameInput).toHaveValue(formData.name);
 		await expect(emailInput).toHaveValue(formData.email);
+	});
+
+	test("should complete confirmation flow and redirect to home", async ({ page }) => {
+		const formData = { name: "Test User", email: `test-confirm-${Date.now()}@example.com` };
+
+		// Step 1: Complete signup (using real API)
+		await fillForm(page, formData.name, formData.email);
+		await submitForm(page);
+
+		// Wait for redirect to confirmation page
+		await page.waitForURL("**/auth/confirmation*", { timeout: 15000 });
+		await page.waitForSelector('h2:has-text("Confirm your email")', { timeout: 10000 });
+
+		// Step 2: Wait for PIN inputs to be visible
+		const pinInputs = page.locator('.pin-input-container input[type="text"]');
+		await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+		await expect(pinInputs).toHaveCount(6);
+
+		// Step 3: Use cognito-local's default confirmation code
+		// cognito-local uses "123123" as the default confirmation code for testing
+		const confirmationCode = "123123";
+
+		// Step 4: Fill confirmation code digit by digit
+		for (let i = 0; i < confirmationCode.length; i++) {
+			const input = pinInputs.nth(i);
+			await input.fill(confirmationCode[i]);
+			// Small delay to allow auto-tab to next input
+			await page.waitForTimeout(150);
+		}
+
+		// Step 5: Wait for form to auto-submit (onComplete triggers submission)
+		// Then wait for redirect to home
+		await page.waitForURL("**/", { timeout: 15000 });
+
+		// Step 6: Verify home page is displayed
+		await expect(page.getByRole("heading", { name: /Welcome to Balansi|Bem-vindo ao Balansi/ })).toBeVisible({ timeout: 5000 });
+
+		// Step 7: Verify cookies were set
+		const cookies = await page.context().cookies();
+		const accessTokenCookie = cookies.find((c) => c.name === "access_token");
+		const refreshTokenCookie = cookies.find((c) => c.name === "refresh_token");
+
+		expect(accessTokenCookie).toBeDefined();
+		expect(refreshTokenCookie).toBeDefined();
+		expect(accessTokenCookie?.httpOnly).toBe(true);
+		expect(refreshTokenCookie?.httpOnly).toBe(true);
 	});
 });
