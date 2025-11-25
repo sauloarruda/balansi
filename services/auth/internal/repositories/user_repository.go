@@ -77,6 +77,36 @@ func (r *UserRepository) FindByID(ctx context.Context, id int64) (*models.User, 
 	return &user, nil
 }
 
+func (r *UserRepository) FindByCognitoID(ctx context.Context, cognitoID string) (*models.User, error) {
+	query := `
+		SELECT id, name, email, temporary_password, cognito_id, status, created_at, updated_at
+		FROM users
+		WHERE cognito_id = $1
+		LIMIT 1
+	`
+
+	var user models.User
+	err := r.db.QueryRow(ctx, query, cognitoID).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.TemporaryPassword,
+		&user.CognitoID,
+		&user.Status,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	query := `
 		INSERT INTO users (name, email, temporary_password, cognito_id, status, created_at, updated_at)
