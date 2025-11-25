@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
-	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
+	import { api, ApiError, NetworkError } from "$lib/api";
+	import { checkAuth } from "$lib/auth/clientAuth";
 	import { signupData } from "$lib/auth/signupStorage";
+	import { refreshAccessToken } from "$lib/auth/token";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import PinInput from "$lib/components/ds/PinInput.svelte";
 	import { _ } from "$lib/i18n";
-	import type { PageData } from "./$types";
-
-	let { data }: { data: PageData } = $props();
 
 	let loading = $state(true);
 	let name = $state("");
@@ -22,7 +21,8 @@
 
 	// Check authentication and signup data
 	$effect(() => {
-		if (data.authenticated) {
+		const isAuth = checkAuth();
+		if (isAuth) {
 			// Already authenticated, redirect to home
 			goto("/");
 			return;
@@ -51,7 +51,7 @@
 	$effect(() => {
 		if (!loading && browser && !submitting) {
 			// Small delay to ensure PinInput is rendered
-			setTimeout(() => {
+			window.setTimeout(() => {
 				const firstInput = document.querySelector(
 					'input[aria-label="PIN digit 1"]'
 				) as HTMLInputElement;
@@ -77,38 +77,54 @@
 			{/if}
 
 			<form
-				method="POST"
-				action="?/confirm"
-				use:enhance={({ formData, cancel }) => {
+				onsubmit={async (e) => {
+					e.preventDefault();
+					if (!userId || confirmationCode.length !== 6) return;
+
 					submitting = true;
 					error = null;
 					pinError = false;
 
-					return async ({ result, update }) => {
-						submitting = false;
+					try {
+						// Use generated API client for consistency
+						await api.auth.confirmSignUp({
+							confirmRequest: {
+								userId,
+								code: confirmationCode,
+							},
+						});
 
-						if (result.type === "redirect") {
-							// Server redirected - clear signup data
-							// The redirect will happen automatically, but we need to clear localStorage
-							signupData.clear();
-							// Let SvelteKit handle the redirect automatically
-							await update();
+						// session_id cookie is set by the server (httpOnly)
+						// Now get access_token by calling /auth/refresh
+						const token = await refreshAccessToken();
+
+						if (!token) {
+							// Failed to get access token - this could be a session issue
+							console.error("Failed to refresh access token after confirmation");
+							error = $_("auth.confirmation.errors.connectionError");
 							return;
 						}
 
-						if (result.type === "success") {
-							// This shouldn't happen if redirect is working, but handle it anyway
-							signupData.clear();
-							if (browser) {
-								window.location.href = "/";
-							}
-						} else if (result.type === "failure" && result.data) {
-							const data = result.data as { error?: string; code?: string };
-							pinError = true;
-							error = data.error || $_("auth.confirmation.errors.connectionError");
-							await update();
+						// Clear signup data
+						signupData.clear();
+
+						// Redirect to home
+						goto("/");
+					} catch (err) {
+						console.error("Error confirming code:", err);
+						pinError = true;
+
+						if (err instanceof ApiError) {
+							// API error already translated by wrapper
+							error = err.message;
+						} else if (err instanceof NetworkError) {
+							error = err.message;
+						} else {
+							error = $_("auth.confirmation.errors.connectionError");
 						}
-					};
+					} finally {
+						submitting = false;
+					}
 				}}
 				class="flex flex-col gap-6 my-8"
 			>
@@ -128,27 +144,16 @@
 							confirmationCode = code;
 							// Auto-submit when code is complete
 							if (code.length === 6 && userId && !submitting) {
-								const form = document.querySelector('form[action="?/confirm"]') as HTMLFormElement;
+								// Find the form element (it's the parent form)
+								const form = document.querySelector("form") as HTMLFormElement;
 								if (form) {
-									// Update hidden input
-									const codeInput = form.querySelector('input[name="code"]') as HTMLInputElement;
-									if (codeInput) {
-										codeInput.value = code;
-									}
+									// Trigger form submission
 									form.requestSubmit();
 								}
 							}
 						}}
 						onChange={(code) => {
 							confirmationCode = code;
-							// Update hidden input
-							const form = document.querySelector('form[action="?/confirm"]') as HTMLFormElement;
-							if (form) {
-								const codeInput = form.querySelector('input[name="code"]') as HTMLInputElement;
-								if (codeInput) {
-									codeInput.value = code;
-								}
-							}
 							// Clear error when user starts typing
 							if (error) {
 								error = null;
