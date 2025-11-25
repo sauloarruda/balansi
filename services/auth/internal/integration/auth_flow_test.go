@@ -170,3 +170,4 @@ func extractSessionID(cookieHeader string) string {
 	}
 	return ""
 }
+
