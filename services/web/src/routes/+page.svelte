@@ -1,24 +1,34 @@
 <script lang="ts">
-	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
+	import { checkAuth, logout as clientLogout } from "$lib/auth/clientAuth";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import { _ } from "$lib/i18n";
-	import type { PageData } from "./$types";
-
-	let { data }: { data: PageData } = $props();
 
 	let loading = $state(true);
+	let authenticated = $state(checkAuth());
 	let loggingOut = $state(false);
 
-	// Redirect if not authenticated
+	// Check authentication on mount
 	$effect(() => {
-		if (!data.authenticated) {
+		if (!authenticated) {
 			goto("/auth");
 		} else {
 			loading = false;
 		}
 	});
+
+	async function handleLogout() {
+		loggingOut = true;
+		try {
+			await clientLogout();
+			goto("/auth");
+		} catch (error) {
+			console.error("Logout error:", error);
+		} finally {
+			loggingOut = false;
+		}
+	}
 </script>
 
 <Container {loading}>
@@ -30,25 +40,9 @@
 			<p class="text-center mb-6">
 				{$_("home.ready")}
 			</p>
-			<form
-				method="POST"
-				action="?/logout"
-				use:enhance={({ formData, cancel }) => {
-					loggingOut = true;
-					return async ({ result, update }) => {
-						loggingOut = false;
-						if (result.type === "redirect") {
-							// Server redirected - let it handle the redirect
-							await update();
-							return;
-						}
-					};
-				}}
-			>
-				<Button type="submit" loading={loggingOut} disabled={loggingOut}>
-					{$_("auth.logout")}
-				</Button>
-			</form>
+			<Button type="button" loading={loggingOut} disabled={loggingOut} onclick={handleLogout}>
+				{$_("auth.logout")}
+			</Button>
 		</div>
 	{/snippet}
 </Container>
