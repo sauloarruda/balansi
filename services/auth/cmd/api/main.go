@@ -164,11 +164,19 @@ func startLocalServer() {
 	}
 
 	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
+		// Get origin from request
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			// Fallback for same-origin requests
+			origin = "*"
+		}
+
 		// Handle CORS preflight
 		if r.Method == "OPTIONS" {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.WriteHeader(200)
 			return
 		}
@@ -216,9 +224,11 @@ func startLocalServer() {
 		}
 
 		// Add CORS headers to response
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		// When using credentials: 'include', we must use specific origin, not '*'
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		// Write response
 		for k, v := range resp.Headers {
