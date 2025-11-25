@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"services/auth/internal/cognito"
 	"services/auth/internal/encryption"
+	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
 	"services/auth/internal/testhelpers"
@@ -300,7 +301,7 @@ func (s *SignupService) saveUser(ctx context.Context, user *models.User, update 
 	return nil
 }
 
-func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.TokenResponse, error) {
+func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.ConfirmResult, error) {
 	// 1. Find user by ID
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -373,12 +374,23 @@ func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) 
 		// Log the error details but return a generic error to the user
 		// This is critical for security - don't leak implementation details
 		// But for debugging 500s, we need to know what happened
-		fmt.Printf("InitiateAuth failed: %v\n", err)
+		logger.Error("InitiateAuth failed: %v", err)
 		return nil, fmt.Errorf("failed to initiate auth: %w", err)
 	}
 
-	// 8. Map response
-	return s.mapToTokenResponse(authResult), nil
+	// 8. Clear temporary password from database after successful login
+	user.TemporaryPassword = nil
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		// Log warning but don't fail - login succeeded, password cleanup is non-critical
+		logger.Error("Failed to clear temporary password after confirmation: %v", err)
+	}
+
+	// 9. Return session data for cookie
+	return &models.ConfirmResult{
+		RefreshToken: aws.ToString(authResult.RefreshToken),
+		UserID:       user.ID,
+		Username:     username,
+	}, nil
 }
 
 // isUserAlreadyConfirmedError checks if the error indicates the user is already confirmed

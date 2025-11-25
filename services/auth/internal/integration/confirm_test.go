@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,7 +77,8 @@ func TestConfirm_Integration_Success(t *testing.T) {
 	// Initialize dependencies
 	userRepo := repositories.NewUserRepository(pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
-	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService, sessionService)
 
 	ctx := context.Background()
 	name := "Confirm Integration Test User"
@@ -114,17 +116,16 @@ func TestConfirm_Integration_Success(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode, "Expected success but got status %d: %s", resp.StatusCode, resp.Body)
 	assert.Equal(t, "application/json", resp.Headers["Content-Type"])
 
-	var tokenResp models.TokenResponse
-	err = json.Unmarshal([]byte(resp.Body), &tokenResp)
-	require.NoError(t, err)
+	// Verify cookie is set
+	assert.Contains(t, resp.Headers["Set-Cookie"], "session_id=", "Session cookie should be set")
+	assert.Contains(t, resp.Headers["Set-Cookie"], "HttpOnly", "Session cookie should be HttpOnly")
+	assert.Contains(t, resp.Headers["Set-Cookie"], "SameSite=Lax", "Session cookie should have SameSite=Lax")
 
-	// Verify tokens are present
-	assert.NotEmpty(t, tokenResp.AccessToken, "Access token should be present")
-	assert.NotEmpty(t, tokenResp.IDToken, "ID token should be present")
-	assert.NotEmpty(t, tokenResp.RefreshToken, "Refresh token should be present")
-	// ExpiresIn might be 0 in cognito-local, so we just verify it's not negative
-	assert.GreaterOrEqual(t, tokenResp.ExpiresIn, int32(0), "ExpiresIn should be >= 0")
-	assert.Equal(t, "Bearer", tokenResp.TokenType, "Token type should be Bearer")
+	// Verify response body
+	var successResp map[string]interface{}
+	err = json.Unmarshal([]byte(resp.Body), &successResp)
+	require.NoError(t, err)
+	assert.Equal(t, true, successResp["success"], "Response should indicate success")
 
 	// Verify user status was updated in database
 	confirmedUser, err := userRepo.FindByID(ctx, userID)
@@ -154,7 +155,8 @@ func TestConfirm_Integration_UserNotFound(t *testing.T) {
 
 	userRepo := repositories.NewUserRepository(pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
-	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService, sessionService)
 
 	ctx := context.Background()
 
@@ -196,7 +198,8 @@ func TestConfirm_Integration_InvalidCode(t *testing.T) {
 
 	userRepo := repositories.NewUserRepository(pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
-	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService, sessionService)
 
 	ctx := context.Background()
 	name := "Invalid Code Test User"
@@ -256,7 +259,8 @@ func TestConfirm_Integration_AlreadyConfirmed(t *testing.T) {
 
 	userRepo := repositories.NewUserRepository(pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
-	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService, sessionService)
 
 	ctx := context.Background()
 	name := "Already Confirmed Test User"
@@ -329,7 +333,8 @@ func TestConfirm_Integration_EndToEnd(t *testing.T) {
 
 	userRepo := repositories.NewUserRepository(pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
-	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService, sessionService)
 
 	ctx := context.Background()
 	name := "E2E Test User"
@@ -371,14 +376,21 @@ func TestConfirm_Integration_EndToEnd(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, resp.StatusCode, "Expected success: %s", resp.Body)
 
-	// Verify tokens
-	var tokenResp models.TokenResponse
-	err = json.Unmarshal([]byte(resp.Body), &tokenResp)
+	// Verify response body
+	var successResp map[string]interface{}
+	err = json.Unmarshal([]byte(resp.Body), &successResp)
 	require.NoError(t, err)
+	assert.Equal(t, true, successResp["success"], "Response should indicate success")
 
-	assert.NotEmpty(t, tokenResp.AccessToken)
-	assert.NotEmpty(t, tokenResp.IDToken)
-	assert.NotEmpty(t, tokenResp.RefreshToken)
+	// Verify cookie is set
+	assert.Contains(t, resp.Headers["Set-Cookie"], "session_id=", "Session cookie should be set")
+	assert.Contains(t, resp.Headers["Set-Cookie"], "HttpOnly", "Session cookie should be HttpOnly")
+	assert.Contains(t, resp.Headers["Set-Cookie"], "SameSite=Lax", "Session cookie should have SameSite=Lax")
+
+	// Extract session_id from cookie
+	cookieHeader := resp.Headers["Set-Cookie"]
+	sessionID := extractSessionIDFromCookie(cookieHeader)
+	require.NotEmpty(t, sessionID, "Session ID should be extracted from cookie")
 
 	// Verify user is confirmed in database
 	confirmedUser, err := userRepo.FindByID(ctx, userID)
@@ -386,8 +398,37 @@ func TestConfirm_Integration_EndToEnd(t *testing.T) {
 	require.NotNil(t, confirmedUser)
 	assert.Equal(t, models.UserStatusConfirmed, confirmedUser.Status)
 
-	// Verify we can use the tokens to authenticate (optional - would require another endpoint)
-	// For now, we just verify the tokens are valid format
-	assert.Greater(t, len(tokenResp.AccessToken), 100, "Access token should be substantial length")
-	assert.Greater(t, len(tokenResp.IDToken), 100, "ID token should be substantial length")
+	// Step 3: Test refresh endpoint to get access token
+	refreshHandler := handlers.NewRefreshHandler(sessionService)
+	refreshReq := events.APIGatewayV2HTTPRequest{
+		Cookies: []string{"session_id=" + sessionID},
+	}
+
+	refreshResp, err := refreshHandler.Handle(ctx, refreshReq)
+	require.NoError(t, err)
+	require.Equal(t, 200, refreshResp.StatusCode, "Refresh should succeed: %s", refreshResp.Body)
+
+	// Verify access token response
+	var accessTokenResp models.AccessTokenResponse
+	err = json.Unmarshal([]byte(refreshResp.Body), &accessTokenResp)
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, accessTokenResp.AccessToken, "Access token should be present")
+	assert.Greater(t, len(accessTokenResp.AccessToken), 100, "Access token should be substantial length")
+	// ExpiresIn might be 0 in cognito-local, so we just verify it's not negative
+	assert.GreaterOrEqual(t, accessTokenResp.ExpiresIn, int32(0), "ExpiresIn should be >= 0")
+}
+
+// extractSessionIDFromCookie extracts the session_id value from Set-Cookie header
+func extractSessionIDFromCookie(cookieHeader string) string {
+	// Format: "session_id=value; Path=/; HttpOnly; ..."
+	parts := strings.Split(cookieHeader, ";")
+	if len(parts) == 0 {
+		return ""
+	}
+	sessionPart := strings.TrimSpace(parts[0])
+	if strings.HasPrefix(sessionPart, "session_id=") {
+		return strings.TrimPrefix(sessionPart, "session_id=")
+	}
+	return ""
 }
