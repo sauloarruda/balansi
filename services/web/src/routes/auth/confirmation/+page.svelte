@@ -1,60 +1,66 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import { goto } from "$app/navigation";
-	import Container from "$lib/components/ds/Container.svelte";
-	import Input from "$lib/components/ds/Input.svelte";
-	import Button from "$lib/components/ds/Button.svelte";
 	import { browser } from "$app/environment";
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { signupData } from "$lib/auth/signupStorage";
+	import Button from "$lib/components/ds/Button.svelte";
+	import Container from "$lib/components/ds/Container.svelte";
+	import PinInput from "$lib/components/ds/PinInput.svelte";
 	import { _ } from "$lib/i18n";
+	import type { PageData } from "./$types";
+
+	let { data }: { data: PageData } = $props();
 
 	let loading = $state(true);
 	let name = $state("");
 	let email = $state("");
+	let userId = $state<number | null>(null);
 	let confirmationCode = $state("");
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
+	let pinError = $state(false);
 
-	onMount(() => {
-		// Check if user already has tokens
-		const accessToken = localStorage.getItem("access_token");
-		const refreshToken = localStorage.getItem("refresh_token");
-
-		if (accessToken && refreshToken) {
+	// Check authentication and signup data
+	$effect(() => {
+		if (data.authenticated) {
 			// Already authenticated, redirect to home
 			goto("/");
 			return;
 		}
 
-		// Get name and email from query params
-		if (browser) {
-			const params = new URLSearchParams(window.location.search);
-			name = params.get("name") || "";
-			email = params.get("email") || "";
-
-			if (!name || !email) {
-				// Missing required params, redirect to signup
-				goto("/auth");
-				return;
-			}
+		if (!browser) {
+			loading = false;
+			return;
 		}
 
+		// Get signup data from localStorage
+		const signup = signupData.get();
+		if (!signup) {
+			// Missing signup data, redirect to signup
+			goto("/auth");
+			return;
+		}
+
+		userId = signup.userId;
+		name = signup.name;
+		email = signup.email;
 		loading = false;
 	});
 
-	async function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		submitting = true;
-		error = null;
-
-		try {
-			// TODO: Implement confirmation code submission
-			console.log("Submitting confirmation code:", confirmationCode);
-		} catch {
-			error = $_("auth.confirmation.errors.connectionError");
-		} finally {
-			submitting = false;
+	// Focus PIN input when page loads
+	$effect(() => {
+		if (!loading && browser && !submitting) {
+			// Small delay to ensure PinInput is rendered
+			setTimeout(() => {
+				const firstInput = document.querySelector(
+					'input[aria-label="PIN digit 1"]'
+				) as HTMLInputElement;
+				if (firstInput && !firstInput.disabled) {
+					firstInput.focus();
+				}
+			}, 100);
 		}
-	}
+	});
 </script>
 
 <Container {loading}>
@@ -70,21 +76,95 @@
 				<div class="error-message mb-4">{error}</div>
 			{/if}
 
-			<form onsubmit={handleSubmit} class="flex flex-col gap-6 my-8">
-				<div class="relative max-w-xs mx-auto">
-					<Input
-						type="text"
-						id="confirmation-code"
-						name="code"
-						label={$_("auth.confirmation.code.label")}
-						placeholder={$_("auth.confirmation.code.placeholder")}
-						required
-						errorMessage={$_("auth.confirmation.code.error")}
+			<form
+				method="POST"
+				action="?/confirm"
+				use:enhance={({ formData, cancel }) => {
+					submitting = true;
+					error = null;
+					pinError = false;
+
+					return async ({ result, update }) => {
+						submitting = false;
+
+						if (result.type === "redirect") {
+							// Server redirected - clear signup data
+							// The redirect will happen automatically, but we need to clear localStorage
+							signupData.clear();
+							// Let SvelteKit handle the redirect automatically
+							await update();
+							return;
+						}
+
+						if (result.type === "success") {
+							// This shouldn't happen if redirect is working, but handle it anyway
+							signupData.clear();
+							if (browser) {
+								window.location.href = "/";
+							}
+						} else if (result.type === "failure" && result.data) {
+							const data = result.data as { error?: string; code?: string };
+							pinError = true;
+							error = data.error || $_("auth.confirmation.errors.connectionError");
+							await update();
+						}
+					};
+				}}
+				class="flex flex-col gap-6 my-8"
+			>
+				<input type="hidden" name="userId" value={userId || ""} />
+				<input type="hidden" name="code" value={confirmationCode} />
+				<div class="flex flex-col gap-2">
+					<label for="confirmation-code" class="text-sm font-medium text-gray-700 text-center">
+						{$_("auth.confirmation.code.label")}
+					</label>
+					<PinInput
+						length={6}
 						bind:value={confirmationCode}
 						disabled={submitting}
+						error={pinError}
+						errorMessage={error || ""}
+						onComplete={(code) => {
+							confirmationCode = code;
+							// Auto-submit when code is complete
+							if (code.length === 6 && userId && !submitting) {
+								const form = document.querySelector('form[action="?/confirm"]') as HTMLFormElement;
+								if (form) {
+									// Update hidden input
+									const codeInput = form.querySelector('input[name="code"]') as HTMLInputElement;
+									if (codeInput) {
+										codeInput.value = code;
+									}
+									form.requestSubmit();
+								}
+							}
+						}}
+						onChange={(code) => {
+							confirmationCode = code;
+							// Update hidden input
+							const form = document.querySelector('form[action="?/confirm"]') as HTMLFormElement;
+							if (form) {
+								const codeInput = form.querySelector('input[name="code"]') as HTMLInputElement;
+								if (codeInput) {
+									codeInput.value = code;
+								}
+							}
+							// Clear error when user starts typing
+							if (error) {
+								error = null;
+								pinError = false;
+							}
+						}}
 					/>
 				</div>
-				<Button type="submit" loading={submitting} disabled={submitting}>
+				{#if error && !pinError}
+					<div class="error-message text-center text-sm text-red-600">{error}</div>
+				{/if}
+				<Button
+					type="submit"
+					loading={submitting}
+					disabled={submitting || confirmationCode.length !== 6}
+				>
 					{$_("common.confirm")}
 				</Button>
 			</form>

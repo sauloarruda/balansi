@@ -11,6 +11,12 @@ export const API_ERROR_CODES = {
 
 	// Erros de conflito (409)
 	user_exists: "auth.signup.errors.userExists",
+	user_already_confirmed: "auth.confirmation.errors.userAlreadyConfirmed",
+
+	// Erros de confirmação (404, 422)
+	user_not_found: "auth.confirmation.errors.userNotFound",
+	invalid_code: "auth.confirmation.errors.invalidCode",
+	expired_code: "auth.confirmation.errors.expiredCode",
 
 	// Erros de servidor (500)
 	internal_error: "errors.serverError",

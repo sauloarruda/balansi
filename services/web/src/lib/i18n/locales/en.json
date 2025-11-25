@@ -37,9 +37,14 @@
 				"error": "Please enter the confirmation code."
 			},
 			"errors": {
-				"connectionError": "Could not connect to the server. Please check your connection and try again."
+				"connectionError": "Could not connect to the server. Please check your connection and try again.",
+				"invalidCode": "Invalid code. Please check and try again.",
+				"expiredCode": "Code expired. Please request a new code.",
+				"userNotFound": "User not found. Please try signing up again.",
+				"userAlreadyConfirmed": "This user is already confirmed. You can log in."
 			}
-		}
+		},
+		"logout": "Logout"
 	},
 	"home": {
 		"welcome": "Welcome to Balansi",
