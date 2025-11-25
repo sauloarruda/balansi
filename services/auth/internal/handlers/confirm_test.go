@@ -16,7 +16,8 @@ import (
 
 func TestConfirmHandler_Handle_Success(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 
 	ctx := context.Background()
 	reqBody := `{"userId": 1, "code": "123456"}`
@@ -24,37 +25,41 @@ func TestConfirmHandler_Handle_Success(t *testing.T) {
 		Body: reqBody,
 	}
 
-	expectedTokens := &models.TokenResponse{
-		AccessToken:  "access-token-123",
-		IDToken:      "id-token-123",
+	expectedResult := &models.ConfirmResult{
 		RefreshToken: "refresh-token-123",
-		ExpiresIn:    3600,
-		TokenType:    "Bearer",
+		UserID:       1,
+		Username:     "testuser",
 	}
 
-	mockService.On("Confirm", ctx, int64(1), "123456").Return(expectedTokens, nil)
+	sessionData := &models.SessionCookieData{
+		RefreshToken: expectedResult.RefreshToken,
+		UserID:       expectedResult.UserID,
+		Username:     expectedResult.Username,
+	}
+
+	mockService.On("Confirm", ctx, int64(1), "123456").Return(expectedResult, nil)
+	mockSessionService.On("EncryptSessionData", sessionData).Return("encrypted-session-data", nil)
 
 	resp, err := handler.Handle(ctx, req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "application/json", resp.Headers["Content-Type"])
+	assert.Contains(t, resp.Headers["Set-Cookie"], "session_id=encrypted-session-data")
 
-	var tokenResp models.TokenResponse
-	err = json.Unmarshal([]byte(resp.Body), &tokenResp)
+	var successResp map[string]interface{}
+	err = json.Unmarshal([]byte(resp.Body), &successResp)
 	require.NoError(t, err)
-	assert.Equal(t, expectedTokens.AccessToken, tokenResp.AccessToken)
-	assert.Equal(t, expectedTokens.IDToken, tokenResp.IDToken)
-	assert.Equal(t, expectedTokens.RefreshToken, tokenResp.RefreshToken)
-	assert.Equal(t, expectedTokens.ExpiresIn, tokenResp.ExpiresIn)
-	assert.Equal(t, expectedTokens.TokenType, tokenResp.TokenType)
+	assert.Equal(t, true, successResp["success"])
 
 	mockService.AssertExpectations(t)
+	mockSessionService.AssertExpectations(t)
 }
 
 func TestConfirmHandler_Handle_UserNotFound(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 
 	ctx := context.Background()
 	reqBody := `{"userId": 999, "code": "123456"}`
@@ -81,7 +86,8 @@ func TestConfirmHandler_Handle_UserNotFound(t *testing.T) {
 
 func TestConfirmHandler_Handle_UserAlreadyConfirmed(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 
 	ctx := context.Background()
 	reqBody := `{"userId": 1, "code": "123456"}`
@@ -108,7 +114,8 @@ func TestConfirmHandler_Handle_UserAlreadyConfirmed(t *testing.T) {
 
 func TestConfirmHandler_Handle_InvalidCode(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 
 	ctx := context.Background()
 	reqBody := `{"userId": 1, "code": "wrong-code"}`
@@ -135,7 +142,8 @@ func TestConfirmHandler_Handle_InvalidCode(t *testing.T) {
 
 func TestConfirmHandler_Handle_ExpiredCode(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 
 	ctx := context.Background()
 	reqBody := `{"userId": 1, "code": "expired-code"}`
@@ -162,7 +170,8 @@ func TestConfirmHandler_Handle_ExpiredCode(t *testing.T) {
 
 func TestConfirmHandler_Handle_InternalError(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 
 	ctx := context.Background()
 	reqBody := `{"userId": 1, "code": "123456"}`
@@ -189,7 +198,8 @@ func TestConfirmHandler_Handle_InternalError(t *testing.T) {
 
 func TestConfirmHandler_Handle_Validation(t *testing.T) {
 	mockService := new(testhelpers.MockSignupService)
-	handler := NewConfirmHandlerWithInterface(mockService)
+	mockSessionService := new(testhelpers.MockSessionService)
+	handler := NewConfirmHandlerWithInterface(mockService, mockSessionService)
 	ctx := context.Background()
 
 	tests := []struct {

@@ -12,3 +12,11 @@ type TokenResponse struct {
 	ExpiresIn    int32  `json:"expiresIn"`
 	TokenType    string `json:"tokenType"`
 }
+
+// ConfirmResult represents the result of a successful confirmation
+// Contains data needed to create session cookie
+type ConfirmResult struct {
+	RefreshToken string `json:"refreshToken"`
+	UserID       int64  `json:"userId"`
+	Username     string `json:"username"`
+}

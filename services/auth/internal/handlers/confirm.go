@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"services/auth/internal/http"
 	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/services"
@@ -13,18 +14,20 @@ import (
 )
 
 type ConfirmHandler struct {
-	signupService testhelpers.SignupServiceInterface
+	signupService  testhelpers.SignupServiceInterface
+	sessionService testhelpers.SessionServiceInterface
 }
 
-func NewConfirmHandler(signupService *services.SignupService) *ConfirmHandler {
-	return NewConfirmHandlerWithInterface(signupService)
+func NewConfirmHandler(signupService *services.SignupService, sessionService *services.SessionService) *ConfirmHandler {
+	return NewConfirmHandlerWithInterface(signupService, sessionService)
 }
 
 // NewConfirmHandlerWithInterface creates a handler with an interface-based service
 // This allows for easier testing with mocks.
-func NewConfirmHandlerWithInterface(signupService testhelpers.SignupServiceInterface) *ConfirmHandler {
+func NewConfirmHandlerWithInterface(signupService testhelpers.SignupServiceInterface, sessionService testhelpers.SessionServiceInterface) *ConfirmHandler {
 	return &ConfirmHandler{
-		signupService: signupService,
+		signupService:  signupService,
+		sessionService: sessionService,
 	}
 }
 
@@ -45,7 +48,7 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 	}
 
 	// Call service
-	tokens, err := h.signupService.Confirm(ctx, confirmReq.UserID, confirmReq.Code)
+	confirmResult, err := h.signupService.Confirm(ctx, confirmReq.UserID, confirmReq.Code)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrUserNotFound):
@@ -63,18 +66,38 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 		}
 	}
 
-	// Prepare response
-	body, err := json.Marshal(tokens)
-	if err != nil {
-		logger.Error("Failed to marshal response: %v", err)
-		return errorResponse(500, "internal_error", "Failed to marshal response"), nil
+	// Create session cookie data
+	sessionData := &models.SessionCookieData{
+		RefreshToken: confirmResult.RefreshToken,
+		UserID:       confirmResult.UserID,
+		Username:     confirmResult.Username,
 	}
 
+	// Encrypt session data for cookie
+	encryptedSessionData, err := h.sessionService.EncryptSessionData(sessionData)
+	if err != nil {
+		logger.Error("Failed to encrypt session data: %v", err)
+		return errorResponse(500, "internal_error", "Failed to create session"), nil
+	}
+
+	// Create cookie header
+	// Cookie expires in 30 days (same as Cognito refresh token)
+	cookieValue := http.BuildCookieHeader(encryptedSessionData, "session_id", req)
+
+	// Log cookie configuration for debugging
+	origin := req.Headers["origin"]
+	if origin == "" {
+		origin = req.Headers["Origin"]
+	}
+	logger.Info("Setting cookie - Origin: %s, API Domain: %s", origin, req.RequestContext.DomainName)
+
+	// Return success response with cookie
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: 200,
 		Headers: map[string]string{
 			"Content-Type": "application/json",
+			"Set-Cookie":   cookieValue,
 		},
-		Body: string(body),
+		Body: `{"success": true}`,
 	}, nil
 }
