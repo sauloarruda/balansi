@@ -1,8 +1,8 @@
 import { browser } from "$app/environment";
-import { get } from "svelte/store";
 import { _ } from "$lib/i18n";
 import { translateApiError } from "$lib/i18n/helpers";
-import { Configuration, AuthenticationApi, ResponseError, FetchError } from "./generated";
+import { get } from "svelte/store";
+import { AuthenticationApi, Configuration, FetchError, ResponseError } from "./generated";
 
 /**
  * Custom API error with translated message
@@ -31,9 +31,13 @@ export class NetworkError extends Error {
 
 /**
  * Get API base URL from environment
+ * Exported for use in server-side code
  */
-function getApiBaseUrl(): string {
-	if (!browser) return "http://localhost:3000";
+export function getApiBaseUrl(): string {
+	if (!browser) {
+		// Server-side: use environment variable or default
+		return process.env.VITE_API_URL || "http://localhost:3000";
+	}
 	return import.meta.env.VITE_API_URL || "http://localhost:3000";
 }
 
@@ -43,7 +47,22 @@ function getApiBaseUrl(): string {
 function createApiConfig(): Configuration {
 	return new Configuration({
 		basePath: getApiBaseUrl(),
-		fetchApi: fetch, // Use native fetch
+		fetchApi: async (url, options) => {
+			// In browser, we rely on 'credentials: include'
+			if (browser) {
+				return fetch(url, {
+					...options,
+					credentials: "include", // Send/receive cookies automatically
+				});
+			}
+
+			// In server-side (Node), fetch is global but doesn't handle cookies automatically
+			// Cookies must be passed explicitly via headers or using SvelteKit's event.fetch
+			// This default config is mainly for client-side usage.
+			// For server-side actions/load functions, it is recommended to instantiate the API client
+			// with a custom configuration that includes the specific fetch or headers needed.
+			return fetch(url, options);
+		},
 	});
 }
 
