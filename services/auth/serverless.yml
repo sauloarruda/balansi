@@ -18,6 +18,9 @@ provider:
     COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
     COGNITO_CLIENT_SECRET: ${env:COGNITO_CLIENT_SECRET, ''}
     COGNITO_ENDPOINT: ${env:COGNITO_ENDPOINT, ''}
+    FRONTEND_DOMAIN: ${env:FRONTEND_DOMAIN, ''}
+    API_DOMAIN: ${env:API_DOMAIN, ''}
+    COOKIE_DOMAIN: ${env:COOKIE_DOMAIN, ''}
   iam:
     role:
       statements:
@@ -32,15 +35,7 @@ provider:
           Resource:
             - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${env:COGNITO_USER_POOL_ID}
   httpApi:
-    cors:
-      allowedOrigins:
-        - '*'
-      allowedHeaders:
-        - Content-Type
-        - Authorization
-      allowedMethods:
-        - POST
-        - OPTIONS
+    cors: false  # Disable API Gateway CORS - handled in Lambda code
 
 functions:
   api:
@@ -50,8 +45,26 @@ functions:
           path: /auth/sign-up
           method: post
       - httpApi:
+          path: /auth/sign-up
+          method: options
+      - httpApi:
           path: /auth/confirm
           method: post
+      - httpApi:
+          path: /auth/confirm
+          method: options
+      - httpApi:
+          path: /auth/refresh
+          method: post
+      - httpApi:
+          path: /auth/refresh
+          method: options
+      - httpApi:
+          path: /auth/me
+          method: get
+      - httpApi:
+          path: /auth/me
+          method: options
 
 package:
   patterns:

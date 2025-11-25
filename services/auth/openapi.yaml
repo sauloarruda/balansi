@@ -105,7 +105,8 @@ paths:
       summary: Confirm user account
       description: |
         Confirms a user's account using the code sent via email.
-        Returns authentication tokens upon successful confirmation.
+        Sets a session_id cookie (httpOnly) containing encrypted session data.
+        The client should then call /auth/refresh to obtain an access token.
       operationId: confirmSignUp
       tags:
         - Authentication
@@ -117,11 +118,21 @@ paths:
               $ref: "#/components/schemas/ConfirmRequest"
       responses:
         "200":
-          description: Account confirmed successfully. Returns JWT tokens.
+          description: Account confirmed successfully. Sets session_id cookie.
+          headers:
+            Set-Cookie:
+              description: Session ID cookie (httpOnly) containing encrypted session data
+              schema:
+                type: string
+                example: "session_id=encrypted_data; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TokenResponse"
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
         "404":
           description: User not found or invalid userId
           content:
@@ -142,6 +153,106 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Invalid or expired confirmation code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      description: |
+        Uses the session_id cookie to obtain a new access token from Cognito.
+        The session_id cookie must contain a valid refresh token and the user must be confirmed.
+      operationId: refreshToken
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Access token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        "401":
+          description: Invalid or missing session cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidSession:
+                  summary: Invalid session
+                  value:
+                    code: "invalid_session"
+                    message: "Invalid session"
+                refreshFailed:
+                  summary: Refresh failed
+                  value:
+                    code: "refresh_failed"
+                    message: "Failed to refresh token"
+        "403":
+          description: User not confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                userNotConfirmed:
+                  summary: User not confirmed
+                  value:
+                    code: "user_not_confirmed"
+                    message: "User not confirmed"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      summary: Get current user information
+      description: |
+        Returns information about the currently authenticated user.
+        Requires a valid access token in the Authorization header.
+      operationId: getMe
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfoResponse"
+        "401":
+          description: Missing or invalid access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                unauthorized:
+                  summary: Missing authorization header
+                  value:
+                    code: "unauthorized"
+                    message: "Missing authorization header"
+                invalidToken:
+                  summary: Invalid token
+                  value:
+                    code: "invalid_token"
+                    message: "Invalid access token"
+        "404":
+          description: User not found
           content:
             application/json:
               schema:
@@ -221,6 +332,11 @@ components:
             - user_already_confirmed
             - invalid_code
             - expired_code
+            - invalid_session
+            - refresh_failed
+            - user_not_confirmed
+            - unauthorized
+            - invalid_token
             - internal_error
           description: |
             Standardized error code to facilitate frontend error handling.
@@ -274,6 +390,38 @@ components:
           type: string
           description: Token type (usually Bearer)
           example: "Bearer"
+
+    AccessTokenResponse:
+      type: object
+      required:
+        - accessToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token for API authentication
+          example: "eyJraWQiOiJcL3VzZXJwb29sXC8..."
+        expiresIn:
+          type: integer
+          format: int32
+          description: Token expiration time in seconds
+          example: 3600
+
+    UserInfoResponse:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: User ID in the database
+          example: 1
+        name:
+          type: string
+          description: User's full name
+          example: "João Silva"
 
   securitySchemes:
     # For future use when implementing authentication
