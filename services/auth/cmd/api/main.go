@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"services/auth/internal/cognito"
 	"services/auth/internal/config"
 	"services/auth/internal/handlers"
 	"services/auth/internal/repositories"
 	"services/auth/internal/services"
+	"strings"
 	"syscall"
 	"time"
 
