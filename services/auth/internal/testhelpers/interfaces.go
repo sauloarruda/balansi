@@ -11,6 +11,7 @@ import (
 type UserRepositoryInterface interface {
 	FindByEmail(ctx context.Context, email string) (*models.User, error)
 	FindByID(ctx context.Context, id int64) (*models.User, error)
+	FindByCognitoID(ctx context.Context, cognitoID string) (*models.User, error)
 	Create(ctx context.Context, user *models.User) error
 	Update(ctx context.Context, user *models.User) error
 }
@@ -23,4 +24,5 @@ type CognitoClientInterface interface {
 	ResendConfirmationCode(ctx context.Context, username string) error
 	ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string, usernameOrEmail ...string) error // cognitoID is UserSub
 	InitiateAuth(ctx context.Context, cognitoID, password string) (*types.AuthenticationResultType, error)         // cognitoID is UserSub
+	RefreshTokenWithUsername(ctx context.Context, refreshToken, username string) (*types.AuthenticationResultType, error)
 }
