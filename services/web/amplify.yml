@@ -6,6 +6,13 @@ frontend:
         - npm install
     build:
       commands:
+        - |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "⚠️  WARNING: VITE_API_URL is not set. The app will use localhost:3000 as fallback."
+            echo "   Please configure VITE_API_URL in Amplify Console → App settings → Environment variables"
+          else
+            echo "✅ Using VITE_API_URL=$VITE_API_URL"
+          fi
         - npm run build
   artifacts:
     baseDirectory: build
