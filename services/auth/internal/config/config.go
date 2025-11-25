@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -12,6 +13,7 @@ type Config struct {
 	CognitoClientID     string
 	CognitoClientSecret string // Optional: required if client has secret
 	CognitoEndpoint     string
+	AWSRegion           string // Optional: AWS region for Cognito (defaults to extracting from User Pool ID)
 }
 
 func Load() (*Config, error) {
@@ -42,6 +44,20 @@ func Load() (*Config, error) {
 	// Set to http://localhost:9229 for local development with cognito-local
 	cognitoEndpoint := os.Getenv("COGNITO_ENDPOINT")
 
+	// AWS region - determine from env var, User Pool ID, or default
+	awsRegion := os.Getenv("AWS_REGION")
+	if awsRegion == "" {
+		// Extract region from User Pool ID format: us-east-2_XXXXXXXXX
+		parts := strings.Split(cognitoUserPoolID, "_")
+		if len(parts) > 0 {
+			awsRegion = parts[0]
+		}
+		// Fallback to default if still empty
+		if awsRegion == "" {
+			awsRegion = "us-east-2"
+		}
+	}
+
 	return &Config{
 		DatabaseURL:         databaseURL,
 		EncryptionSecret:    encryptionSecret,
@@ -49,5 +65,6 @@ func Load() (*Config, error) {
 		CognitoClientID:     cognitoClientID,
 		CognitoClientSecret: cognitoClientSecret,
 		CognitoEndpoint:     cognitoEndpoint,
+		AWSRegion:           awsRegion,
 	}, nil
 }
