@@ -217,7 +217,10 @@ test.describe("Signup Flow", () => {
 		await expect(page.getByRole("heading", { name: "Confirm your email" })).toBeVisible();
 		await expect(page.getByText(/Hello.*João Silva.*we sent a confirmation code/)).toBeVisible();
 		await expect(page.getByText(/joao.silva@example.com/)).toBeVisible();
-		await expect(page.locator('input[name="code"]')).toBeVisible();
+		// Wait for PIN inputs to be visible
+		const pinInputs = page.locator('.pin-input-container input[type="text"]');
+		await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+		await expect(pinInputs).toHaveCount(6);
 	});
 
 	test("should show error message when API returns error", async ({ page }) => {
