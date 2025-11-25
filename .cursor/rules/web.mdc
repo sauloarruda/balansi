@@ -46,3 +46,6 @@ SvelteKit frontend with TailwindCSS and Preline UI.
 - Code splitting
 - Lazy loading routes
 - Optimize images
+
+## Configuration
+- Always use config in place of os.Getenv
