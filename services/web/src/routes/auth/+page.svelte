@@ -1,12 +1,17 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { browser } from "$app/environment";
 	import { goto } from "$app/navigation";
+	import type { SignupRequest } from "$lib/api";
+	import { api, ApiError, NetworkError } from "$lib/api";
+	import { signupData } from "$lib/auth/signupStorage";
+	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import Input from "$lib/components/ds/Input.svelte";
-	import Button from "$lib/components/ds/Button.svelte";
 	import { _ } from "$lib/i18n";
-	import { api, ApiError, NetworkError } from "$lib/api";
-	import type { SignupRequest } from "$lib/api";
+	import { isValidEmail, isValidName } from "$lib/utils/validation";
+	import type { PageData } from "./$types";
+
+	let { data }: { data: PageData } = $props();
 
 	let loading = $state(true);
 	let name = $state("");
@@ -20,29 +25,29 @@
 
 	// Computed: form is valid when both fields are valid
 	$effect(() => {
-		// Validate name: at least 2 characters
-		nameValid = name.trim().length >= 2;
+		// Validate name
+		nameValid = isValidName(name);
 
-		// Validate email: valid email format
-		if (email.trim()) {
-			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-			emailValid = emailRegex.test(email.trim());
-		} else {
-			emailValid = false;
-		}
+		// Validate email
+		emailValid = isValidEmail(email);
 	});
 
 	const isFormValid = $derived(nameValid && emailValid);
 
-	onMount(() => {
-		// Check if user already has tokens
-		const accessToken = localStorage.getItem("access_token");
-		const refreshToken = localStorage.getItem("refresh_token");
-
-		if (accessToken && refreshToken) {
+	// Check authentication and load signup data from localStorage
+	$effect(() => {
+		if (data.authenticated) {
 			// Already authenticated, redirect to home
 			goto("/");
 		} else {
+			// Load signup data from localStorage if available
+			if (browser) {
+				const savedData = signupData.get();
+				if (savedData) {
+					name = savedData.name;
+					email = savedData.email;
+				}
+			}
 			loading = false;
 		}
 	});
@@ -57,10 +62,11 @@
 			const response = await api.auth.signUp({ signupRequest: request });
 
 			if (response.status === "pending_confirmation") {
-				// Redirect to confirmation page with name and email
-				goto(
-					`/auth/confirmation?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`
-				);
+				// Save signup data to localStorage
+				signupData.save(response.id, response.name, response.email);
+
+				// Redirect to confirmation page
+				goto("/auth/confirmation");
 			} else {
 				// User created successfully
 				// TODO: Handle success case
