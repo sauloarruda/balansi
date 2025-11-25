@@ -1,5 +1,5 @@
 // Export API client wrapper with i18n integration
-export { ApiError, NetworkError, api, getApiBaseUrl } from "./wrapper";
+export { ApiError, NetworkError, api, getApiBaseUrl, createApiConfig } from "./wrapper";
 
 // Export types directly from generated client
 export type {

@@ -43,26 +43,29 @@ export function getApiBaseUrl(): string {
 
 /**
  * Create API configuration
+ * @param fetchImpl Optional fetch implementation. If not provided, uses default browser/server fetch.
  */
-function createApiConfig(): Configuration {
+export function createApiConfig(fetchImpl?: typeof fetch): Configuration {
 	return new Configuration({
 		basePath: getApiBaseUrl(),
-		fetchApi: async (url, options) => {
-			// In browser, we rely on 'credentials: include'
-			if (browser) {
-				return fetch(url, {
-					...options,
-					credentials: "include", // Send/receive cookies automatically
-				});
-			}
+		fetchApi: fetchImpl
+			? fetchImpl
+			: async (url, options) => {
+					// In browser, we rely on 'credentials: include'
+					if (browser) {
+						return fetch(url, {
+							...options,
+							credentials: "include", // Send/receive cookies automatically
+						});
+					}
 
-			// In server-side (Node), fetch is global but doesn't handle cookies automatically
-			// Cookies must be passed explicitly via headers or using SvelteKit's event.fetch
-			// This default config is mainly for client-side usage.
-			// For server-side actions/load functions, it is recommended to instantiate the API client
-			// with a custom configuration that includes the specific fetch or headers needed.
-			return fetch(url, options);
-		},
+					// In server-side (Node), fetch is global but doesn't handle cookies automatically
+					// Cookies must be passed explicitly via headers or using SvelteKit's event.fetch
+					// This default config is mainly for client-side usage.
+					// For server-side actions/load functions, it is recommended to instantiate the API client
+					// with a custom configuration that includes the specific fetch or headers needed.
+					return fetch(url, options);
+				},
 	});
 }
 
