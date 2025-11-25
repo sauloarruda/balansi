@@ -1,4 +1,4 @@
-import { browser } from "$app/environment";
+import { clearAccessToken, getAccessToken } from "$lib/auth/token";
 import { _ } from "$lib/i18n";
 import { translateApiError } from "$lib/i18n/helpers";
 import { get } from "svelte/store";
@@ -31,41 +31,64 @@ export class NetworkError extends Error {
 
 /**
  * Get API base URL from environment
- * Exported for use in server-side code
  */
 export function getApiBaseUrl(): string {
-	if (!browser) {
-		// Server-side: use environment variable or default
-		return process.env.VITE_API_URL || "http://localhost:3000";
-	}
-	return import.meta.env.VITE_API_URL || "http://localhost:3000";
+	return import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 }
 
 /**
  * Create API configuration
- * @param fetchImpl Optional fetch implementation. If not provided, uses default browser/server fetch.
+ * @param fetchImpl Optional fetch implementation. If not provided, uses default browser fetch.
  */
 export function createApiConfig(fetchImpl?: typeof fetch): Configuration {
 	return new Configuration({
 		basePath: getApiBaseUrl(),
-		fetchApi: fetchImpl
-			? fetchImpl
-			: async (url, options) => {
-					// In browser, we rely on 'credentials: include'
-					if (browser) {
-						return fetch(url, {
-							...options,
-							credentials: "include", // Send/receive cookies automatically
-						});
-					}
+		fetchApi: fetchImpl || (async (url, options) => {
+			// Skip auth for refresh endpoint to avoid infinite loop
+			const isRefreshEndpoint = url.toString().includes("/auth/refresh");
 
-					// In server-side (Node), fetch is global but doesn't handle cookies automatically
-					// Cookies must be passed explicitly via headers or using SvelteKit's event.fetch
-					// This default config is mainly for client-side usage.
-					// For server-side actions/load functions, it is recommended to instantiate the API client
-					// with a custom configuration that includes the specific fetch or headers needed.
-					return fetch(url, options);
-				},
+			// Get access token and add to headers if available
+			const headers = options?.headers
+				? new Headers(options.headers)
+				: new Headers();
+
+			if (!isRefreshEndpoint) {
+				const token = await getAccessToken();
+				if (token) {
+					headers.set("Authorization", `Bearer ${token}`);
+				}
+			}
+
+			// Client-side: include credentials for cookies (session_id cookie)
+			let response = await fetch(url, {
+				...options,
+				headers,
+				credentials: "include", // Send/receive cookies automatically
+			});
+
+			// If we get 401, try to refresh token and retry once
+			if (response.status === 401 && !isRefreshEndpoint) {
+				clearAccessToken();
+				const newToken = await getAccessToken();
+
+				if (newToken) {
+					// Retry the request with new token
+					headers.set("Authorization", `Bearer ${newToken}`);
+					response = await fetch(url, {
+						...options,
+						headers,
+						credentials: "include",
+					});
+				}
+			}
+
+			// If we still get 401/403 after refresh attempt, clear token
+			if (response.status === 401 || response.status === 403) {
+				clearAccessToken();
+			}
+
+			return response;
+		}),
 	});
 }
 
@@ -77,6 +100,12 @@ async function handleApiError(error: unknown): Promise<never> {
 	if (error instanceof ResponseError && error.response) {
 		const response = error.response;
 		const status = response.status;
+
+		// If we get 401/403, clear access token (unauthorized)
+		// This will trigger refresh on next request
+		if (status === 401 || status === 403) {
+			clearAccessToken();
+		}
 
 		try {
 			// Try to parse error response body
