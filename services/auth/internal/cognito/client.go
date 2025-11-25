@@ -506,3 +506,56 @@ func (c *Client) InitiateAuth(ctx context.Context, cognitoID, password string) (
 	logger.Info("Auth successful - CognitoID: %s", cognitoID)
 	return output.AuthenticationResult, nil
 }
+
+// RefreshToken refreshes an access token using a refresh token.
+// It uses REFRESH_TOKEN_AUTH flow.
+// DEPRECATED: Use RefreshTokenWithUsername instead
+func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*types.AuthenticationResultType, error) {
+	return nil, errors.New("RefreshToken requires username - use RefreshTokenWithUsername instead")
+}
+
+// RefreshTokenWithUsername refreshes an access token using a refresh token and username.
+// It uses REFRESH_TOKEN_AUTH flow.
+func (c *Client) RefreshTokenWithUsername(ctx context.Context, refreshToken, username string) (*types.AuthenticationResultType, error) {
+	// Validate input parameters
+	if refreshToken == "" {
+		return nil, apperrors.NewArgumentError("refreshToken", "cannot be empty")
+	}
+	if username == "" {
+		return nil, apperrors.NewArgumentError("username", "cannot be empty")
+	}
+
+	authParams := map[string]string{
+		"REFRESH_TOKEN": refreshToken,
+	}
+
+	if secretHash := c.getSecretHash(username); secretHash != nil {
+		authParams["SECRET_HASH"] = *secretHash
+	}
+
+	input := &cognitoidentityprovider.InitiateAuthInput{
+		AuthFlow:       types.AuthFlowTypeRefreshTokenAuth,
+		ClientId:       aws.String(c.clientID),
+		AuthParameters: authParams,
+	}
+
+	logger.Info("Refreshing token - Username: %s, ClientID: %s", username, c.clientID)
+	logger.DebugJSON("RefreshToken Input", input)
+
+	output, err := c.client.InitiateAuth(ctx, input)
+	if err != nil {
+		logger.Error("Error refreshing token: %v", err)
+		logger.DebugJSON("RefreshToken Error", err)
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	logger.DebugJSON("RefreshToken Output", output)
+
+	if output.AuthenticationResult == nil {
+		logger.Error("RefreshToken returned nil AuthenticationResult")
+		return nil, errors.New("cognito refresh token did not return result")
+	}
+
+	logger.Info("Token refreshed successfully - Username: %s", username)
+	return output.AuthenticationResult, nil
+}
