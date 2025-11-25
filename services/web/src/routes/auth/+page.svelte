@@ -3,15 +3,13 @@
 	import { goto } from "$app/navigation";
 	import type { SignupRequest } from "$lib/api";
 	import { api, ApiError, NetworkError } from "$lib/api";
+	import { checkAuth } from "$lib/auth/clientAuth";
 	import { signupData } from "$lib/auth/signupStorage";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import Input from "$lib/components/ds/Input.svelte";
 	import { _ } from "$lib/i18n";
 	import { isValidEmail, isValidName } from "$lib/utils/validation";
-	import type { PageData } from "./$types";
-
-	let { data }: { data: PageData } = $props();
 
 	let loading = $state(true);
 	let name = $state("");
@@ -36,7 +34,8 @@
 
 	// Check authentication and load signup data from localStorage
 	$effect(() => {
-		if (data.authenticated) {
+		const isAuth = checkAuth();
+		if (isAuth) {
 			// Already authenticated, redirect to home
 			goto("/");
 		} else {
