@@ -39,8 +39,8 @@ export default defineConfig({
 	webServer: [
 		{
 			command: process.env.SKIP_BUILD
-				? 'cd ../../services/auth && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api || PORT=3001 ./bin/api'
-				: 'cd ../../services/auth && make build-local && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api || PORT=3001 ./bin/api',
+				? 'cd ../../services/auth && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api'
+				: 'cd ../../services/auth && (make build-local || echo "Build failed, using existing binary") && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api',
 			port: 3001, // Test API port (dev uses 3000)
 			reuseExistingServer: false, // Always create new server for tests
 			timeout: 30000, // 30 seconds for build and startup
@@ -53,8 +53,8 @@ export default defineConfig({
 		},
 		{
 			command: process.env.SKIP_BUILD
-				? "VITE_API_URL=http://localhost:3001 npm run preview -- --port 8081"
-				: "VITE_API_URL=http://localhost:3001 npm run build && VITE_API_URL=http://localhost:3001 npm run preview -- --port 8081",
+				? "npm run preview -- --port 8081"
+				: "npm run build && npm run preview -- --port 8081",
 			port: 8081, // Test web port (dev uses 8080)
 			reuseExistingServer: false, // Always create new server for tests
 			timeout: 60000, // 60 seconds for build and startup (increased for CI)
@@ -62,7 +62,8 @@ export default defineConfig({
 			stderr: "pipe",
 			env: {
 				PORT: "8081",
-				VITE_API_URL: "http://localhost:3001", // Point to test API port
+				VITE_API_URL: "", // Use relative path to leverage Vite proxy
+				VITE_API_PROXY_TARGET: "http://localhost:3001", // Point proxy to test API
 			},
 		},
 	],
