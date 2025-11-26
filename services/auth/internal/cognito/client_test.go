@@ -98,6 +98,8 @@ type mockCognitoClient struct {
 	ResendConfirmationCodeFunc func(ctx context.Context, params *cognitoidentityprovider.ResendConfirmationCodeInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ResendConfirmationCodeOutput, error)
 	ConfirmSignUpFunc          func(ctx context.Context, params *cognitoidentityprovider.ConfirmSignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmSignUpOutput, error)
 	InitiateAuthFunc           func(ctx context.Context, params *cognitoidentityprovider.InitiateAuthInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.InitiateAuthOutput, error)
+	ForgotPasswordFunc         func(ctx context.Context, params *cognitoidentityprovider.ForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ForgotPasswordOutput, error)
+	ConfirmForgotPasswordFunc  func(ctx context.Context, params *cognitoidentityprovider.ConfirmForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmForgotPasswordOutput, error)
 }
 
 func (m *mockCognitoClient) SignUp(ctx context.Context, params *cognitoidentityprovider.SignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.SignUpOutput, error) {
@@ -161,6 +163,28 @@ func (m *mockCognitoClient) InitiateAuth(ctx context.Context, params *cognitoide
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*cognitoidentityprovider.InitiateAuthOutput), args.Error(1)
+}
+
+func (m *mockCognitoClient) ForgotPassword(ctx context.Context, params *cognitoidentityprovider.ForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ForgotPasswordOutput, error) {
+	if m.ForgotPasswordFunc != nil {
+		return m.ForgotPasswordFunc(ctx, params, optFns...)
+	}
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*cognitoidentityprovider.ForgotPasswordOutput), args.Error(1)
+}
+
+func (m *mockCognitoClient) ConfirmForgotPassword(ctx context.Context, params *cognitoidentityprovider.ConfirmForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmForgotPasswordOutput, error) {
+	if m.ConfirmForgotPasswordFunc != nil {
+		return m.ConfirmForgotPasswordFunc(ctx, params, optFns...)
+	}
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*cognitoidentityprovider.ConfirmForgotPasswordOutput), args.Error(1)
 }
 
 // newClientWithMock creates a Client with a mocked AWS SDK client for testing.
@@ -931,4 +955,467 @@ func TestCalculateSecretHash_Algorithm(t *testing.T) {
 	expectedHash := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 
 	assert.Equal(t, expectedHash, hash, "Secret hash should match manual calculation")
+}
+
+// ============================================================================
+// Tests for ForgotPassword
+// ============================================================================
+
+// TestForgotPassword_Validation tests input validation for ForgotPassword.
+func TestForgotPassword_Validation(t *testing.T) {
+	client := newTestClient(t, testConfig())
+	ctx := context.Background()
+
+	runValidationTests(t, "ForgotPassword", []struct {
+		name        string
+		testFunc    func() error
+		expectedArg string
+	}{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				_, err := client.ForgotPassword(ctx, "")
+				return err
+			},
+			expectedArg: "email",
+		},
+	})
+}
+
+// TestForgotPassword_Success tests successful password recovery initiation.
+func TestForgotPassword_Success(t *testing.T) {
+	tests := []struct {
+		name         string
+		configFn     func(*config.Config)
+		validateHash bool
+		isLocal      bool
+	}{
+		{
+			name:         "without secret hash",
+			configFn:     nil,
+			validateHash: false,
+			isLocal:      false,
+		},
+		{
+			name: "with secret hash",
+			configFn: func(c *config.Config) {
+				c.CognitoClientSecret = testClientSecret
+			},
+			validateHash: true,
+			isLocal:      false,
+		},
+		{
+			name: "local endpoint uses email as username",
+			configFn: func(c *config.Config) {
+				c.CognitoEndpoint = testEndpoint
+			},
+			validateHash: false,
+			isLocal:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg *config.Config
+			if tt.configFn != nil {
+				cfg = testConfig(tt.configFn)
+			} else {
+				cfg = testConfig()
+			}
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+			username := testUsername
+			destination := "u***@e***.com"
+			deliveryMedium := types.DeliveryMediumTypeEmail
+
+			if tt.isLocal {
+				// Local endpoint uses email as username directly
+				mockAWSClient.On("ForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == email
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ForgotPasswordOutput{
+					CodeDeliveryDetails: &types.CodeDeliveryDetailsType{
+						Destination:     aws.String(destination),
+						DeliveryMedium:  deliveryMedium,
+						AttributeName:   aws.String("email"),
+					},
+				}, nil)
+			} else {
+				// AWS Cognito needs ListUsers to resolve username
+				mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+					return input != nil &&
+						aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
+						aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+				})).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: []types.UserType{
+						{
+							Username: aws.String(username),
+						},
+					},
+				}, nil)
+
+				mockAWSClient.On("ForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == username
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ForgotPasswordOutput{
+					CodeDeliveryDetails: &types.CodeDeliveryDetailsType{
+						Destination:     aws.String(destination),
+						DeliveryMedium:  deliveryMedium,
+						AttributeName:   aws.String("email"),
+					},
+				}, nil)
+			}
+
+			// Execute
+			result, err := client.ForgotPassword(ctx, email)
+
+			// Assert
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.Equal(t, destination, aws.ToString(result.Destination))
+			assert.Equal(t, deliveryMedium, result.DeliveryMedium)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestForgotPassword_Errors tests handling of various errors.
+func TestForgotPassword_Errors(t *testing.T) {
+	tests := []struct {
+		name    string
+		errType error
+		users   []types.UserType
+	}{
+		{
+			name:    "user not found",
+			errType: nil,
+			users:   []types.UserType{},
+		},
+		{
+			name:    "list users error",
+			errType: &types.InvalidParameterException{Message: aws.String("Invalid parameter")},
+			users:   nil,
+		},
+		{
+			name:    "empty username",
+			errType: nil,
+			users: []types.UserType{
+				{
+					Username: nil,
+				},
+			},
+		},
+		{
+			name:    "cognito user not found",
+			errType: &types.UserNotFoundException{Message: aws.String("User does not exist")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+		{
+			name:    "limit exceeded",
+			errType: &types.LimitExceededException{Message: aws.String("Limit exceeded")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig()
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+
+			// Setup mock
+			if tt.errType != nil && len(tt.users) == 0 {
+				// Error from ListUsers
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(nil, tt.errType)
+			} else if len(tt.users) > 0 {
+				// ListUsers succeeds, but ForgotPassword fails
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+				if tt.users[0].Username != nil {
+					mockAWSClient.On("ForgotPassword", ctx, mock.Anything).Return(nil, tt.errType)
+				}
+			} else {
+				// ListUsers returns empty users
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+			}
+
+			// Execute
+			_, err := client.ForgotPassword(ctx, email)
+
+			// Assert
+			assert.Error(t, err)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
+}
+
+// ============================================================================
+// Tests for ResetPassword
+// ============================================================================
+
+// TestResetPassword_Validation tests input validation for ResetPassword.
+func TestResetPassword_Validation(t *testing.T) {
+	client := newTestClient(t, testConfig())
+	ctx := context.Background()
+
+	runValidationTests(t, "ResetPassword", []struct {
+		name        string
+		testFunc    func() error
+		expectedArg string
+	}{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				return client.ResetPassword(ctx, "", testConfirmationCode, testPassword)
+			},
+			expectedArg: "email",
+		},
+		{
+			name: "empty code",
+			testFunc: func() error {
+				return client.ResetPassword(ctx, testEmail, "", testPassword)
+			},
+			expectedArg: "code",
+		},
+		{
+			name: "empty password",
+			testFunc: func() error {
+				return client.ResetPassword(ctx, testEmail, testConfirmationCode, "")
+			},
+			expectedArg: "newPassword",
+		},
+	})
+}
+
+// TestResetPassword_Success tests successful password reset.
+func TestResetPassword_Success(t *testing.T) {
+	tests := []struct {
+		name         string
+		configFn     func(*config.Config)
+		validateHash bool
+		isLocal      bool
+	}{
+		{
+			name:         "without secret hash",
+			configFn:     nil,
+			validateHash: false,
+			isLocal:      false,
+		},
+		{
+			name: "with secret hash",
+			configFn: func(c *config.Config) {
+				c.CognitoClientSecret = testClientSecret
+			},
+			validateHash: true,
+			isLocal:      false,
+		},
+		{
+			name: "local endpoint uses email as username",
+			configFn: func(c *config.Config) {
+				c.CognitoEndpoint = testEndpoint
+			},
+			validateHash: false,
+			isLocal:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg *config.Config
+			if tt.configFn != nil {
+				cfg = testConfig(tt.configFn)
+			} else {
+				cfg = testConfig()
+			}
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+			username := testUsername
+			code := testConfirmationCode
+			newPassword := testPassword
+
+			if tt.isLocal {
+				// Local endpoint uses email as username directly
+				mockAWSClient.On("ConfirmForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == email &&
+						aws.ToString(input.ConfirmationCode) == code &&
+						aws.ToString(input.Password) == newPassword
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ConfirmForgotPasswordOutput{}, nil)
+			} else {
+				// AWS Cognito needs ListUsers to resolve username
+				mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+					return input != nil &&
+						aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
+						aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+				})).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: []types.UserType{
+						{
+							Username: aws.String(username),
+						},
+					},
+				}, nil)
+
+				mockAWSClient.On("ConfirmForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == username &&
+						aws.ToString(input.ConfirmationCode) == code &&
+						aws.ToString(input.Password) == newPassword
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ConfirmForgotPasswordOutput{}, nil)
+			}
+
+			// Execute
+			err := client.ResetPassword(ctx, email, code, newPassword)
+
+			// Assert
+			assert.NoError(t, err)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestResetPassword_Errors tests handling of various errors.
+func TestResetPassword_Errors(t *testing.T) {
+	tests := []struct {
+		name    string
+		errType error
+		users   []types.UserType
+	}{
+		{
+			name:    "user not found",
+			errType: nil,
+			users:   []types.UserType{},
+		},
+		{
+			name:    "list users error",
+			errType: &types.InvalidParameterException{Message: aws.String("Invalid parameter")},
+			users:   nil,
+		},
+		{
+			name:    "empty username",
+			errType: nil,
+			users: []types.UserType{
+				{
+					Username: nil,
+				},
+			},
+		},
+		{
+			name:    "code mismatch",
+			errType: &types.CodeMismatchException{Message: aws.String("Invalid verification code provided")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+		{
+			name:    "expired code",
+			errType: &types.ExpiredCodeException{Message: aws.String("Invalid code provided, please request a code again")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+		{
+			name:    "invalid password",
+			errType: &types.InvalidPasswordException{Message: aws.String("Password did not conform with policy")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig()
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+			code := testConfirmationCode
+			newPassword := testPassword
+
+			// Setup mock
+			if tt.errType != nil && len(tt.users) == 0 {
+				// Error from ListUsers
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(nil, tt.errType)
+			} else if len(tt.users) > 0 {
+				// ListUsers succeeds, but ConfirmForgotPassword fails
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+				if tt.users[0].Username != nil {
+					mockAWSClient.On("ConfirmForgotPassword", ctx, mock.Anything).Return(nil, tt.errType)
+				}
+			} else {
+				// ListUsers returns empty users
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+			}
+
+			// Execute
+			err := client.ResetPassword(ctx, email, code, newPassword)
+
+			// Assert
+			assert.Error(t, err)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
 }

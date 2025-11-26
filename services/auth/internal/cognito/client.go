@@ -29,6 +29,8 @@ type cognitoClientInterface interface {
 	ResendConfirmationCode(ctx context.Context, params *cognitoidentityprovider.ResendConfirmationCodeInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ResendConfirmationCodeOutput, error)
 	ConfirmSignUp(ctx context.Context, params *cognitoidentityprovider.ConfirmSignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmSignUpOutput, error)
 	InitiateAuth(ctx context.Context, params *cognitoidentityprovider.InitiateAuthInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.InitiateAuthOutput, error)
+	ForgotPassword(ctx context.Context, params *cognitoidentityprovider.ForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ForgotPasswordOutput, error)
+	ConfirmForgotPassword(ctx context.Context, params *cognitoidentityprovider.ConfirmForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmForgotPasswordOutput, error)
 }
 
 type Client struct {
@@ -563,4 +565,154 @@ func (c *Client) RefreshTokenWithUsername(ctx context.Context, refreshToken, use
 
 	logger.Info("Token refreshed successfully - Username: %s", username)
 	return output.AuthenticationResult, nil
+}
+
+// ForgotPassword initiates password recovery by sending a confirmation code to user's email.
+// Returns delivery details (destination, medium).
+// For cognito-local, email is used as username. For AWS Cognito, we need to resolve username from email.
+func (c *Client) ForgotPassword(ctx context.Context, email string) (*types.CodeDeliveryDetailsType, error) {
+	// Validate input parameters
+	if email == "" {
+		return nil, apperrors.NewArgumentError("email", "cannot be empty")
+	}
+
+	// Resolve username from email
+	// For cognito-local, username = email
+	// For AWS Cognito, we need to find the username by email
+	var username string
+	if c.isLocalEndpoint() {
+		username = email
+		logger.Debug("Using email as username for cognito-local")
+	} else {
+		// For AWS Cognito, find username by email
+		listInput := &cognitoidentityprovider.ListUsersInput{
+			UserPoolId: aws.String(c.userPoolID),
+			Filter:     aws.String(fmt.Sprintf("email = \"%s\"", email)),
+			Limit:      aws.Int32(1),
+		}
+
+		logger.DebugJSON("ListUsers Input (ForgotPassword)", listInput)
+
+		listOutput, err := c.client.ListUsers(ctx, listInput)
+		if err != nil {
+			logger.Error("Error listing users for ForgotPassword: %v", err)
+			logger.DebugJSON("ListUsers Error", err)
+			return nil, fmt.Errorf("failed to find user: %w", err)
+		}
+
+		logger.DebugJSON("ListUsers Output (ForgotPassword)", listOutput)
+
+		if len(listOutput.Users) == 0 {
+			return nil, errors.New("user not found")
+		}
+
+		if listOutput.Users[0].Username == nil {
+			return nil, errors.New("user found but username is empty")
+		}
+
+		username = *listOutput.Users[0].Username
+		logger.Debug("Found username for ForgotPassword - Email: %s, Username: %s", email, username)
+	}
+
+	input := &cognitoidentityprovider.ForgotPasswordInput{
+		ClientId:   aws.String(c.clientID),
+		Username:   aws.String(username),
+		SecretHash: c.getSecretHash(username),
+	}
+
+	logger.Info("Initiating password recovery - Email: %s, Username: %s, ClientID: %s",
+		email, username, c.clientID)
+	logger.DebugJSON("ForgotPassword Input", input)
+
+	output, err := c.client.ForgotPassword(ctx, input)
+	if err != nil {
+		logger.Error("Error initiating password recovery: %v", err)
+		logger.DebugJSON("ForgotPassword Error", err)
+		return nil, fmt.Errorf("failed to initiate password recovery: %w", err)
+	}
+
+	logger.DebugJSON("ForgotPassword Output", output)
+
+	if output.CodeDeliveryDetails == nil {
+		logger.Error("ForgotPassword returned nil CodeDeliveryDetails")
+		return nil, errors.New("cognito forgot password did not return delivery details")
+	}
+
+	logger.Info("Password recovery code sent successfully - Email: %s", email)
+	return output.CodeDeliveryDetails, nil
+}
+
+// ResetPassword resets the user's password using the confirmation code.
+// For cognito-local, email is used as username. For AWS Cognito, we need to resolve username from email.
+func (c *Client) ResetPassword(ctx context.Context, email, code, newPassword string) error {
+	// Validate input parameters
+	if email == "" {
+		return apperrors.NewArgumentError("email", "cannot be empty")
+	}
+	if code == "" {
+		return apperrors.NewArgumentError("code", "cannot be empty")
+	}
+	if newPassword == "" {
+		return apperrors.NewArgumentError("newPassword", "cannot be empty")
+	}
+
+	// Resolve username from email
+	// For cognito-local, username = email
+	// For AWS Cognito, we need to find the username by email
+	var username string
+	if c.isLocalEndpoint() {
+		username = email
+		logger.Debug("Using email as username for cognito-local")
+	} else {
+		// For AWS Cognito, find username by email
+		listInput := &cognitoidentityprovider.ListUsersInput{
+			UserPoolId: aws.String(c.userPoolID),
+			Filter:     aws.String(fmt.Sprintf("email = \"%s\"", email)),
+			Limit:      aws.Int32(1),
+		}
+
+		logger.DebugJSON("ListUsers Input (ResetPassword)", listInput)
+
+		listOutput, err := c.client.ListUsers(ctx, listInput)
+		if err != nil {
+			logger.Error("Error listing users for ResetPassword: %v", err)
+			logger.DebugJSON("ListUsers Error", err)
+			return fmt.Errorf("failed to find user: %w", err)
+		}
+
+		logger.DebugJSON("ListUsers Output (ResetPassword)", listOutput)
+
+		if len(listOutput.Users) == 0 {
+			return errors.New("user not found")
+		}
+
+		if listOutput.Users[0].Username == nil {
+			return errors.New("user found but username is empty")
+		}
+
+		username = *listOutput.Users[0].Username
+		logger.Debug("Found username for ResetPassword - Email: %s, Username: %s", email, username)
+	}
+
+	input := &cognitoidentityprovider.ConfirmForgotPasswordInput{
+		ClientId:         aws.String(c.clientID),
+		Username:         aws.String(username),
+		ConfirmationCode: aws.String(code),
+		Password:         aws.String(newPassword),
+		SecretHash:       c.getSecretHash(username),
+	}
+
+	logger.Info("Resetting password - Email: %s, Username: %s, ClientID: %s",
+		email, username, c.clientID)
+	logger.DebugJSON("ConfirmForgotPassword Input", input)
+
+	_, err := c.client.ConfirmForgotPassword(ctx, input)
+	if err != nil {
+		logger.Error("Error resetting password: %v", err)
+		logger.DebugJSON("ConfirmForgotPassword Error", err)
+		return fmt.Errorf("failed to reset password: %w", err)
+	}
+
+	logger.Info("Password reset successfully - Email: %s", email)
+	return nil
 }
