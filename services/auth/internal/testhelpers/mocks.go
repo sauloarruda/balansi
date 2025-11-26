@@ -29,6 +29,14 @@ func (m *MockUserRepository) FindByID(ctx context.Context, id int64) (*models.Us
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
+func (m *MockUserRepository) FindByCognitoID(ctx context.Context, cognitoID string) (*models.User, error) {
+	args := m.Called(ctx, cognitoID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
 func (m *MockUserRepository) Create(ctx context.Context, user *models.User) error {
 	args := m.Called(ctx, user)
 	return args.Error(0)
@@ -77,6 +85,14 @@ func (m *MockCognitoClient) InitiateAuth(ctx context.Context, cognitoID, passwor
 	return args.Get(0).(*types.AuthenticationResultType), args.Error(1)
 }
 
+func (m *MockCognitoClient) RefreshTokenWithUsername(ctx context.Context, refreshToken, username string) (*types.AuthenticationResultType, error) {
+	args := m.Called(ctx, refreshToken, username)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.AuthenticationResultType), args.Error(1)
+}
+
 // MockSignupService is a mock implementation of SignupServiceInterface.
 type MockSignupService struct {
 	mock.Mock
@@ -90,10 +106,10 @@ func (m *MockSignupService) Signup(ctx context.Context, name, email string) (*mo
 	return args.Get(0).(*models.SignupOutcome), args.Error(1)
 }
 
-func (m *MockSignupService) Confirm(ctx context.Context, userID int64, code string) (*models.TokenResponse, error) {
+func (m *MockSignupService) Confirm(ctx context.Context, userID int64, code string) (*models.AuthenticationTokenResult, error) {
 	args := m.Called(ctx, userID, code)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.TokenResponse), args.Error(1)
+	return args.Get(0).(*models.AuthenticationTokenResult), args.Error(1)
 }

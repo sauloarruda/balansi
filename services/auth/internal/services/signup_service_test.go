@@ -476,8 +476,8 @@ func TestSignupService_Confirm_Idempotency_UserAlreadyConfirmedInCognito(t *test
 
 	// Setup mocks
 	mockRepo.On("FindByID", ctx, userID).Return(user, nil)
+	mockCognito.On("ConfirmSignUp", ctx, cognitoID, code, []string{email}).Return(notAuthorizedErr)
 	mockCognito.On("GetUsernameByUserSub", ctx, cognitoID, []string{email}).Return(username, nil)
-	mockCognito.On("ConfirmSignUp", ctx, cognitoID, code, []string{username}).Return(notAuthorizedErr)
 	// Verify user is actually confirmed in Cognito
 	mockCognito.On("IsUserConfirmed", ctx, email).Return(true, username, cognitoID, nil)
 	// Update DB status to confirmed
@@ -493,17 +493,20 @@ func TestSignupService_Confirm_Idempotency_UserAlreadyConfirmedInCognito(t *test
 		TokenType:    aws.String("Bearer"),
 	}, nil)
 
+	// EXPECTATION: Check that TemporaryPassword is set to nil
+	mockRepo.On("Update", ctx, mock.MatchedBy(func(u *models.User) bool {
+		return u.ID == 1 && u.TemporaryPassword == nil
+	})).Return(nil)
+
 	// Execute
 	result, err := service.Confirm(ctx, userID, code)
 
 	// Assert
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, "access-token", result.AccessToken)
-	assert.Equal(t, "id-token", result.IDToken)
 	assert.Equal(t, "refresh-token", result.RefreshToken)
-	assert.Equal(t, int32(3600), result.ExpiresIn)
-	assert.Equal(t, "Bearer", result.TokenType)
+	assert.Equal(t, int64(1), result.UserID)
+	assert.Equal(t, username, result.Username)
 
 	mockRepo.AssertExpectations(t)
 	mockCognito.AssertExpectations(t)

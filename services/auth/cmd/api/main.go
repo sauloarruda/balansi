@@ -2,19 +2,17 @@ package main
 
 import (
 	"context"
-	"io"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"services/auth/internal/cognito"
 	"services/auth/internal/config"
 	"services/auth/internal/handlers"
+	httputils "services/auth/internal/http"
+	"services/auth/internal/jwt"
+	"services/auth/internal/logger"
 	"services/auth/internal/repositories"
 	"services/auth/internal/services"
 	"syscall"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -22,97 +20,121 @@ import (
 )
 
 var (
-	signupHandler  *handlers.SignupHandler
-	confirmHandler *handlers.ConfirmHandler
-	dbPool         *pgxpool.Pool
+	signupHandler   *handlers.SignupHandler
+	confirmHandler  *handlers.ConfirmHandler
+	refreshHandler  *handlers.RefreshHandler
+	meHandler       *handlers.MeHandler
+	dbPool          *pgxpool.Pool
+	cfg             *config.Config
+	handlerRegistry *httputils.HandlerRegistry
 )
+
+// loadConfiguration loads and returns the application configuration
+func loadConfiguration() *config.Config {
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("Failed to load config: %v", err)
+		os.Exit(1)
+	}
+	return cfg
+}
+
+// connectDatabase establishes a connection to the database and returns the pool
+func connectDatabase(cfg *config.Config) *pgxpool.Pool {
+	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("Failed to connect to database: %v", err)
+		os.Exit(1)
+	}
+	return db
+}
+
+// initializeRepositories creates and returns the application repositories
+func initializeRepositories(db *pgxpool.Pool) *repositories.UserRepository {
+	return repositories.NewUserRepository(db)
+}
+
+// initializeCognitoClient creates and returns the Cognito client
+func initializeCognitoClient(cfg *config.Config) *cognito.Client {
+	cognitoClient, err := cognito.NewClient(cfg)
+	if err != nil {
+		logger.Error("Failed to create Cognito client: %v", err)
+		os.Exit(1)
+	}
+	return cognitoClient
+}
+
+// initializeJWTValidator creates and returns the JWT validator
+func initializeJWTValidator(cfg *config.Config) *jwt.Validator {
+	return jwt.NewValidator(cfg)
+}
+
+// initializeServices creates and returns the application services
+func initializeServices(userRepo *repositories.UserRepository, cognitoClient *cognito.Client, cfg *config.Config) (*services.SignupService, *services.SessionService) {
+	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	return signupService, sessionService
+}
+
+// initializeHandlers creates and initializes all the HTTP handlers
+func initializeHandlers(signupService *services.SignupService, sessionService *services.SessionService, userRepo *repositories.UserRepository, cognitoClient *cognito.Client, jwtValidator *jwt.Validator) {
+	signupHandler = handlers.NewSignupHandler(signupService)
+	confirmHandler = handlers.NewConfirmHandler(signupService, sessionService)
+	refreshHandler = handlers.NewRefreshHandler(sessionService)
+	meHandler = handlers.NewMeHandler(userRepo, cognitoClient, jwtValidator)
+}
 
 func init() {
 	// Load configuration
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	cfg = loadConfiguration()
 
 	// Connect to database
-	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	db := connectDatabase(cfg)
 	dbPool = db
 
 	// Initialize repositories
-	userRepo := repositories.NewUserRepository(db)
+	userRepo := initializeRepositories(db)
 
 	// Initialize Cognito client
-	cognitoClient, err := cognito.NewClient(cfg)
-	if err != nil {
-		log.Fatalf("Failed to create Cognito client: %v", err)
-	}
+	cognitoClient := initializeCognitoClient(cfg)
+
+	// Initialize JWT validator
+	jwtValidator := initializeJWTValidator(cfg)
 
 	// Initialize services
-	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	signupService, sessionService := initializeServices(userRepo, cognitoClient, cfg)
 
 	// Initialize handlers
-	signupHandler = handlers.NewSignupHandler(signupService)
-	confirmHandler = handlers.NewConfirmHandler(signupService)
+	initializeHandlers(signupService, sessionService, userRepo, cognitoClient, jwtValidator)
+
+	// Create handler registry for unified processing
+	handlerRegistry = &httputils.HandlerRegistry{
+		Routes: []httputils.RouteConfig{
+			{Path: "/auth/sign-up", Method: "POST"},
+			{Path: "/auth/confirm", Method: "POST"},
+			{Path: "/auth/refresh", Method: "POST"},
+			{Path: "/auth/me", Method: "GET"},
+		},
+		SignupHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return signupHandler.Handle(ctx, req)
+		},
+		ConfirmHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return confirmHandler.Handle(ctx, req)
+		},
+		RefreshHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return refreshHandler.Handle(ctx, req)
+		},
+		MeHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return meHandler.Handle(ctx, req)
+		},
+	}
+
 }
 
 func cleanup() {
 	if dbPool != nil {
-		log.Println("Closing database connection pool...")
+		logger.Info("Closing database connection pool...")
 		dbPool.Close()
-	}
-}
-
-func methodNotAllowedResponse() events.APIGatewayV2HTTPResponse {
-	return events.APIGatewayV2HTTPResponse{
-		StatusCode: 405,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: `{"error": "Method not allowed"}`,
-	}
-}
-
-func handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
-	log.Printf("Received request: RawPath='%s', Path='%s', Method='%s'",
-		req.RawPath, req.RequestContext.HTTP.Path, req.RequestContext.HTTP.Method)
-
-	// Simple routing based on path
-	path := req.RequestContext.HTTP.Path
-	if path == "" {
-		path = req.RawPath
-	}
-
-	// Strip stage from path if present
-	stage := os.Getenv("STAGE")
-	if stage != "" {
-		prefix := "/" + stage
-		if strings.HasPrefix(path, prefix) {
-			path = strings.TrimPrefix(path, prefix)
-		}
-	}
-
-	switch path {
-	case "/auth/sign-up":
-		if req.RequestContext.HTTP.Method == "POST" {
-			return signupHandler.Handle(ctx, req)
-		}
-		return methodNotAllowedResponse(), nil
-	case "/auth/confirm":
-		if req.RequestContext.HTTP.Method == "POST" {
-			return confirmHandler.Handle(ctx, req)
-		}
-		return methodNotAllowedResponse(), nil
-	default:
-		return events.APIGatewayV2HTTPResponse{
-			StatusCode: 404,
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-			Body: `{"error": "Not found", "path": "` + path + `"}`,
-		}, nil
 	}
 }
 
@@ -127,7 +149,7 @@ func lambdaHandler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (eve
 			Body:       `{"error": "Request cancelled"}`,
 		}, ctx.Err()
 	default:
-		return handler(ctx, req)
+		return httputils.HandleLambdaRequest(ctx, req, cfg.FrontendDomain, handlerRegistry)
 	}
 }
 
@@ -145,7 +167,7 @@ func main() {
 
 		go func() {
 			<-sigChan
-			log.Println("Shutting down...")
+			logger.Info("Shutting down...")
 			cleanup()
 			os.Exit(0)
 		}()
@@ -153,97 +175,6 @@ func main() {
 		// Ensure cleanup on exit
 		defer cleanup()
 
-		startLocalServer()
-	}
-}
-
-func startLocalServer() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
-	handlerFunc := func(w http.ResponseWriter, r *http.Request) {
-		// Handle CORS preflight
-		if r.Method == "OPTIONS" {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			w.WriteHeader(200)
-			return
-		}
-
-		// Read request body
-		body := ""
-		if r.Body != nil {
-			bodyBytes, err := io.ReadAll(r.Body)
-			if err == nil {
-				body = string(bodyBytes)
-			}
-		}
-
-		// Create APIGatewayV2HTTPRequest
-		req := events.APIGatewayV2HTTPRequest{
-			RawPath:        r.URL.Path,
-			RawQueryString: r.URL.RawQuery,
-			Headers:        make(map[string]string),
-			Body:           body,
-			RequestContext: events.APIGatewayV2HTTPRequestContext{
-				HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
-					Method: r.Method,
-					Path:   r.URL.Path,
-				},
-			},
-		}
-
-		// Copy headers
-		for k, v := range r.Header {
-			if len(v) > 0 {
-				req.Headers[k] = v[0]
-			}
-		}
-
-		// Call handler
-		ctx := context.Background()
-		resp, err := handler(ctx, req)
-		if err != nil {
-			log.Printf("Handler error: %v", err)
-			w.WriteHeader(500)
-			if _, writeErr := w.Write([]byte(`{"error": "Internal server error"}`)); writeErr != nil {
-				log.Printf("Failed to write error response: %v", writeErr)
-			}
-			return
-		}
-
-		// Add CORS headers to response
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		// Write response
-		for k, v := range resp.Headers {
-			w.Header().Set(k, v)
-		}
-		w.WriteHeader(resp.StatusCode)
-		if _, writeErr := w.Write([]byte(resp.Body)); writeErr != nil {
-			log.Printf("Failed to write response: %v", writeErr)
-		}
-	}
-
-	http.HandleFunc("/auth/sign-up", handlerFunc)
-	http.HandleFunc("/auth/confirm", handlerFunc)
-
-	log.Printf("Server starting on port %s", port)
-	log.Printf("Test endpoint: POST http://localhost:%s/auth/sign-up", port)
-	log.Printf("Test endpoint: POST http://localhost:%s/auth/confirm", port)
-	server := &http.Server{
-		Addr:              ":" + port,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		httputils.StartLocalServer(handlerRegistry)
 	}
 }

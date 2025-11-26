@@ -1,8 +1,8 @@
-import { browser } from "$app/environment";
-import { get } from "svelte/store";
+import { clearAccessToken, getAccessToken } from "$lib/auth/token";
 import { _ } from "$lib/i18n";
 import { translateApiError } from "$lib/i18n/helpers";
-import { Configuration, AuthenticationApi, ResponseError, FetchError } from "./generated";
+import { get } from "svelte/store";
+import { AuthenticationApi, Configuration, FetchError, ResponseError } from "./generated";
 
 /**
  * Custom API error with translated message
@@ -32,18 +32,63 @@ export class NetworkError extends Error {
 /**
  * Get API base URL from environment
  */
-function getApiBaseUrl(): string {
-	if (!browser) return "http://localhost:3000";
-	return import.meta.env.VITE_API_URL || "http://localhost:3000";
+export function getApiBaseUrl(): string {
+	return import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 }
 
 /**
  * Create API configuration
+ * @param fetchImpl Optional fetch implementation. If not provided, uses default browser fetch.
  */
-function createApiConfig(): Configuration {
+export function createApiConfig(fetchImpl?: typeof fetch): Configuration {
 	return new Configuration({
 		basePath: getApiBaseUrl(),
-		fetchApi: fetch, // Use native fetch
+		fetchApi: fetchImpl || (async (url, options) => {
+			// Skip auth for refresh endpoint to avoid infinite loop
+			const isRefreshEndpoint = url.toString().includes("/auth/refresh");
+
+			// Get access token and add to headers if available
+			const headers = options?.headers
+				? new Headers(options.headers)
+				: new Headers();
+
+			if (!isRefreshEndpoint) {
+				const token = await getAccessToken();
+				if (token) {
+					headers.set("Authorization", `Bearer ${token}`);
+				}
+			}
+
+			// Client-side: include credentials for cookies (session_id cookie)
+			let response = await fetch(url, {
+				...options,
+				headers,
+				credentials: "include", // Send/receive cookies automatically
+			});
+
+			// If we get 401, try to refresh token and retry once
+			if (response.status === 401 && !isRefreshEndpoint) {
+				clearAccessToken();
+				const newToken = await getAccessToken();
+
+				if (newToken) {
+					// Retry the request with new token
+					headers.set("Authorization", `Bearer ${newToken}`);
+					response = await fetch(url, {
+						...options,
+						headers,
+						credentials: "include",
+					});
+				}
+			}
+
+			// If we still get 401/403 after refresh attempt, clear token
+			if (response.status === 401 || response.status === 403) {
+				clearAccessToken();
+			}
+
+			return response;
+		}),
 	});
 }
 
@@ -55,6 +100,12 @@ async function handleApiError(error: unknown): Promise<never> {
 	if (error instanceof ResponseError && error.response) {
 		const response = error.response;
 		const status = response.status;
+
+		// If we get 401/403, clear access token (unauthorized)
+		// This will trigger refresh on next request
+		if (status === 401 || status === 403) {
+			clearAccessToken();
+		}
 
 		try {
 			// Try to parse error response body

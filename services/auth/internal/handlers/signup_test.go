@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"services/auth/internal/http"
 	"services/auth/internal/models"
 	"services/auth/internal/services"
 	"services/auth/internal/testhelpers"
@@ -280,7 +281,7 @@ func TestSignupHandler_Handle_EmptyBody(t *testing.T) {
 }
 
 func TestErrorResponse(t *testing.T) {
-	resp := errorResponse(404, "not_found", "Not found")
+	resp := http.ErrorResponse(404, "not_found", "Not found")
 
 	assert.Equal(t, 404, resp.StatusCode)
 	assert.Equal(t, "application/json", resp.Headers["Content-Type"])

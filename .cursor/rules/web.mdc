@@ -27,7 +27,7 @@ SvelteKit frontend with TailwindCSS and Preline UI.
 - Scoped component styles
 
 ## API Integration
-- Use generated API client
+- Always use generated API client
 - Handle errors with i18n
 - Show loading states
 - Validate inputs
@@ -46,3 +46,6 @@ SvelteKit frontend with TailwindCSS and Preline UI.
 - Code splitting
 - Lazy loading routes
 - Optimize images
+
+## Configuration
+- Always use config in place of os.Getenv

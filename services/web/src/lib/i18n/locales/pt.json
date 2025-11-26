@@ -37,9 +37,14 @@
 				"error": "Por favor, insira o código de confirmação."
 			},
 			"errors": {
-				"connectionError": "Não foi possível conectar ao servidor. Por favor, verifique sua conexão e tente novamente."
+				"connectionError": "Não foi possível conectar ao servidor. Por favor, verifique sua conexão e tente novamente.",
+				"invalidCode": "Código inválido. Por favor, verifique e tente novamente.",
+				"expiredCode": "Código expirado. Por favor, solicite um novo código.",
+				"userNotFound": "Usuário não encontrado. Por favor, tente fazer o cadastro novamente.",
+				"userAlreadyConfirmed": "Este usuário já foi confirmado. Você pode fazer login."
 			}
-		}
+		},
+		"logout": "Sair"
 	},
 	"home": {
 		"welcome": "Bem-vindo ao Balansi",

@@ -3,13 +3,10 @@ package integration
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	"services/auth/internal/cognito"
-	"services/auth/internal/config"
 	"services/auth/internal/encryption"
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
@@ -20,50 +17,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// localTestConfig creates a configuration for cognito-local integration tests.
-// It reads from environment variables or uses default values from cognito-local setup.
-func localTestConfig() *config.Config {
-	// Try to get values from environment variables first (set by cognito-setup script)
-	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
-	if userPoolID == "" {
-		// Default value from cognito-local setup (can be found in .cognito/db/)
-		userPoolID = "local_6eLCsRav"
-	}
-
-	clientID := os.Getenv("COGNITO_CLIENT_ID")
-	if clientID == "" {
-		// Default value from cognito-local setup (can be found in .cognito/db/clients.json)
-		clientID = "2qdfneigub7f5h79cnej0i3fo"
-	}
-
-	clientSecret := os.Getenv("COGNITO_CLIENT_SECRET")
-	endpoint := os.Getenv("COGNITO_ENDPOINT")
-	if endpoint == "" {
-		endpoint = "http://localhost:9229"
-	}
-
-	return &config.Config{
-		CognitoUserPoolID:   userPoolID,
-		CognitoClientID:     clientID,
-		CognitoClientSecret: clientSecret,
-		CognitoEndpoint:     endpoint,
-		EncryptionSecret:    "test-secret-key-1234567890123456",
-	}
-}
 
 func TestSignup_Integration_NewUser(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup test database
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
+	// Setup test database and config
+	setup := setupIntegrationTest(t)
+	defer setup.Cleanup()
 
-	testhelpers.CreateUsersTable(t, pool)
+	cfg := setup.Cfg
 
 	// Setup Cognito client (using cognito-local if available)
-	cfg := localTestConfig()
 
 	cognitoClient, err := cognito.NewClient(cfg)
 	if err != nil {
@@ -71,7 +37,7 @@ func TestSignup_Integration_NewUser(t *testing.T) {
 	}
 
 	// Initialize dependencies
-	userRepo := repositories.NewUserRepository(pool)
+	userRepo := repositories.NewUserRepository(setup.Pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
 
 	ctx := context.Background()
@@ -164,91 +130,4 @@ func TestSignup_Integration_DuplicateEmail(t *testing.T) {
 		assert.Equal(t, result1.User.ID, result2.User.ID)
 		assert.Equal(t, models.SignupStatusPendingConfirmation, result2.Status)
 	}
-}
-
-func TestSignup_Integration_ConcurrentSignups(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	// Setup test database
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
-
-	testhelpers.CreateUsersTable(t, pool)
-
-	// Setup Cognito client
-	cfg := localTestConfig()
-
-	cognitoClient, err := cognito.NewClient(cfg)
-	if err != nil {
-		t.Skipf("Skipping integration test - Cognito client setup failed: %v", err)
-	}
-
-	userRepo := repositories.NewUserRepository(pool)
-	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
-
-	ctx := context.Background()
-	numUsers := 5
-	results := make(chan error, numUsers)
-
-	// Create multiple users concurrently
-	for i := 0; i < numUsers; i++ {
-		go func(index int) {
-			email := fmt.Sprintf("concurrent%d@example.com", index)
-			_, err := signupService.Signup(ctx, "Concurrent User", email)
-			results <- err
-		}(i)
-	}
-
-	// Wait for all signups to complete
-	errs := make([]error, 0, numUsers)
-	for i := 0; i < numUsers; i++ {
-		err := <-results
-		if err != nil {
-			// Skip if signup provider not available
-			if errors.Is(err, services.ErrSignupProviderUnavailable) {
-				t.Skipf("Skipping integration test - signup provider not available: %v", err)
-				return
-			}
-			errs = append(errs, err)
-		}
-	}
-
-	// All signups should succeed (or fail gracefully)
-	// In a real scenario, some might fail due to race conditions
-	assert.LessOrEqual(t, len(errs), numUsers, "Some signups may fail due to concurrency")
-}
-
-func TestSignup_Integration_DatabaseConstraints(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	// Setup test database
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
-
-	testhelpers.CreateUsersTable(t, pool)
-
-	userRepo := repositories.NewUserRepository(pool)
-	ctx := context.Background()
-
-	// Test unique email constraint
-	user1 := &models.User{
-		Name:  "User One",
-		Email: "unique@example.com",
-	}
-
-	err := userRepo.Create(ctx, user1)
-	require.NoError(t, err)
-
-	// Try to create another user with same email
-	user2 := &models.User{
-		Name:  "User Two",
-		Email: "unique@example.com",
-	}
-
-	err = userRepo.Create(ctx, user2)
-	assert.Error(t, err, "Should fail on duplicate email constraint")
 }

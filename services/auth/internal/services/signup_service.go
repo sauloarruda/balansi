@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"services/auth/internal/cognito"
 	"services/auth/internal/encryption"
+	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
 	"services/auth/internal/testhelpers"
@@ -300,7 +301,7 @@ func (s *SignupService) saveUser(ctx context.Context, user *models.User, update 
 	return nil
 }
 
-func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.TokenResponse, error) {
+func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.AuthenticationTokenResult, error) {
 	// 1. Find user by ID
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -315,20 +316,14 @@ func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) 
 	}
 	cognitoID := *user.CognitoID
 
-	// 2. Check if user is already confirmed
+	// 2. Check if user is already confirmed in the database
 	if user.Status == models.UserStatusConfirmed {
 		return nil, ErrUserAlreadyConfirmed
 	}
 
-	// 3. Get username for ConfirmSignUp and InitiateAuth (reuse to avoid duplicate ListUsers)
-	username, err := s.cognitoClient.GetUsernameByUserSub(ctx, cognitoID, user.Email)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get username: %w", err)
-	}
-
-	// 4. Confirm with Cognito (pass username directly to avoid duplicate ListUsers call)
-	if err := s.cognitoClient.ConfirmSignUp(ctx, cognitoID, code, username); err != nil {
-		// Check if error indicates user is already confirmed (idempotency)
+	// 3. Confirm with Cognito (pass email - client will resolve username internally)
+	if err := s.cognitoClient.ConfirmSignUp(ctx, cognitoID, code, user.Email); err != nil {
+		// Check if error indicates user is already confirmed in cognito (idempotency)
 		if s.isUserAlreadyConfirmedError(err) {
 			// Verify user is actually confirmed in Cognito
 			isConfirmed, _, _, checkErr := s.cognitoClient.IsUserConfirmed(ctx, user.Email)
@@ -366,19 +361,36 @@ func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) 
 		return nil, fmt.Errorf("failed to decrypt password: %w", err)
 	}
 
-	// 7. Login to get tokens
-	// Use the username we already fetched (avoids duplicate ListUsers call)
+	// 7. Get username for login (reuse from confirmation to avoid duplicate ListUsers call)
+	// Note: We reuse the email->username resolution that ConfirmSignUp just did internally
+	username, err := s.cognitoClient.GetUsernameByUserSub(ctx, cognitoID, user.Email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get username for login: %w", err)
+	}
+
+	// 8. Login to get tokens
 	authResult, err := s.cognitoClient.InitiateAuth(ctx, username, password)
 	if err != nil {
 		// Log the error details but return a generic error to the user
 		// This is critical for security - don't leak implementation details
 		// But for debugging 500s, we need to know what happened
-		fmt.Printf("InitiateAuth failed: %v\n", err)
+		logger.Error("InitiateAuth failed: %v", err)
 		return nil, fmt.Errorf("failed to initiate auth: %w", err)
 	}
 
-	// 8. Map response
-	return s.mapToTokenResponse(authResult), nil
+	// 8. Clear temporary password from database after successful login
+	user.TemporaryPassword = nil
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		// Log warning but don't fail - login succeeded, password cleanup is non-critical
+		logger.Error("Failed to clear temporary password after confirmation: %v", err)
+	}
+
+	// 9. Return session data for cookie
+	return &models.AuthenticationTokenResult{
+		RefreshToken: aws.ToString(authResult.RefreshToken),
+		UserID:       user.ID,
+		Username:     username,
+	}, nil
 }
 
 // isUserAlreadyConfirmedError checks if the error indicates the user is already confirmed

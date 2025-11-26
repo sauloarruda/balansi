@@ -172,34 +172,33 @@ cognito-local-setup:
 # Alias for cognito-local-setup
 cognito-setup: cognito-local-setup
 
-# Run all tests (unit tests only, skips integration tests)
+# Testing variables
+GOTESTSUM := $(shell command -v gotestsum 2> /dev/null)
+GOTESTSUM_FORMAT := testdox
+
+ifdef GOTESTSUM
+	TEST_RUNNER := gotestsum --format $(GOTESTSUM_FORMAT) --
+else
+	TEST_RUNNER := go test -v
+endif
+
+# Run all tests
 test:
-	go test -v -short ./...
+	$(TEST_RUNNER) ./...
 
-# Run unit tests only
+# Run unit tests only (short mode)
 test-unit:
-	go test -v -short ./...
-
-# Run tests with better formatting using gotestsum
-# Install: go install gotest.tools/gotestsum@latest
-test-pretty:
-	@if command -v gotestsum > /dev/null; then \
-		gotestsum --format testname -- -short ./...; \
-	else \
-		echo "gotestsum not found. Install with: go install gotest.tools/gotestsum@latest"; \
-		echo "Falling back to standard go test..."; \
-		go test -v -short ./...; \
-	fi
+	$(TEST_RUNNER) -short ./...
 
 # Run integration tests (requires Docker and cognito-local)
 test-integration:
 	@echo "Running integration tests..."
 	@echo "Note: Integration tests require Docker for testcontainers"
-	go test -v ./internal/integration/...
+	$(TEST_RUNNER) ./internal/integration/...
 
-# Run tests with coverage report
+# Run tests with coverage report (unit tests)
 test-coverage:
-	go test -v -short -coverprofile=coverage.out ./...
+	$(TEST_RUNNER) -short -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 	@echo "Coverage summary:"

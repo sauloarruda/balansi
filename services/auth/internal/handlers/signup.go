@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"services/auth/internal/http"
 	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/services"
@@ -37,12 +38,12 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 	if err := json.Unmarshal([]byte(req.Body), &signupReq); err != nil {
 		// Log detailed error for debugging but return generic message to client
 		logger.Error("Invalid request body: %v", err)
-		return errorResponse(400, "invalid_request", "Invalid request body"), nil
+		return http.ErrorResponse(400, "invalid_request", "Invalid request body"), nil
 	}
 
 	// Validate fields
 	if signupReq.Name == "" || signupReq.Email == "" {
-		return errorResponse(400, "missing_fields", "Name and email are required"), nil
+		return http.ErrorResponse(400, "missing_fields", "Name and email are required"), nil
 	}
 
 	// Call service
@@ -50,11 +51,11 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrUserAlreadyExists):
-			return errorResponse(409, "user_exists", "User with this email already exists"), nil
+			return http.ErrorResponse(409, "user_exists", "User with this email already exists"), nil
 		default:
 			// Log the actual error for debugging but return generic message to client
 			logger.Error("Signup service error: %v", err)
-			return errorResponse(500, "internal_error", "Internal server error"), nil
+			return http.ErrorResponse(500, "internal_error", "Internal server error"), nil
 		}
 	}
 
@@ -69,7 +70,7 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 	body, err := json.Marshal(response)
 	if err != nil {
 		logger.Error("Failed to marshal response: %v", err)
-		return errorResponse(500, "internal_error", "Failed to marshal response"), nil
+		return http.ErrorResponse(500, "internal_error", "Failed to marshal response"), nil
 	}
 
 	// All new signups require email confirmation, so return 200
@@ -82,20 +83,4 @@ func (h *SignupHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPR
 		},
 		Body: string(body),
 	}, nil
-}
-
-func errorResponse(statusCode int, code, message string) events.APIGatewayV2HTTPResponse {
-	payload := models.ErrorResponse{
-		Code:    code,
-		Message: message,
-	}
-
-	body, _ := json.Marshal(payload)
-	return events.APIGatewayV2HTTPResponse{
-		StatusCode: statusCode,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(body),
-	}
 }

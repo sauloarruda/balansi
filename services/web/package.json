@@ -21,13 +21,13 @@
 		"test:local": "HEADLESS=false playwright test"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.0.0",
 		"@openapitools/openapi-generator-cli": "^2.25.1",
 		"@playwright/test": "^1.56.1",
-		"@sveltejs/adapter-static": "^3.0.0",
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0-next.6",
 		"@types/node": "^24.10.1",
-		"@eslint/js": "^9.0.0",
 		"@typescript-eslint/eslint-plugin": "^8.0.0",
 		"@typescript-eslint/parser": "^8.0.0",
 		"autoprefixer": "^10.4.16",

@@ -137,6 +137,9 @@ This skips the build and starts tests immediately, saving time.
   - Form submission
   - Confirmation code display
   - API error handling
+  - Complete confirmation flow (signup → confirmation → home)
+
+**Note:** When using `cognito-local` for testing, the default confirmation code is `123123`. This is used in the E2E tests for the confirmation flow.
 
 ### How It Works
 
