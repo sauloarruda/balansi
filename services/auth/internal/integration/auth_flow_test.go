@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
 	"services/auth/internal/services"
-	"services/auth/internal/testhelpers"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/assert"
@@ -29,12 +27,10 @@ func TestAuthFlow_Integration_FullCycle(t *testing.T) {
 	}
 
 	// 1. Setup Environment
-	pool, cleanup := testhelpers.SetupTestDB(t)
-	defer cleanup()
+	setup := setupIntegrationTest(t)
+	defer setup.Cleanup()
 
-	testhelpers.CreateUsersTable(t, pool)
-
-	cfg := localTestConfig()
+	cfg := setup.Cfg
 
 	// Cognito Client
 	cognitoClient, err := cognito.NewClient(cfg)
@@ -43,7 +39,7 @@ func TestAuthFlow_Integration_FullCycle(t *testing.T) {
 	}
 
 	// Repositories & Services
-	userRepo := repositories.NewUserRepository(pool)
+	userRepo := repositories.NewUserRepository(setup.Pool)
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
 	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
 
@@ -158,15 +154,97 @@ func TestAuthFlow_Integration_FullCycle(t *testing.T) {
 	assert.Equal(t, 200, meResp2.StatusCode)
 }
 
-// Helper function locally defined to avoid dependency issues
-func extractSessionID(cookieHeader string) string {
-	parts := strings.Split(cookieHeader, ";")
-	if len(parts) == 0 {
-		return ""
+func TestAuth_Integration_SessionExpiry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
 	}
-	sessionPart := strings.TrimSpace(parts[0])
-	if strings.HasPrefix(sessionPart, "session_id=") {
-		return strings.TrimPrefix(sessionPart, "session_id=")
+
+	// 1. Setup Environment
+	setup := setupIntegrationTest(t)
+	defer setup.Cleanup()
+
+	cfg := setup.Cfg
+
+	// Cognito Client
+	cognitoClient, err := cognito.NewClient(cfg)
+	if err != nil {
+		t.Skipf("Skipping integration test - Cognito client setup failed: %v", err)
 	}
-	return ""
+
+	// Repositories & Services
+	userRepo := repositories.NewUserRepository(setup.Pool)
+	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
+	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
+
+	// Handlers
+	confirmHandler := handlers.NewConfirmHandlerWithInterface(signupService, sessionService)
+	refreshHandler := handlers.NewRefreshHandlerWithInterface(sessionService)
+
+	ctx := context.Background()
+	name := "Session Expiry Test User"
+	email := fmt.Sprintf("session-expiry-%d@example.com", time.Now().UnixNano())
+
+	// 2. Signup
+	t.Logf("Starting Signup for %s", email)
+	signupResult, err := signupService.Signup(ctx, name, email)
+	if err != nil {
+		if errors.Is(err, services.ErrSignupProviderUnavailable) {
+			t.Skipf("Skipping integration test - signup provider not available: %v", err)
+			return
+		}
+		require.NoError(t, err, "Signup should succeed")
+	}
+	require.NotNil(t, signupResult)
+	userID := signupResult.User.ID
+
+	// Wait for Cognito eventual consistency
+	time.Sleep(1 * time.Second)
+
+	// 3. Confirm (Login)
+	t.Log("Confirming User")
+	confirmationCode := "123123" // Default cognito-local code
+	reqBody := fmt.Sprintf(`{"userId": %d, "code": "%s"}`, userID, confirmationCode)
+	confirmReq := events.APIGatewayV2HTTPRequest{
+		Body: reqBody,
+	}
+
+	confirmResp, err := confirmHandler.Handle(ctx, confirmReq)
+	require.NoError(t, err)
+	require.Equal(t, 200, confirmResp.StatusCode, "Confirm should succeed: %s", confirmResp.Body)
+
+	// Extract Session Cookie
+	cookieHeader := confirmResp.Headers["Set-Cookie"]
+	sessionID := extractSessionID(cookieHeader)
+	require.NotEmpty(t, sessionID, "Session ID must be present in Set-Cookie")
+
+	// 4. Refresh (Get Access Token)
+	t.Log("Refreshing Token (1st time)")
+	refreshReq := events.APIGatewayV2HTTPRequest{
+		Cookies: []string{"session_id=" + sessionID},
+	}
+
+	refreshResp, err := refreshHandler.Handle(ctx, refreshReq)
+	require.NoError(t, err)
+	require.Equal(t, 200, refreshResp.StatusCode, "Refresh should succeed: %s", refreshResp.Body)
+
+	var tokenResp models.AccessTokenResponse
+	err = json.Unmarshal([]byte(refreshResp.Body), &tokenResp)
+	require.NoError(t, err)
+	accessToken := tokenResp.AccessToken
+	require.NotEmpty(t, accessToken, "Access Token must be returned")
+
+	// 5. Try to refresh with invalid session (should fail)
+	t.Log("Attempting refresh with invalid session")
+	invalidRefreshReq := events.APIGatewayV2HTTPRequest{
+		Cookies: []string{"session_id=invalid-session-data"},
+	}
+
+	invalidRefreshResp, err := refreshHandler.Handle(ctx, invalidRefreshReq)
+	require.NoError(t, err)
+	assert.Equal(t, 401, invalidRefreshResp.StatusCode, "Refresh should fail with invalid session")
+
+	var errorResp models.ErrorResponse
+	err = json.Unmarshal([]byte(invalidRefreshResp.Body), &errorResp)
+	require.NoError(t, err)
+	assert.Equal(t, "invalid_session", errorResp.Code, "Should return invalid_session error")
 }
