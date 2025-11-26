@@ -4,5 +4,7 @@ export { ApiError, NetworkError, api, getApiBaseUrl, createApiConfig } from "./w
 // Export types directly from generated client
 export type {
     ConfirmRequest, SignupRequest,
-    SignupResponse, TokenResponse
+    SignupResponse, TokenResponse,
+    ForgotPasswordRequest, ForgotPasswordResponse,
+    ResetPasswordRequest, ResetPasswordResponse
 } from "./generated";
