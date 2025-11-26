@@ -3,15 +3,15 @@
 	import { goto } from "$app/navigation";
 	import type { SignupRequest } from "$lib/api";
 	import { api, ApiError, NetworkError } from "$lib/api";
-	import { checkAuth } from "$lib/auth/clientAuth";
-	import { signupData } from "$lib/auth/signupStorage";
+	import { getAuthData, saveAuthData } from "$lib/auth/authStorage";
+	import { checkAuthAndRedirect } from "$lib/auth/hooks";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import Input from "$lib/components/ds/Input.svelte";
 	import { _ } from "$lib/i18n";
 	import { isValidEmail, isValidName } from "$lib/utils/validation";
 
-	let loading = $state(true);
+	let checking = $state(true);
 	let name = $state("");
 	let email = $state("");
 	let submitting = $state(false);
@@ -32,22 +32,22 @@
 
 	const isFormValid = $derived(nameValid && emailValid);
 
-	// Check authentication and load signup data from localStorage
+	// Check authentication and redirect if already logged in
 	$effect(() => {
-		const isAuth = checkAuth();
-		if (isAuth) {
-			// Already authenticated, redirect to home
-			goto("/");
-		} else {
-			// Load signup data from localStorage if available
-			if (browser) {
-				const savedData = signupData.get();
-				if (savedData) {
-					name = savedData.name;
-					email = savedData.email;
+		if (browser) {
+			checkAuthAndRedirect().then((redirected) => {
+				if (!redirected) {
+					// Not redirected, load saved data
+					const savedData = getAuthData();
+					if (savedData) {
+						email = savedData.email;
+						if (savedData.name) {
+							name = savedData.name;
+						}
+					}
+					checking = false;
 				}
-			}
-			loading = false;
+			});
 		}
 	});
 
@@ -61,8 +61,12 @@
 			const response = await api.auth.signUp({ signupRequest: request });
 
 			if (response.status === "pending_confirmation") {
-				// Save signup data to localStorage
-				signupData.save(response.id, response.name, response.email);
+				// Save auth data (email + name + userId) for confirmation page
+				saveAuthData({
+					email: response.email,
+					name: response.name,
+					userId: response.id,
+				});
 
 				// Redirect to confirmation page
 				goto("/auth/confirmation");
@@ -88,9 +92,9 @@
 	}
 </script>
 
-<Container {loading}>
+<Container loading={checking}>
 	{#snippet children()}
-		{#if !loading}
+		{#if !checking}
 			<h2 class="text-xl font-semibold mb-6 text-center">
 				{$_("auth.signup.title")}
 			</h2>

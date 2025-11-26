@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import { goto } from "$app/navigation";
 	import type { ForgotPasswordRequest } from "$lib/api";
 	import { api, ApiError, NetworkError } from "$lib/api";
-	import { checkAuth } from "$lib/auth/clientAuth";
+	import { getAuthData, saveAuthData } from "$lib/auth/authStorage";
+	import { checkAuthAndRedirect } from "$lib/auth/hooks";
 	import { passwordRecoveryData } from "$lib/auth/passwordRecoveryStorage";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
@@ -10,10 +12,26 @@
 	import { _ } from "$lib/i18n";
 	import { isValidEmail } from "$lib/utils/validation";
 
-	let loading = $state(true);
+	let checking = $state(true);
 	let email = $state("");
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
+
+	// Check authentication and redirect if already logged in
+	$effect(() => {
+		if (browser) {
+			checkAuthAndRedirect().then((redirected) => {
+				if (!redirected) {
+					// Not redirected, load saved email
+					const authData = getAuthData();
+					if (authData?.email) {
+						email = authData.email;
+					}
+					checking = false;
+				}
+			});
+		}
+	});
 
 	// Validation state
 	let emailValid = $state(false);
@@ -25,17 +43,6 @@
 
 	const isFormValid = $derived(emailValid);
 
-	// Check authentication
-	$effect(() => {
-		const isAuth = checkAuth();
-		if (isAuth) {
-			// Already authenticated, redirect to home
-			goto("/");
-		} else {
-			loading = false;
-		}
-	});
-
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		submitting = true;
@@ -44,6 +51,9 @@
 		try {
 			const request: ForgotPasswordRequest = { email };
 			const response = await api.auth.forgotPassword({ forgotPasswordRequest: request });
+
+			// Save email for reuse in other auth flows
+			saveAuthData({ email });
 
 			// Save email and destination for the reset-password page
 			passwordRecoveryData.save(email, response.destination || email);
@@ -71,9 +81,9 @@
 	}
 </script>
 
-<Container {loading}>
+<Container loading={checking}>
 	{#snippet children()}
-		{#if !loading}
+		{#if !checking}
 			<h2 class="text-xl font-semibold mb-6 text-center">
 				{$_("auth.forgotPassword.title")}
 			</h2>

@@ -2,14 +2,16 @@
 	import { browser } from "$app/environment";
 	import { goto } from "$app/navigation";
 	import { api, ApiError, NetworkError } from "$lib/api";
-	import { checkAuth } from "$lib/auth/clientAuth";
-	import { signupData } from "$lib/auth/signupStorage";
+	import { clearAuthData, getAuthData } from "$lib/auth/authStorage";
+	import { checkAuthAndRedirect } from "$lib/auth/hooks";
 	import { refreshAccessToken } from "$lib/auth/token";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import PinInput from "$lib/components/ds/PinInput.svelte";
 	import { _ } from "$lib/i18n";
+	import { focusPinInput } from "$lib/utils/focus";
 
+	let checking = $state(true);
 	let loading = $state(true);
 	let name = $state("");
 	let email = $state("");
@@ -19,46 +21,34 @@
 	let error = $state<string | null>(null);
 	let pinError = $state(false);
 
-	// Check authentication and signup data
+	// Check authentication and load auth data
 	$effect(() => {
-		const isAuth = checkAuth();
-		if (isAuth) {
-			// Already authenticated, redirect to home
-			goto("/");
-			return;
-		}
+		if (browser) {
+			checkAuthAndRedirect().then((redirected) => {
+				if (!redirected) {
+					checking = false;
 
-		if (!browser) {
-			loading = false;
-			return;
-		}
+					// Get auth data from localStorage
+					const authData = getAuthData();
+					if (!authData || !authData.userId || !authData.name) {
+						// Missing required data, redirect to signup
+						goto("/auth");
+						return;
+					}
 
-		// Get signup data from localStorage
-		const signup = signupData.get();
-		if (!signup) {
-			// Missing signup data, redirect to signup
-			goto("/auth");
-			return;
+					userId = authData.userId;
+					name = authData.name;
+					email = authData.email;
+					loading = false;
+				}
+			});
 		}
-
-		userId = signup.userId;
-		name = signup.name;
-		email = signup.email;
-		loading = false;
 	});
 
 	// Focus PIN input when page loads
 	$effect(() => {
-		if (!loading && browser && !submitting) {
-			// Small delay to ensure PinInput is rendered
-			window.setTimeout(() => {
-				const firstInput = document.querySelector(
-					'input[aria-label="PIN digit 1"]'
-				) as HTMLInputElement;
-				if (firstInput && !firstInput.disabled) {
-					firstInput.focus();
-				}
-			}, 100);
+		if (!loading && !checking && !submitting) {
+			focusPinInput();
 		}
 	});
 </script>
@@ -105,8 +95,8 @@
 							return;
 						}
 
-						// Clear signup data
-						signupData.clear();
+						// Clear temporary auth data
+						clearAuthData();
 
 						// Redirect to home
 						goto("/");

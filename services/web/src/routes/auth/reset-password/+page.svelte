@@ -3,15 +3,17 @@
 	import { goto } from "$app/navigation";
 	import type { ResetPasswordRequest } from "$lib/api";
 	import { api, ApiError, NetworkError } from "$lib/api";
-	import { checkAuth } from "$lib/auth/clientAuth";
+	import { checkAuthAndRedirect } from "$lib/auth/hooks";
 	import { passwordRecoveryData } from "$lib/auth/passwordRecoveryStorage";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import Input from "$lib/components/ds/Input.svelte";
 	import PinInput from "$lib/components/ds/PinInput.svelte";
 	import { _ } from "$lib/i18n";
+	import { focusPinInput } from "$lib/utils/focus";
 	import { getPasswordRequirements, isValidPassword } from "$lib/utils/validation";
 
+	let checking = $state(true);
 	let loading = $state(true);
 	let email = $state("");
 	let destination = $state("");
@@ -35,43 +37,31 @@
 
 	// Check authentication and load recovery data
 	$effect(() => {
-		const isAuth = checkAuth();
-		if (isAuth) {
-			// Already authenticated, redirect to home
-			goto("/");
-			return;
-		}
+		if (browser) {
+			checkAuthAndRedirect().then((redirected) => {
+				if (!redirected) {
+					checking = false;
 
-		if (!browser) {
-			loading = false;
-			return;
-		}
+					// Get recovery data from localStorage
+					const recovery = passwordRecoveryData.get();
+					if (!recovery) {
+						// Missing recovery data, redirect to forgot-password
+						goto("/auth/forgot-password");
+						return;
+					}
 
-		// Get recovery data from localStorage
-		const recovery = passwordRecoveryData.get();
-		if (!recovery) {
-			// Missing recovery data, redirect to forgot-password
-			goto("/auth/forgot-password");
-			return;
+					email = recovery.email;
+					destination = recovery.destination;
+					loading = false;
+				}
+			});
 		}
-
-		email = recovery.email;
-		destination = recovery.destination;
-		loading = false;
 	});
 
 	// Focus PIN input when page loads
 	$effect(() => {
-		if (!loading && browser && !submitting) {
-			// Small delay to ensure PinInput is rendered
-			window.setTimeout(() => {
-				const firstInput = document.querySelector(
-					'input[aria-label="PIN digit 1"]'
-				) as HTMLInputElement;
-				if (firstInput && !firstInput.disabled) {
-					firstInput.focus();
-				}
-			}, 100);
+		if (!loading && !checking && !submitting) {
+			focusPinInput();
 		}
 	});
 
