@@ -25,4 +25,6 @@ type CognitoClientInterface interface {
 	ConfirmSignUp(ctx context.Context, cognitoID string, confirmationCode string, usernameOrEmail ...string) error // cognitoID is UserSub
 	InitiateAuth(ctx context.Context, cognitoID, password string) (*types.AuthenticationResultType, error)         // cognitoID is UserSub
 	RefreshTokenWithUsername(ctx context.Context, refreshToken, username string) (*types.AuthenticationResultType, error)
+	ForgotPassword(ctx context.Context, email string) (*types.CodeDeliveryDetailsType, error)
+	ResetPassword(ctx context.Context, email, code, newPassword string) error
 }

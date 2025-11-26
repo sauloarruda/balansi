@@ -10,7 +10,6 @@ import (
 	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
-	"services/auth/internal/testhelpers"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -23,12 +22,6 @@ var (
 	ErrExpiredConfirmationCode = errors.New("expired confirmation code")
 	ErrUserAlreadyConfirmed    = errors.New("user already confirmed")
 )
-
-// UserRepositoryInterface defines repository operations (aliased for convenience).
-type UserRepositoryInterface = testhelpers.UserRepositoryInterface
-
-// CognitoClientInterface defines Cognito client operations (aliased for convenience).
-type CognitoClientInterface = testhelpers.CognitoClientInterface
 
 type SignupService struct {
 	userRepo         UserRepositoryInterface

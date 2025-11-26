@@ -93,6 +93,19 @@ func (m *MockCognitoClient) RefreshTokenWithUsername(ctx context.Context, refres
 	return args.Get(0).(*types.AuthenticationResultType), args.Error(1)
 }
 
+func (m *MockCognitoClient) ForgotPassword(ctx context.Context, email string) (*types.CodeDeliveryDetailsType, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.CodeDeliveryDetailsType), args.Error(1)
+}
+
+func (m *MockCognitoClient) ResetPassword(ctx context.Context, email, code, newPassword string) error {
+	args := m.Called(ctx, email, code, newPassword)
+	return args.Error(0)
+}
+
 // MockSignupService is a mock implementation of SignupServiceInterface.
 type MockSignupService struct {
 	mock.Mock

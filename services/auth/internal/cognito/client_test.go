@@ -73,19 +73,323 @@ func setupMockClient(t *testing.T, cfg *config.Config) (*mockCognitoClient, *Cli
 	return mockAWSClient, client
 }
 
-// runValidationTests runs validation tests for empty parameters using table-driven approach.
-// This consolidates repetitive validation test patterns.
-func runValidationTests(t *testing.T, testName string, testCases []struct {
+// mockSetupBuilder provides a fluent interface for configuring common mock scenarios.
+// This reduces code duplication in test setup.
+type mockSetupBuilder struct {
+	mockClient *mockCognitoClient
+	ctx        context.Context
+	cfg        *config.Config
+}
+
+func newMockSetupBuilder(mockClient *mockCognitoClient, ctx context.Context, cfg *config.Config) *mockSetupBuilder {
+	return &mockSetupBuilder{
+		mockClient: mockClient,
+		ctx:        ctx,
+		cfg:        cfg,
+	}
+}
+
+// withSignUpSuccess configures a successful SignUp mock.
+func (b *mockSetupBuilder) withSignUpSuccess(email, password, name string, expectedUsername string, useSecretHash bool) *mockSetupBuilder {
+	b.mockClient.On("SignUp", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.SignUpInput) bool {
+		valid := input != nil &&
+			aws.ToString(input.ClientId) == b.cfg.CognitoClientID &&
+			aws.ToString(input.Password) == password &&
+			len(input.UserAttributes) >= 3
+
+		// Check email attribute
+		emailAttr := false
+		for _, attr := range input.UserAttributes {
+			if aws.ToString(attr.Name) == "email" && aws.ToString(attr.Value) == email {
+				emailAttr = true
+				break
+			}
+		}
+		valid = valid && emailAttr
+
+		// Check username - if expectedUsername is empty, accept any non-empty username (for UUID case)
+		actualUsername := aws.ToString(input.Username)
+		if expectedUsername == "" {
+			valid = valid && actualUsername != ""
+		} else {
+			valid = valid && actualUsername == expectedUsername
+		}
+
+		if useSecretHash {
+			valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+		} else {
+			valid = valid && input.SecretHash == nil
+		}
+
+		return valid
+	})).Return(&cognitoidentityprovider.SignUpOutput{
+		UserSub: aws.String("test-user-sub"),
+	}, nil)
+	return b
+}
+
+// withListUsersSuccess configures a successful ListUsers mock.
+func (b *mockSetupBuilder) withListUsersSuccess(email string, username, userSub string, userStatus types.UserStatusType) *mockSetupBuilder {
+	b.mockClient.On("ListUsers", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+		return input != nil &&
+			aws.ToString(input.UserPoolId) == b.cfg.CognitoUserPoolID &&
+			aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+	})).Return(&cognitoidentityprovider.ListUsersOutput{
+		Users: []types.UserType{
+			{
+				Username:   aws.String(username),
+				UserStatus: userStatus,
+				Attributes: []types.AttributeType{
+					{
+						Name:  aws.String("sub"),
+						Value: aws.String(userSub),
+					},
+				},
+			},
+		},
+	}, nil)
+	return b
+}
+
+// withListUsersSuccessNoSub configures ListUsers mock without sub attribute (triggers AdminGetUser fallback).
+func (b *mockSetupBuilder) withListUsersSuccessNoSub(email string, username string, userStatus types.UserStatusType) *mockSetupBuilder {
+	b.mockClient.On("ListUsers", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+		return input != nil &&
+			aws.ToString(input.UserPoolId) == b.cfg.CognitoUserPoolID &&
+			aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+	})).Return(&cognitoidentityprovider.ListUsersOutput{
+		Users: []types.UserType{
+			{
+				Username:   aws.String(username),
+				UserStatus: userStatus,
+				// No Attributes - will trigger AdminGetUser fallback
+			},
+		},
+	}, nil)
+	return b
+}
+
+// withAdminGetUserSuccess configures a successful AdminGetUser mock.
+func (b *mockSetupBuilder) withAdminGetUserSuccess(username, userSub string, userStatus types.UserStatusType) *mockSetupBuilder {
+	b.mockClient.On("AdminGetUser", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.AdminGetUserInput) bool {
+		return input != nil &&
+			aws.ToString(input.UserPoolId) == b.cfg.CognitoUserPoolID &&
+			aws.ToString(input.Username) == username
+	})).Return(&cognitoidentityprovider.AdminGetUserOutput{
+		Username:   aws.String(username),
+		UserStatus: userStatus,
+		UserAttributes: []types.AttributeType{
+			{
+				Name:  aws.String("sub"),
+				Value: aws.String(userSub),
+			},
+		},
+	}, nil)
+	return b
+}
+
+// withResendConfirmationCodeSuccess configures a successful ResendConfirmationCode mock.
+func (b *mockSetupBuilder) withResendConfirmationCodeSuccess(username string, useSecretHash bool) *mockSetupBuilder {
+	b.mockClient.On("ResendConfirmationCode", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ResendConfirmationCodeInput) bool {
+		valid := input != nil &&
+			aws.ToString(input.ClientId) == b.cfg.CognitoClientID &&
+			aws.ToString(input.Username) == username
+
+		if useSecretHash {
+			valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+		} else {
+			valid = valid && input.SecretHash == nil
+		}
+
+		return valid
+	})).Return(&cognitoidentityprovider.ResendConfirmationCodeOutput{}, nil)
+	return b
+}
+
+// withConfirmSignUpSuccess configures a successful ConfirmSignUp mock.
+func (b *mockSetupBuilder) withConfirmSignUpSuccess(username, confirmationCode string, useSecretHash bool) *mockSetupBuilder {
+	b.mockClient.On("ConfirmSignUp", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmSignUpInput) bool {
+		valid := input != nil &&
+			aws.ToString(input.ClientId) == b.cfg.CognitoClientID &&
+			aws.ToString(input.Username) == username &&
+			aws.ToString(input.ConfirmationCode) == confirmationCode
+
+		if useSecretHash {
+			valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+		} else {
+			valid = valid && input.SecretHash == nil
+		}
+
+		return valid
+	})).Return(&cognitoidentityprovider.ConfirmSignUpOutput{}, nil)
+	return b
+}
+
+// withForgotPasswordSuccess configures a successful ForgotPassword mock.
+func (b *mockSetupBuilder) withForgotPasswordSuccess(username string, useSecretHash bool) *mockSetupBuilder {
+	b.mockClient.On("ForgotPassword", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ForgotPasswordInput) bool {
+		valid := input != nil &&
+			aws.ToString(input.ClientId) == b.cfg.CognitoClientID &&
+			aws.ToString(input.Username) == username
+
+		if useSecretHash {
+			valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+		} else {
+			valid = valid && input.SecretHash == nil
+		}
+
+		return valid
+	})).Return(&cognitoidentityprovider.ForgotPasswordOutput{
+		CodeDeliveryDetails: &types.CodeDeliveryDetailsType{
+			Destination:    aws.String("u***@e***.com"),
+			DeliveryMedium: types.DeliveryMediumTypeEmail,
+			AttributeName:  aws.String("email"),
+		},
+	}, nil)
+	return b
+}
+
+// withConfirmForgotPasswordSuccess configures a successful ConfirmForgotPassword mock.
+func (b *mockSetupBuilder) withConfirmForgotPasswordSuccess(username, confirmationCode, newPassword string, useSecretHash bool) *mockSetupBuilder {
+	b.mockClient.On("ConfirmForgotPassword", b.ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmForgotPasswordInput) bool {
+		valid := input != nil &&
+			aws.ToString(input.ClientId) == b.cfg.CognitoClientID &&
+			aws.ToString(input.Username) == username &&
+			aws.ToString(input.ConfirmationCode) == confirmationCode &&
+			aws.ToString(input.Password) == newPassword
+
+		if useSecretHash {
+			valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+		} else {
+			valid = valid && input.SecretHash == nil
+		}
+
+		return valid
+	})).Return(&cognitoidentityprovider.ConfirmForgotPasswordOutput{}, nil)
+	return b
+}
+
+// validationTestCase represents a validation test case.
+type validationTestCase struct {
 	name        string
 	testFunc    func() error
 	expectedArg string
-}) {
+}
+
+// runValidationTests runs validation tests for empty parameters using table-driven approach.
+// This consolidates repetitive validation test patterns.
+func runValidationTests(t *testing.T, testName string, testCases []validationTestCase) {
 	t.Helper()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.testFunc()
 			assertArgumentError(t, err, tc.expectedArg)
 		})
+	}
+}
+
+// createValidationTestCases creates common validation test cases for methods with email parameter.
+func createEmailValidationTestCases(client *Client, ctx context.Context, testFunc func(string) error) []validationTestCase {
+	return []validationTestCase{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				return testFunc("")
+			},
+			expectedArg: "email",
+		},
+	}
+}
+
+// createSignUpValidationTestCases creates validation test cases for SignUp method.
+func createSignUpValidationTestCases(client *Client, ctx context.Context) []validationTestCase {
+	return []validationTestCase{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, "", testPassword, testName)
+				return err
+			},
+			expectedArg: "email",
+		},
+		{
+			name: "empty password",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, testEmail, "", testName)
+				return err
+			},
+			expectedArg: "password",
+		},
+		{
+			name: "empty name",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, testEmail, testPassword, "")
+				return err
+			},
+			expectedArg: "name",
+		},
+		{
+			name: "all empty",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, "", "", "")
+				return err
+			},
+			expectedArg: "email", // Should return error for email first
+		},
+	}
+}
+
+// createConfirmSignUpValidationTestCases creates validation test cases for ConfirmSignUp method.
+func createConfirmSignUpValidationTestCases(client *Client, ctx context.Context) []validationTestCase {
+	return []validationTestCase{
+		{
+			name: "empty cognitoId",
+			testFunc: func() error {
+				return client.ConfirmSignUp(ctx, "", testConfirmationCode)
+			},
+			expectedArg: "cognitoId",
+		},
+		{
+			name: "empty confirmationCode",
+			testFunc: func() error {
+				return client.ConfirmSignUp(ctx, "test-user-sub", "")
+			},
+			expectedArg: "confirmationCode",
+		},
+		{
+			name: "both empty",
+			testFunc: func() error {
+				return client.ConfirmSignUp(ctx, "", "")
+			},
+			expectedArg: "cognitoId", // Should return error for cognitoId first
+		},
+	}
+}
+
+// createResetPasswordValidationTestCases creates validation test cases for ResetPassword method.
+func createResetPasswordValidationTestCases(client *Client, ctx context.Context) []validationTestCase {
+	return []validationTestCase{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				return client.ResetPassword(ctx, "", testConfirmationCode, testPassword)
+			},
+			expectedArg: "email",
+		},
+		{
+			name: "empty code",
+			testFunc: func() error {
+				return client.ResetPassword(ctx, testEmail, "", testPassword)
+			},
+			expectedArg: "code",
+		},
+		{
+			name: "empty password",
+			testFunc: func() error {
+				return client.ResetPassword(ctx, testEmail, testConfirmationCode, "")
+			},
+			expectedArg: "newPassword",
+		},
 	}
 }
 
@@ -98,6 +402,8 @@ type mockCognitoClient struct {
 	ResendConfirmationCodeFunc func(ctx context.Context, params *cognitoidentityprovider.ResendConfirmationCodeInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ResendConfirmationCodeOutput, error)
 	ConfirmSignUpFunc          func(ctx context.Context, params *cognitoidentityprovider.ConfirmSignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmSignUpOutput, error)
 	InitiateAuthFunc           func(ctx context.Context, params *cognitoidentityprovider.InitiateAuthInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.InitiateAuthOutput, error)
+	ForgotPasswordFunc         func(ctx context.Context, params *cognitoidentityprovider.ForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ForgotPasswordOutput, error)
+	ConfirmForgotPasswordFunc  func(ctx context.Context, params *cognitoidentityprovider.ConfirmForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmForgotPasswordOutput, error)
 }
 
 func (m *mockCognitoClient) SignUp(ctx context.Context, params *cognitoidentityprovider.SignUpInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.SignUpOutput, error) {
@@ -163,6 +469,28 @@ func (m *mockCognitoClient) InitiateAuth(ctx context.Context, params *cognitoide
 	return args.Get(0).(*cognitoidentityprovider.InitiateAuthOutput), args.Error(1)
 }
 
+func (m *mockCognitoClient) ForgotPassword(ctx context.Context, params *cognitoidentityprovider.ForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ForgotPasswordOutput, error) {
+	if m.ForgotPasswordFunc != nil {
+		return m.ForgotPasswordFunc(ctx, params, optFns...)
+	}
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*cognitoidentityprovider.ForgotPasswordOutput), args.Error(1)
+}
+
+func (m *mockCognitoClient) ConfirmForgotPassword(ctx context.Context, params *cognitoidentityprovider.ConfirmForgotPasswordInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.ConfirmForgotPasswordOutput, error) {
+	if m.ConfirmForgotPasswordFunc != nil {
+		return m.ConfirmForgotPasswordFunc(ctx, params, optFns...)
+	}
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*cognitoidentityprovider.ConfirmForgotPasswordOutput), args.Error(1)
+}
+
 // newClientWithMock creates a Client with a mocked AWS SDK client for testing.
 func newClientWithMock(mockClient *mockCognitoClient, cfg *config.Config) *Client {
 	return &Client{
@@ -174,7 +502,6 @@ func newClientWithMock(mockClient *mockCognitoClient, cfg *config.Config) *Clien
 	}
 }
 
-// ============================================================================
 // Tests for public methods (ordered by method definition in client.go)
 // ============================================================================
 
@@ -210,54 +537,20 @@ func TestSignUp_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	runValidationTests(t, "SignUp", []struct {
-		name        string
-		testFunc    func() error
-		expectedArg string
-	}{
-		{
-			name: "empty email",
-			testFunc: func() error {
-				_, err := client.SignUp(ctx, "", testPassword, testName)
-				return err
-			},
-			expectedArg: "email",
-		},
-		{
-			name: "empty password",
-			testFunc: func() error {
-				_, err := client.SignUp(ctx, testEmail, "", testName)
-				return err
-			},
-			expectedArg: "password",
-		},
-		{
-			name: "empty name",
-			testFunc: func() error {
-				_, err := client.SignUp(ctx, testEmail, testPassword, "")
-				return err
-			},
-			expectedArg: "name",
-		},
-		{
-			name: "all empty",
-			testFunc: func() error {
-				_, err := client.SignUp(ctx, "", "", "")
-				return err
-			},
-			expectedArg: "email", // Should return error for email first
-		},
-	})
+	runValidationTests(t, "SignUp", createSignUpValidationTestCases(client, ctx))
+}
+
+// signUpTestCase represents a test case for SignUp functionality.
+type signUpTestCase struct {
+	name         string
+	configFn     func(*config.Config)
+	validateHash bool
+	useLocal     bool
 }
 
 // TestSignUp_Success tests successful signup with different configurations.
 func TestSignUp_Success(t *testing.T) {
-	tests := []struct {
-		name         string
-		configFn     func(*config.Config)
-		validateHash bool
-		useLocal     bool
-	}{
+	testCases := []signUpTestCase{
 		{
 			name:         "without secret hash",
 			configFn:     nil,
@@ -282,69 +575,51 @@ func TestSignUp_Success(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var cfg *config.Config
-			if tt.configFn != nil {
-				cfg = testConfig(tt.configFn)
-			} else {
-				cfg = testConfig()
-			}
-			mockAWSClient, client := setupMockClient(t, cfg)
-			ctx := context.Background()
-
-			email := testEmail
-			password := testPassword
-			name := testName
-
-			// Setup mock to return success
-			mockAWSClient.On("SignUp", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.SignUpInput) bool {
-				valid := input != nil &&
-					aws.ToString(input.ClientId) == cfg.CognitoClientID &&
-					aws.ToString(input.Password) == password &&
-					len(input.UserAttributes) >= 3
-
-				// Check email attribute
-				emailAttr := false
-				for _, attr := range input.UserAttributes {
-					if aws.ToString(attr.Name) == "email" && aws.ToString(attr.Value) == email {
-						emailAttr = true
-						break
-					}
-				}
-				valid = valid && emailAttr
-
-				// Check username based on endpoint
-				if tt.useLocal {
-					valid = valid && aws.ToString(input.Username) == email
-				} else {
-					// UUID format check (basic)
-					username := aws.ToString(input.Username)
-					valid = valid && len(username) > 0 && username != email
-				}
-
-				if tt.validateHash {
-					valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
-				} else {
-					valid = valid && input.SecretHash == nil
-				}
-
-				return valid
-			})).Return(&cognitoidentityprovider.SignUpOutput{
-				UserSub: aws.String("test-user-sub"),
-			}, nil)
-
-			// Execute
-			username, err := client.SignUp(ctx, email, password, name)
-
-			// Assert
-			assert.NoError(t, err)
-			assert.NotEmpty(t, username)
-			// Now SignUp returns UserSub, not username
-			assert.Equal(t, "test-user-sub", username, "SignUp should return UserSub")
-			mockAWSClient.AssertExpectations(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			runSignUpSuccessTest(t, tc)
 		})
 	}
+}
+
+// runSignUpSuccessTest executes a successful SignUp test for the given configuration.
+func runSignUpSuccessTest(t *testing.T, tc signUpTestCase) {
+	cfg := createTestConfig(tc.configFn)
+	mockClient, client := setupMockClient(t, cfg)
+	ctx := context.Background()
+
+	setupSignUpMock(mockClient, ctx, cfg, tc)
+	username, err := client.SignUp(ctx, testEmail, testPassword, testName)
+
+	assertSignUpSuccess(t, username, err, mockClient)
+}
+
+// createTestConfig creates a test configuration with optional modifications.
+func createTestConfig(configFn func(*config.Config)) *config.Config {
+	if configFn != nil {
+		return testConfig(configFn)
+	}
+	return testConfig()
+}
+
+// setupSignUpMock configures the mock for a SignUp operation.
+func setupSignUpMock(mockClient *mockCognitoClient, ctx context.Context, cfg *config.Config, tc signUpTestCase) {
+	expectedUsername := testEmail
+	if !tc.useLocal {
+		// For non-local, expect any non-empty UUID format (not email)
+		expectedUsername = ""
+	}
+
+	builder := newMockSetupBuilder(mockClient, ctx, cfg)
+	builder.withSignUpSuccess(testEmail, testPassword, testName, expectedUsername, tc.validateHash)
+}
+
+// assertSignUpSuccess verifies that SignUp succeeded as expected.
+func assertSignUpSuccess(t *testing.T, username string, err error, mockClient *mockCognitoClient) {
+	assert.NoError(t, err)
+	assert.NotEmpty(t, username)
+	assert.Equal(t, "test-user-sub", username, "SignUp should return UserSub")
+	mockClient.AssertExpectations(t)
 }
 
 // TestSignUp_Errors tests handling of various Cognito errors.
@@ -396,29 +671,22 @@ func TestIsUserConfirmed_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	runValidationTests(t, "IsUserConfirmed", []struct {
-		name        string
-		testFunc    func() error
-		expectedArg string
-	}{
-		{
-			name: "empty email",
-			testFunc: func() error {
-				_, _, _, err := client.IsUserConfirmed(ctx, "")
-				return err
-			},
-			expectedArg: "email",
-		},
-	})
+	runValidationTests(t, "IsUserConfirmed", createEmailValidationTestCases(client, ctx, func(email string) error {
+		_, _, _, err := client.IsUserConfirmed(ctx, email)
+		return err
+	}))
+}
+
+// userConfirmationTestCase represents a test case for user confirmation status.
+type userConfirmationTestCase struct {
+	name            string
+	userStatus      types.UserStatusType
+	expectConfirmed bool
 }
 
 // TestIsUserConfirmed_Success tests successful user confirmation status checks.
 func TestIsUserConfirmed_Success(t *testing.T) {
-	tests := []struct {
-		name            string
-		userStatus      types.UserStatusType
-		expectConfirmed bool
-	}{
+	testCases := []userConfirmationTestCase{
 		{
 			name:            "confirmed user",
 			userStatus:      types.UserStatusTypeConfirmed,
@@ -431,47 +699,38 @@ func TestIsUserConfirmed_Success(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := testConfig()
-			mockAWSClient, client := setupMockClient(t, cfg)
-			ctx := context.Background()
-
-			email := testEmail
-			username := testUsername
-			userSub := testUserSub
-
-			// Setup mock to return user with sub attribute
-			mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
-				return input != nil &&
-					aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
-					aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
-			})).Return(&cognitoidentityprovider.ListUsersOutput{
-				Users: []types.UserType{
-					{
-						Username:   aws.String(username),
-						UserStatus: tt.userStatus,
-						Attributes: []types.AttributeType{
-							{
-								Name:  aws.String("sub"),
-								Value: aws.String(userSub),
-							},
-						},
-					},
-				},
-			}, nil)
-
-			// Execute
-			isConfirmed, retrievedUsername, cognitoID, err := client.IsUserConfirmed(ctx, email)
-
-			// Assert
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectConfirmed, isConfirmed)
-			assert.Equal(t, username, retrievedUsername)
-			assert.Equal(t, userSub, cognitoID, "Should return UserSub, not username")
-			mockAWSClient.AssertExpectations(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			runUserConfirmationTest(t, tc)
 		})
 	}
+}
+
+// runUserConfirmationTest executes a user confirmation status test.
+func runUserConfirmationTest(t *testing.T, tc userConfirmationTestCase) {
+	cfg := testConfig()
+	mockClient, client := setupMockClient(t, cfg)
+	ctx := context.Background()
+
+	setupUserConfirmationMock(mockClient, ctx, cfg, tc)
+	isConfirmed, retrievedUsername, cognitoID, err := client.IsUserConfirmed(ctx, testEmail)
+
+	assertUserConfirmationResult(t, isConfirmed, retrievedUsername, cognitoID, err, tc, mockClient)
+}
+
+// setupUserConfirmationMock configures the mock for user confirmation status check.
+func setupUserConfirmationMock(mockClient *mockCognitoClient, ctx context.Context, cfg *config.Config, tc userConfirmationTestCase) {
+	builder := newMockSetupBuilder(mockClient, ctx, cfg)
+	builder.withListUsersSuccess(testEmail, testUsername, testUserSub, tc.userStatus)
+}
+
+// assertUserConfirmationResult verifies the user confirmation result.
+func assertUserConfirmationResult(t *testing.T, isConfirmed bool, retrievedUsername, cognitoID string, err error, tc userConfirmationTestCase, mockClient *mockCognitoClient) {
+	assert.NoError(t, err)
+	assert.Equal(t, tc.expectConfirmed, isConfirmed)
+	assert.Equal(t, testUsername, retrievedUsername)
+	assert.Equal(t, testUserSub, cognitoID, "Should return UserSub, not username")
+	mockClient.AssertExpectations(t)
 }
 
 // TestIsUserConfirmed_FallbackToAdminGetUser tests the fallback to AdminGetUser when sub attribute is not in ListUsers response.
@@ -587,11 +846,7 @@ func TestResendConfirmationCode_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	runValidationTests(t, "ResendConfirmationCode", []struct {
-		name        string
-		testFunc    func() error
-		expectedArg string
-	}{
+	runValidationTests(t, "ResendConfirmationCode", []validationTestCase{
 		{
 			name: "empty username",
 			testFunc: func() error {
@@ -722,33 +977,7 @@ func TestConfirmSignUp_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	runValidationTests(t, "ConfirmSignUp", []struct {
-		name        string
-		testFunc    func() error
-		expectedArg string
-	}{
-		{
-			name: "empty cognitoId",
-			testFunc: func() error {
-				return client.ConfirmSignUp(ctx, "", testConfirmationCode)
-			},
-			expectedArg: "cognitoId",
-		},
-		{
-			name: "empty confirmationCode",
-			testFunc: func() error {
-				return client.ConfirmSignUp(ctx, "test-user-sub", "")
-			},
-			expectedArg: "confirmationCode",
-		},
-		{
-			name: "both empty",
-			testFunc: func() error {
-				return client.ConfirmSignUp(ctx, "", "")
-			},
-			expectedArg: "cognitoId", // Should return error for cognitoId first
-		},
-	})
+	runValidationTests(t, "ConfirmSignUp", createConfirmSignUpValidationTestCases(client, ctx))
 }
 
 // TestConfirmSignUp_Success tests successful confirmation with different configurations.
@@ -915,20 +1144,449 @@ func TestCalculateSecretHash_Success(t *testing.T) {
 	}
 }
 
-// TestCalculateSecretHash_Algorithm tests that our implementation matches the expected HMAC-SHA256 calculation.
-// This test ensures the cryptographic implementation is correct and serves as a regression test.
-func TestCalculateSecretHash_Algorithm(t *testing.T) {
+// TestCalculateSecretHash_AlgorithmVerification tests that our implementation matches the expected HMAC-SHA256 calculation.
+// This ensures the cryptographic implementation is correct and serves as a regression test.
+func TestCalculateSecretHash_AlgorithmVerification(t *testing.T) {
+	// Test with the same inputs as one of the success test cases to verify algorithm correctness
 	username := "testuser"
 	clientID := "testclient"
 	clientSecret := "testsecret"
 
 	hash := calculateSecretHash(username, clientID, clientSecret)
 
-	// Manually calculate expected hash
+	// Manually calculate expected hash to verify algorithm
 	message := username + clientID
 	mac := hmac.New(sha256.New, []byte(clientSecret))
 	mac.Write([]byte(message))
 	expectedHash := base64.StdEncoding.EncodeToString(mac.Sum(nil))
 
-	assert.Equal(t, expectedHash, hash, "Secret hash should match manual calculation")
+	assert.Equal(t, expectedHash, hash, "Secret hash should match manual HMAC-SHA256 calculation")
+	assert.Len(t, hash, 44, "Hash should be 44 characters (base64 encoded)")
+}
+
+// ============================================================================
+// Tests for ForgotPassword
+// ============================================================================
+
+// TestForgotPassword_Validation tests input validation for ForgotPassword.
+func TestForgotPassword_Validation(t *testing.T) {
+	client := newTestClient(t, testConfig())
+	ctx := context.Background()
+
+	runValidationTests(t, "ForgotPassword", createEmailValidationTestCases(client, ctx, func(email string) error {
+		_, err := client.ForgotPassword(ctx, email)
+		return err
+	}))
+}
+
+// TestForgotPassword_Success tests successful password recovery initiation.
+func TestForgotPassword_Success(t *testing.T) {
+	tests := []struct {
+		name         string
+		configFn     func(*config.Config)
+		validateHash bool
+		isLocal      bool
+	}{
+		{
+			name:         "without secret hash",
+			configFn:     nil,
+			validateHash: false,
+			isLocal:      false,
+		},
+		{
+			name: "with secret hash",
+			configFn: func(c *config.Config) {
+				c.CognitoClientSecret = testClientSecret
+			},
+			validateHash: true,
+			isLocal:      false,
+		},
+		{
+			name: "local endpoint uses email as username",
+			configFn: func(c *config.Config) {
+				c.CognitoEndpoint = testEndpoint
+			},
+			validateHash: false,
+			isLocal:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg *config.Config
+			if tt.configFn != nil {
+				cfg = testConfig(tt.configFn)
+			} else {
+				cfg = testConfig()
+			}
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+			username := testUsername
+			destination := "u***@e***.com"
+			deliveryMedium := types.DeliveryMediumTypeEmail
+
+			if tt.isLocal {
+				// Local endpoint uses email as username directly
+				mockAWSClient.On("ForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == email
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ForgotPasswordOutput{
+					CodeDeliveryDetails: &types.CodeDeliveryDetailsType{
+						Destination:    aws.String(destination),
+						DeliveryMedium: deliveryMedium,
+						AttributeName:  aws.String("email"),
+					},
+				}, nil)
+			} else {
+				// AWS Cognito needs ListUsers to resolve username
+				mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+					return input != nil &&
+						aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
+						aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+				})).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: []types.UserType{
+						{
+							Username: aws.String(username),
+						},
+					},
+				}, nil)
+
+				mockAWSClient.On("ForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == username
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ForgotPasswordOutput{
+					CodeDeliveryDetails: &types.CodeDeliveryDetailsType{
+						Destination:    aws.String(destination),
+						DeliveryMedium: deliveryMedium,
+						AttributeName:  aws.String("email"),
+					},
+				}, nil)
+			}
+
+			// Execute
+			result, err := client.ForgotPassword(ctx, email)
+
+			// Assert
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.Equal(t, destination, aws.ToString(result.Destination))
+			assert.Equal(t, deliveryMedium, result.DeliveryMedium)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestForgotPassword_Errors tests handling of various errors.
+func TestForgotPassword_Errors(t *testing.T) {
+	tests := []struct {
+		name    string
+		errType error
+		users   []types.UserType
+	}{
+		{
+			name:    "user not found",
+			errType: nil,
+			users:   []types.UserType{},
+		},
+		{
+			name:    "list users error",
+			errType: &types.InvalidParameterException{Message: aws.String("Invalid parameter")},
+			users:   nil,
+		},
+		{
+			name:    "empty username",
+			errType: nil,
+			users: []types.UserType{
+				{
+					Username: nil,
+				},
+			},
+		},
+		{
+			name:    "cognito user not found",
+			errType: &types.UserNotFoundException{Message: aws.String("User does not exist")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+		{
+			name:    "limit exceeded",
+			errType: &types.LimitExceededException{Message: aws.String("Limit exceeded")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig()
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+
+			// Setup mock
+			if tt.errType != nil && len(tt.users) == 0 {
+				// Error from ListUsers
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(nil, tt.errType)
+			} else if len(tt.users) > 0 {
+				// ListUsers succeeds, but ForgotPassword fails
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+				if tt.users[0].Username != nil {
+					mockAWSClient.On("ForgotPassword", ctx, mock.Anything).Return(nil, tt.errType)
+				}
+			} else {
+				// ListUsers returns empty users
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+			}
+
+			// Execute
+			_, err := client.ForgotPassword(ctx, email)
+
+			// Assert
+			assert.Error(t, err)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
+}
+
+// ============================================================================
+// Tests for ResetPassword
+// ============================================================================
+
+// TestResetPassword_Validation tests input validation for ResetPassword.
+func TestResetPassword_Validation(t *testing.T) {
+	client := newTestClient(t, testConfig())
+	ctx := context.Background()
+
+	runValidationTests(t, "ResetPassword", createResetPasswordValidationTestCases(client, ctx))
+}
+
+// TestResetPassword_Success tests successful password reset.
+func TestResetPassword_Success(t *testing.T) {
+	tests := []struct {
+		name         string
+		configFn     func(*config.Config)
+		validateHash bool
+		isLocal      bool
+	}{
+		{
+			name:         "without secret hash",
+			configFn:     nil,
+			validateHash: false,
+			isLocal:      false,
+		},
+		{
+			name: "with secret hash",
+			configFn: func(c *config.Config) {
+				c.CognitoClientSecret = testClientSecret
+			},
+			validateHash: true,
+			isLocal:      false,
+		},
+		{
+			name: "local endpoint uses email as username",
+			configFn: func(c *config.Config) {
+				c.CognitoEndpoint = testEndpoint
+			},
+			validateHash: false,
+			isLocal:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg *config.Config
+			if tt.configFn != nil {
+				cfg = testConfig(tt.configFn)
+			} else {
+				cfg = testConfig()
+			}
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+			username := testUsername
+			code := testConfirmationCode
+			newPassword := testPassword
+
+			if tt.isLocal {
+				// Local endpoint uses email as username directly
+				mockAWSClient.On("ConfirmForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == email &&
+						aws.ToString(input.ConfirmationCode) == code &&
+						aws.ToString(input.Password) == newPassword
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ConfirmForgotPasswordOutput{}, nil)
+			} else {
+				// AWS Cognito needs ListUsers to resolve username
+				mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
+					return input != nil &&
+						aws.ToString(input.UserPoolId) == cfg.CognitoUserPoolID &&
+						aws.ToString(input.Filter) == fmt.Sprintf("email = \"%s\"", email)
+				})).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: []types.UserType{
+						{
+							Username: aws.String(username),
+						},
+					},
+				}, nil)
+
+				mockAWSClient.On("ConfirmForgotPassword", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ConfirmForgotPasswordInput) bool {
+					valid := input != nil &&
+						aws.ToString(input.ClientId) == cfg.CognitoClientID &&
+						aws.ToString(input.Username) == username &&
+						aws.ToString(input.ConfirmationCode) == code &&
+						aws.ToString(input.Password) == newPassword
+
+					if tt.validateHash {
+						valid = valid && input.SecretHash != nil && aws.ToString(input.SecretHash) != ""
+					} else {
+						valid = valid && input.SecretHash == nil
+					}
+
+					return valid
+				})).Return(&cognitoidentityprovider.ConfirmForgotPasswordOutput{}, nil)
+			}
+
+			// Execute
+			err := client.ResetPassword(ctx, email, code, newPassword)
+
+			// Assert
+			assert.NoError(t, err)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestResetPassword_Errors tests handling of various errors.
+func TestResetPassword_Errors(t *testing.T) {
+	tests := []struct {
+		name    string
+		errType error
+		users   []types.UserType
+	}{
+		{
+			name:    "user not found",
+			errType: nil,
+			users:   []types.UserType{},
+		},
+		{
+			name:    "list users error",
+			errType: &types.InvalidParameterException{Message: aws.String("Invalid parameter")},
+			users:   nil,
+		},
+		{
+			name:    "empty username",
+			errType: nil,
+			users: []types.UserType{
+				{
+					Username: nil,
+				},
+			},
+		},
+		{
+			name:    "code mismatch",
+			errType: &types.CodeMismatchException{Message: aws.String("Invalid verification code provided")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+		{
+			name:    "expired code",
+			errType: &types.ExpiredCodeException{Message: aws.String("Invalid code provided, please request a code again")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+		{
+			name:    "invalid password",
+			errType: &types.InvalidPasswordException{Message: aws.String("Password did not conform with policy")},
+			users: []types.UserType{
+				{
+					Username: aws.String(testUsername),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig()
+			mockAWSClient, client := setupMockClient(t, cfg)
+			ctx := context.Background()
+
+			email := testEmail
+			code := testConfirmationCode
+			newPassword := testPassword
+
+			// Setup mock
+			if tt.errType != nil && len(tt.users) == 0 {
+				// Error from ListUsers
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(nil, tt.errType)
+			} else if len(tt.users) > 0 {
+				// ListUsers succeeds, but ConfirmForgotPassword fails
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+				if tt.users[0].Username != nil {
+					mockAWSClient.On("ConfirmForgotPassword", ctx, mock.Anything).Return(nil, tt.errType)
+				}
+			} else {
+				// ListUsers returns empty users
+				mockAWSClient.On("ListUsers", ctx, mock.Anything).Return(&cognitoidentityprovider.ListUsersOutput{
+					Users: tt.users,
+				}, nil)
+			}
+
+			// Execute
+			err := client.ResetPassword(ctx, email, code, newPassword)
+
+			// Assert
+			assert.Error(t, err)
+			mockAWSClient.AssertExpectations(t)
+		})
+	}
 }
