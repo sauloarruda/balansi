@@ -94,6 +94,11 @@ func ProcessOriginValidation(req HTTPRequest, frontendDomain string) (string, er
 		return origin, nil
 	}
 
+	// For local development, allow localhost origins
+	if origin != "" && (strings.Contains(origin, "localhost:8080") || strings.Contains(origin, "localhost:3000")) {
+		return origin, nil
+	}
+
 	if origin != "" && frontendDomain != "" {
 		validatedOrigin := ValidateOrigin(origin, frontendDomain)
 		if validatedOrigin == "" {

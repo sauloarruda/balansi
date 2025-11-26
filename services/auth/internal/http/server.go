@@ -114,7 +114,7 @@ func (s *LocalServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 // StartLocalServer starts the local development server
-func StartLocalServer() {
+func StartLocalServer(handlerRegistry *HandlerRegistry) {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
@@ -129,7 +129,7 @@ func StartLocalServer() {
 	logger.Info("Test endpoint: POST http://localhost:%s/auth/refresh", port)
 	logger.Info("Test endpoint: GET http://localhost:%s/auth/me", port)
 
-	server := NewLocalServer(port, frontendDomain, NewHandlerRegistry())
+	server := NewLocalServer(port, frontendDomain, handlerRegistry)
 	if err := server.ListenAndServe(); err != nil {
 		logger.Error("Failed to start server: %v", err)
 		os.Exit(1)

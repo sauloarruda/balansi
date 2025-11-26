@@ -114,6 +114,7 @@ func routeRequest(ctx context.Context, req events.APIGatewayV2HTTPRequest, path,
 		handler = handlers.MeHandler
 	}
 
+
 	// Check method and call handler
 	if req.RequestContext.HTTP.Method == routeConfig.Method && handler != nil {
 		resp, err := handler(ctx, req)

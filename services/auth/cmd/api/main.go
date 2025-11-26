@@ -109,6 +109,12 @@ func init() {
 
 	// Create handler registry for unified processing
 	handlerRegistry = &httputils.HandlerRegistry{
+		Routes: []httputils.RouteConfig{
+			{Path: "/auth/sign-up", Method: "POST"},
+			{Path: "/auth/confirm", Method: "POST"},
+			{Path: "/auth/refresh", Method: "POST"},
+			{Path: "/auth/me", Method: "GET"},
+		},
 		SignupHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 			return signupHandler.Handle(ctx, req)
 		},
@@ -122,6 +128,7 @@ func init() {
 			return meHandler.Handle(ctx, req)
 		},
 	}
+
 }
 
 func cleanup() {
@@ -168,6 +175,6 @@ func main() {
 		// Ensure cleanup on exit
 		defer cleanup()
 
-		httputils.StartLocalServer()
+		httputils.StartLocalServer(handlerRegistry)
 	}
 }
