@@ -1,10 +1,10 @@
 /**
  * Shared authentication data storage for temporary auth flows
  * Used across signup, login, forgot-password, confirmation, etc.
- * 
+ *
  * This stores user data to improve UX by pre-filling forms and
  * passing data between auth pages.
- * 
+ *
  * Data structure:
  * - email: always saved (used in all auth flows)
  * - name: saved during signup (optional)
@@ -22,23 +22,23 @@ export interface AuthData {
 /**
  * Save authentication data to localStorage
  * Can save just email, or email + name, or email + name + userId
- * 
+ *
  * @param data - Authentication data to save
- * 
+ *
  * @example
  * // Just email (login/forgot-password)
  * saveAuthData({ email: "user@example.com" });
- * 
+ *
  * // Email + name (signup)
  * saveAuthData({ email: "user@example.com", name: "John" });
- * 
+ *
  * // Email + name + userId (signup pending confirmation)
  * saveAuthData({ email: "user@example.com", name: "John", userId: 123 });
  */
 export function saveAuthData(data: AuthData): void {
 	if (typeof window === "undefined") return;
 	if (!data.email) return;
-	
+
 	localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -48,10 +48,10 @@ export function saveAuthData(data: AuthData): void {
  */
 export function getAuthData(): AuthData | null {
 	if (typeof window === "undefined") return null;
-	
+
 	const stored = localStorage.getItem(AUTH_STORAGE_KEY);
 	if (!stored) return null;
-	
+
 	try {
 		return JSON.parse(stored) as AuthData;
 	} catch {
@@ -65,7 +65,7 @@ export function getAuthData(): AuthData | null {
  */
 export function clearAuthData(): void {
 	if (typeof window === "undefined") return;
-	
+
 	localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 

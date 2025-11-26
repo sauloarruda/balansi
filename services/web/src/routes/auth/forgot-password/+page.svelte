@@ -5,7 +5,6 @@
 	import { api, ApiError, NetworkError } from "$lib/api";
 	import { getAuthData, saveAuthData } from "$lib/auth/authStorage";
 	import { checkAuthAndRedirect } from "$lib/auth/hooks";
-	import { passwordRecoveryData } from "$lib/auth/passwordRecoveryStorage";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import Input from "$lib/components/ds/Input.svelte";
@@ -50,13 +49,10 @@
 
 		try {
 			const request: ForgotPasswordRequest = { email };
-			const response = await api.auth.forgotPassword({ forgotPasswordRequest: request });
+			await api.auth.forgotPassword({ forgotPasswordRequest: request });
 
-			// Save email for reuse in other auth flows
+			// Save email for the reset-password page
 			saveAuthData({ email });
-
-			// Save email and destination for the reset-password page
-			passwordRecoveryData.save(email, response.destination || email);
 
 			// Redirect to reset-password page
 			goto("/auth/reset-password");

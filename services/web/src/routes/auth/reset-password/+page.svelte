@@ -3,8 +3,8 @@
 	import { goto } from "$app/navigation";
 	import type { ResetPasswordRequest } from "$lib/api";
 	import { api, ApiError, NetworkError } from "$lib/api";
+	import { clearAuthData, getAuthData } from "$lib/auth/authStorage";
 	import { checkAuthAndRedirect } from "$lib/auth/hooks";
-	import { passwordRecoveryData } from "$lib/auth/passwordRecoveryStorage";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import Input from "$lib/components/ds/Input.svelte";
@@ -15,7 +15,6 @@
 	let _checking = $state(true);
 	let loading = $state(true);
 	let email = $state("");
-	let destination = $state("");
 	let code = $state("");
 	let newPassword = $state("");
 	let confirmPassword = $state("");
@@ -42,15 +41,14 @@
 					_checking = false;
 
 					// Get recovery data from localStorage
-					const recovery = passwordRecoveryData.get();
-					if (!recovery) {
+					const authData = getAuthData();
+					if (!authData?.email) {
 						// Missing recovery data, redirect to forgot-password
 						goto("/auth/forgot-password");
 						return;
 					}
 
-					email = recovery.email;
-					destination = recovery.destination;
+					email = authData.email;
 					loading = false;
 				}
 			});
@@ -73,18 +71,22 @@
 			};
 			await api.auth.resetPassword({ resetPasswordRequest: request });
 
-			// Clear recovery data
-			passwordRecoveryData.clear();
+			// Clear recovery data (destination field)
+			clearAuthData();
 
 			// Show success message
 			success = true;
 		} catch (err) {
 			console.error("Error resetting password:", err);
-			pinError = true;
 
 			if (err instanceof ApiError) {
 				// API error already translated
 				error = err.message;
+
+				// Only set pinError for code-related errors
+				if (err.code === "recovery_code_invalid" || err.code === "recovery_code_expired") {
+					pinError = true;
+				}
 			} else if (err instanceof NetworkError) {
 				// Network error
 				error = err.message;
@@ -126,7 +128,7 @@
 					<h2 class="text-xl font-semibold mb-6">
 						{$_("auth.resetPassword.success")}
 					</h2>
-					<Button type="button" onclick={() => goto("/auth/sign-in")}>
+					<Button type="button" onclick={() => goto("/auth")}>
 						{$_("auth.forgotPassword.backToLogin")}
 					</Button>
 				</div>
@@ -136,7 +138,7 @@
 				</h2>
 
 				<p class="text-center mb-6 text-gray-600 dark:text-gray-400">
-					{$_("auth.resetPassword.description", { values: { destination } })}
+					{$_("auth.resetPassword.description", { values: { destination: email } })}
 				</p>
 
 				{#if error && !pinError}
