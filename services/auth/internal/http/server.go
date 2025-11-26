@@ -79,6 +79,7 @@ func (s *LocalServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		RawQueryString: r.URL.RawQuery,
 		Body:           adapter.GetBody(),
 		Headers:        adapter.GetHeaders(),
+		Cookies:        adapter.GetCookies(),
 		RequestContext: events.APIGatewayV2HTTPRequestContext{
 			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
 				Method: r.Method,

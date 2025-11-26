@@ -1,6 +1,7 @@
 package http
 
 import (
+	"net/http"
 	"os"
 	"testing"
 
@@ -235,6 +236,54 @@ func TestExtractCookieValue(t *testing.T) {
 	}
 
 	runCookieTests(t, tests, ExtractCookieValue)
+}
+
+func TestLocalRequestAdapter_GetCookies(t *testing.T) {
+	tests := []struct {
+		name     string
+		cookies  []*http.Cookie
+		expected []string
+	}{
+		{
+			name: "Single Cookie",
+			cookies: []*http.Cookie{
+				{Name: "session_id", Value: "abc123"},
+			},
+			expected: []string{"session_id=abc123"},
+		},
+		{
+			name: "Multiple Cookies",
+			cookies: []*http.Cookie{
+				{Name: "session_id", Value: "abc123"},
+				{Name: "theme", Value: "dark"},
+			},
+			expected: []string{"session_id=abc123", "theme=dark"},
+		},
+		{
+			name: "No Cookies",
+			cookies:  []*http.Cookie{},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create HTTP request
+			req, _ := http.NewRequest("GET", "/", nil)
+
+			// Add cookies to request
+			for _, cookie := range tt.cookies {
+				req.AddCookie(cookie)
+			}
+
+			// Create adapter
+			adapter := NewLocalRequestAdapter(req)
+
+			// Test GetCookies
+			result := adapter.GetCookies()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 func TestBuildCookieHeader(t *testing.T) {

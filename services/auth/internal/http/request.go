@@ -16,6 +16,7 @@ type HTTPRequest interface {
 	GetHeaders() map[string]string
 	GetBody() string
 	GetOrigin() string
+	GetCookies() []string
 }
 
 // LambdaRequestAdapter adapts API Gateway v2 requests to HTTPRequest interface
@@ -45,6 +46,10 @@ func (a *LambdaRequestAdapter) GetBody() string {
 
 func (a *LambdaRequestAdapter) GetOrigin() string {
 	return ExtractOrigin(a.req)
+}
+
+func (a *LambdaRequestAdapter) GetCookies() []string {
+	return a.req.Cookies
 }
 
 // LocalRequestAdapter adapts standard http.Request to HTTPRequest interface
@@ -115,4 +120,24 @@ func (a *LocalRequestAdapter) GetBody() string {
 
 func (a *LocalRequestAdapter) GetOrigin() string {
 	return a.origin
+}
+
+// GetCookies extracts cookies from the HTTP request and returns them in AWS Lambda format
+// Returns an array of cookie strings in the format expected by ExtractCookieValue
+func (a *LocalRequestAdapter) GetCookies() []string {
+	if a.req == nil {
+		return []string{}
+	}
+
+	cookies := a.req.Cookies()
+	if len(cookies) == 0 {
+		return []string{}
+	}
+
+	cookieStrings := make([]string, len(cookies))
+	for i, cookie := range cookies {
+		cookieStrings[i] = cookie.Name + "=" + cookie.Value
+	}
+
+	return cookieStrings
 }
