@@ -44,11 +44,6 @@ type SignupResponse struct {
 	Status SignupStatus `json:"status"`
 }
 
-type ForgotPasswordResult struct {
-	Destination    string `json:"destination"`
-	DeliveryMedium string `json:"deliveryMedium"`
-}
-
 type ErrorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`

@@ -13,6 +13,6 @@ type SignupServiceInterface interface {
 
 // PasswordRecoveryServiceInterface defines the interface for password recovery service operations.
 type PasswordRecoveryServiceInterface interface {
-	ForgotPassword(ctx context.Context, email string) (*models.ForgotPasswordResult, error)
+	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, email, code, newPassword string) error
 }

@@ -567,6 +567,46 @@ func (c *Client) RefreshTokenWithUsername(ctx context.Context, refreshToken, use
 	return output.AuthenticationResult, nil
 }
 
+// resolveUsernameFromEmail resolves the Cognito username from email.
+// For cognito-local, returns email directly. For AWS Cognito, queries ListUsers.
+func (c *Client) resolveUsernameFromEmail(ctx context.Context, email string) (string, error) {
+	if c.isLocalEndpoint() {
+		logger.Debug("Using email as username for cognito-local")
+		return email, nil
+	}
+
+	// For AWS Cognito, find username by email
+	listInput := &cognitoidentityprovider.ListUsersInput{
+		UserPoolId: aws.String(c.userPoolID),
+		Filter:     aws.String(fmt.Sprintf("email = \"%s\"", email)),
+		Limit:      aws.Int32(1),
+	}
+
+	logger.DebugJSON("ListUsers Input (resolveUsernameFromEmail)", listInput)
+
+	listOutput, err := c.client.ListUsers(ctx, listInput)
+	if err != nil {
+		logger.Error("Error listing users for email resolution: %v", err)
+		logger.DebugJSON("ListUsers Error", err)
+		return "", fmt.Errorf("failed to find user: %w", err)
+	}
+
+	logger.DebugJSON("ListUsers Output (resolveUsernameFromEmail)", listOutput)
+
+	if len(listOutput.Users) == 0 {
+		return "", errors.New("user not found")
+	}
+
+	if listOutput.Users[0].Username == nil {
+		return "", errors.New("user found but username is empty")
+	}
+
+	username := *listOutput.Users[0].Username
+	logger.Debug("Found username for email resolution - Email: %s, Username: %s", email, username)
+
+	return username, nil
+}
+
 // ForgotPassword initiates password recovery by sending a confirmation code to user's email.
 // Returns delivery details (destination, medium).
 // For cognito-local, email is used as username. For AWS Cognito, we need to resolve username from email.
@@ -577,41 +617,9 @@ func (c *Client) ForgotPassword(ctx context.Context, email string) (*types.CodeD
 	}
 
 	// Resolve username from email
-	// For cognito-local, username = email
-	// For AWS Cognito, we need to find the username by email
-	var username string
-	if c.isLocalEndpoint() {
-		username = email
-		logger.Debug("Using email as username for cognito-local")
-	} else {
-		// For AWS Cognito, find username by email
-		listInput := &cognitoidentityprovider.ListUsersInput{
-			UserPoolId: aws.String(c.userPoolID),
-			Filter:     aws.String(fmt.Sprintf("email = \"%s\"", email)),
-			Limit:      aws.Int32(1),
-		}
-
-		logger.DebugJSON("ListUsers Input (ForgotPassword)", listInput)
-
-		listOutput, err := c.client.ListUsers(ctx, listInput)
-		if err != nil {
-			logger.Error("Error listing users for ForgotPassword: %v", err)
-			logger.DebugJSON("ListUsers Error", err)
-			return nil, fmt.Errorf("failed to find user: %w", err)
-		}
-
-		logger.DebugJSON("ListUsers Output (ForgotPassword)", listOutput)
-
-		if len(listOutput.Users) == 0 {
-			return nil, errors.New("user not found")
-		}
-
-		if listOutput.Users[0].Username == nil {
-			return nil, errors.New("user found but username is empty")
-		}
-
-		username = *listOutput.Users[0].Username
-		logger.Debug("Found username for ForgotPassword - Email: %s, Username: %s", email, username)
+	username, err := c.resolveUsernameFromEmail(ctx, email)
+	if err != nil {
+		return nil, err
 	}
 
 	input := &cognitoidentityprovider.ForgotPasswordInput{
@@ -657,41 +665,9 @@ func (c *Client) ResetPassword(ctx context.Context, email, code, newPassword str
 	}
 
 	// Resolve username from email
-	// For cognito-local, username = email
-	// For AWS Cognito, we need to find the username by email
-	var username string
-	if c.isLocalEndpoint() {
-		username = email
-		logger.Debug("Using email as username for cognito-local")
-	} else {
-		// For AWS Cognito, find username by email
-		listInput := &cognitoidentityprovider.ListUsersInput{
-			UserPoolId: aws.String(c.userPoolID),
-			Filter:     aws.String(fmt.Sprintf("email = \"%s\"", email)),
-			Limit:      aws.Int32(1),
-		}
-
-		logger.DebugJSON("ListUsers Input (ResetPassword)", listInput)
-
-		listOutput, err := c.client.ListUsers(ctx, listInput)
-		if err != nil {
-			logger.Error("Error listing users for ResetPassword: %v", err)
-			logger.DebugJSON("ListUsers Error", err)
-			return fmt.Errorf("failed to find user: %w", err)
-		}
-
-		logger.DebugJSON("ListUsers Output (ResetPassword)", listOutput)
-
-		if len(listOutput.Users) == 0 {
-			return errors.New("user not found")
-		}
-
-		if listOutput.Users[0].Username == nil {
-			return errors.New("user found but username is empty")
-		}
-
-		username = *listOutput.Users[0].Username
-		logger.Debug("Found username for ResetPassword - Email: %s, Username: %s", email, username)
+	username, err := c.resolveUsernameFromEmail(ctx, email)
+	if err != nil {
+		return err
 	}
 
 	input := &cognitoidentityprovider.ConfirmForgotPasswordInput{
@@ -706,7 +682,7 @@ func (c *Client) ResetPassword(ctx context.Context, email, code, newPassword str
 		email, username, c.clientID)
 	logger.DebugJSON("ConfirmForgotPassword Input", input)
 
-	_, err := c.client.ConfirmForgotPassword(ctx, input)
+	_, err = c.client.ConfirmForgotPassword(ctx, input)
 	if err != nil {
 		logger.Error("Error resetting password: %v", err)
 		logger.DebugJSON("ConfirmForgotPassword Error", err)

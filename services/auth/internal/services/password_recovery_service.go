@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"services/auth/internal/cognito"
 	"services/auth/internal/logger"
-	"services/auth/internal/models"
+	"services/auth/internal/repositories"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
@@ -27,6 +28,15 @@ type PasswordRecoveryService struct {
 
 // NewPasswordRecoveryService creates a new PasswordRecoveryService with concrete implementations.
 func NewPasswordRecoveryService(
+	userRepo *repositories.UserRepository,
+	cognitoClient *cognito.Client,
+) *PasswordRecoveryService {
+	return NewPasswordRecoveryServiceWithInterfaces(userRepo, cognitoClient)
+}
+
+// NewPasswordRecoveryServiceWithInterfaces creates a new PasswordRecoveryService with interface-based dependencies.
+// This allows for easier testing with mocks.
+func NewPasswordRecoveryServiceWithInterfaces(
 	userRepo UserRepositoryInterface,
 	cognitoClient CognitoClientInterface,
 ) *PasswordRecoveryService {
@@ -37,43 +47,34 @@ func NewPasswordRecoveryService(
 }
 
 // ForgotPassword initiates password recovery by sending a confirmation code to the user's email.
-func (s *PasswordRecoveryService) ForgotPassword(ctx context.Context, email string) (*models.ForgotPasswordResult, error) {
+func (s *PasswordRecoveryService) ForgotPassword(ctx context.Context, email string) error {
 	// Validate email
 	if email == "" {
-		return nil, fmt.Errorf("email cannot be empty")
+		return fmt.Errorf("email cannot be empty")
 	}
 
 	// Check if user exists in our database
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check user existence: %w", err)
+		return fmt.Errorf("failed to check user existence: %w", err)
 	}
 
-	if user == nil {
-		// Return generic error to avoid user enumeration
-		// In production, we might want to return success anyway for security
-		return nil, ErrUserNotFoundForRecovery
-	}
-
-	// Check if user has Cognito ID
-	if user.CognitoID == nil {
-		return nil, ErrUserNotFoundForRecovery
+	// User enumeration protection: return success even if user doesn't exist
+	if user == nil || user.CognitoID == nil {
+		// We return ErrUserNotFoundForRecovery here to let the handler layer decide how to handle it
+		// (e.g. return generic success to client but log the error)
+		return ErrUserNotFoundForRecovery
 	}
 
 	// Call Cognito ForgotPassword API
 	codeDeliveryDetails, err := s.cognitoClient.ForgotPassword(ctx, email)
 	if err != nil {
 		// Map Cognito errors to our error types
-		return nil, s.mapForgotPasswordError(err)
+		return s.mapForgotPasswordError(err)
 	}
 
 	if codeDeliveryDetails == nil {
-		return nil, errors.New("cognito forgot password did not return delivery details")
-	}
-
-	destination := ""
-	if codeDeliveryDetails.Destination != nil {
-		destination = *codeDeliveryDetails.Destination
+		return errors.New("cognito forgot password did not return delivery details")
 	}
 
 	deliveryMedium := ""
@@ -81,13 +82,10 @@ func (s *PasswordRecoveryService) ForgotPassword(ctx context.Context, email stri
 		deliveryMedium = string(codeDeliveryDetails.DeliveryMedium)
 	}
 
-	logger.Info("Password recovery code sent successfully - Email: %s, Destination: %s, Medium: %s",
-		email, destination, deliveryMedium)
+	logger.Info("Password recovery code sent successfully - Email: %s, Medium: %s",
+		email, deliveryMedium)
 
-	return &models.ForgotPasswordResult{
-		Destination:    destination,
-		DeliveryMedium: deliveryMedium,
-	}, nil
+	return nil
 }
 
 // ResetPassword confirms password reset with the provided code and new password.
@@ -198,4 +196,3 @@ func (s *PasswordRecoveryService) mapResetPasswordError(err error) error {
 
 	return fmt.Errorf("failed to reset password: %w", err)
 }
-
