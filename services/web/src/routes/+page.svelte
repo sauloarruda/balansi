@@ -1,21 +1,28 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import { goto } from "$app/navigation";
-	import { checkAuth, logout as clientLogout } from "$lib/auth/clientAuth";
+	import { logout as clientLogout } from "$lib/auth/clientAuth";
+	import { hasSession } from "$lib/auth/session";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
 	import { _ } from "$lib/i18n";
 
 	let loading = $state(true);
-	let authenticated = $state(checkAuth());
+	let authenticated = $state(false);
 	let loggingOut = $state(false);
 
-	// Check authentication on mount
+	// Check authentication on mount (async to allow token refresh)
 	$effect(() => {
-		if (!authenticated) {
-			goto("/auth");
-		} else {
-			loading = false;
-		}
+		if (!browser) return;
+
+		hasSession().then((isAuth) => {
+			if (!isAuth) {
+				goto("/auth");
+			} else {
+				authenticated = true;
+				loading = false;
+			}
+		});
 	});
 
 	async function handleLogout() {

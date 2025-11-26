@@ -24,6 +24,7 @@ type HandlerRegistry struct {
 	MeHandler             HandlerFunc
 	ForgotPasswordHandler HandlerFunc
 	ResetPasswordHandler  HandlerFunc
+	LogoutHandler         HandlerFunc
 	Routes                []RouteConfig
 }
 
@@ -37,6 +38,7 @@ func NewHandlerRegistry() *HandlerRegistry {
 			{Path: "/auth/me", Method: "GET"},
 			{Path: "/auth/forgot-password", Method: "POST"},
 			{Path: "/auth/reset-password", Method: "POST"},
+			{Path: "/auth/logout", Method: "POST"},
 		},
 	}
 	return registry
@@ -120,6 +122,8 @@ func routeRequest(ctx context.Context, req events.APIGatewayV2HTTPRequest, path,
 		handler = handlers.ForgotPasswordHandler
 	case "/auth/reset-password":
 		handler = handlers.ResetPasswordHandler
+	case "/auth/logout":
+		handler = handlers.LogoutHandler
 	}
 
 	// Check method and call handler

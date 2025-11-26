@@ -1,8 +1,9 @@
 // Export API client wrapper with i18n integration
-export { ApiError, NetworkError, api, getApiBaseUrl, createApiConfig } from "./wrapper";
+export { ApiError, NetworkError, api, createApiConfig, getApiBaseUrl } from "./wrapper";
 
 // Export types directly from generated client
 export type {
-    ConfirmRequest, SignupRequest,
+    ConfirmRequest, ForgotPasswordRequest, ForgotPasswordResponse,
+    ResetPasswordRequest, ResetPasswordResponse, SignupRequest,
     SignupResponse, TokenResponse
 } from "./generated";

@@ -451,6 +451,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/logout:
+    post:
+      summary: Logout user
+      description: |
+        Logs out the user by clearing the session cookie.
+        This endpoint invalidates the session_id cookie, forcing the client to re-authenticate.
+      operationId: logout
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              description: Clears the session_id cookie by setting Max-Age=-1
+              schema:
+                type: string
+                example: "session_id=; Path=/; HttpOnly; Max-Age=-1; SameSite=None; Secure"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+              examples:
+                success:
+                  summary: Success
+                  value:
+                    success: true
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     SignupRequest:
@@ -687,6 +721,16 @@ components:
         success:
           type: boolean
           description: Indicates if the password was reset successfully
+          example: true
+
+    LogoutResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the logout was successful
           example: true
 
   securitySchemes:

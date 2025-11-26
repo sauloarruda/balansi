@@ -26,6 +26,7 @@ var (
 	meHandler             *handlers.MeHandler
 	forgotPasswordHandler *handlers.ForgotPasswordHandler
 	resetPasswordHandler  *handlers.ResetPasswordHandler
+	logoutHandler         *handlers.LogoutHandler
 	dbPool                *pgxpool.Pool
 	cfg                   *config.Config
 	handlerRegistry       *httputils.HandlerRegistry
@@ -87,6 +88,7 @@ func initializeHandlers(signupService *services.SignupService, sessionService *s
 	meHandler = handlers.NewMeHandler(userRepo, cognitoClient, jwtValidator)
 	forgotPasswordHandler = handlers.NewForgotPasswordHandler(passwordRecoveryService)
 	resetPasswordHandler = handlers.NewResetPasswordHandler(passwordRecoveryService)
+	logoutHandler = handlers.NewLogoutHandler()
 }
 
 func init() {
@@ -121,6 +123,7 @@ func init() {
 			{Path: "/auth/me", Method: "GET"},
 			{Path: "/auth/forgot-password", Method: "POST"},
 			{Path: "/auth/reset-password", Method: "POST"},
+			{Path: "/auth/logout", Method: "POST"},
 		},
 		SignupHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 			return signupHandler.Handle(ctx, req)
@@ -139,6 +142,9 @@ func init() {
 		},
 		ResetPasswordHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 			return resetPasswordHandler.Handle(ctx, req)
+		},
+		LogoutHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return logoutHandler.Handle(ctx, req)
 		},
 	}
 

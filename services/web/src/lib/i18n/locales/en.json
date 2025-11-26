@@ -44,6 +44,58 @@
 				"userAlreadyConfirmed": "This user is already confirmed. You can log in."
 			}
 		},
+		"forgotPassword": {
+			"title": "Reset your password",
+			"description": "Enter your email and we'll send you a code to reset your password.",
+			"fields": {
+				"email": {
+					"label": "Email",
+					"placeholder": "Enter your email"
+				}
+			},
+			"submit": "Send code",
+			"backToLogin": "Back to login",
+			"errors": {
+				"userNotFound": "No account found with this email.",
+				"tooManyAttempts": "Too many attempts. Please try again later.",
+				"connectionError": "Could not connect to the server."
+			}
+		},
+		"resetPassword": {
+			"title": "Create new password",
+			"description": "We sent a code to {destination}. Enter it below with your new password.",
+			"code": {
+				"label": "Verification code"
+			},
+			"fields": {
+				"newPassword": {
+					"label": "New password",
+					"placeholder": "Enter new password"
+				},
+				"confirmPassword": {
+					"label": "Confirm password",
+					"placeholder": "Confirm new password"
+				}
+			},
+			"requirements": {
+				"title": "Password must have:",
+				"minLength": "At least 8 characters",
+				"uppercase": "One uppercase letter",
+				"lowercase": "One lowercase letter",
+				"number": "One number",
+				"special": "One special character (!@#$%^&*)"
+			},
+			"submit": "Reset password",
+			"resendCode": "Resend code",
+			"errors": {
+				"invalidCode": "Invalid code. Please check and try again.",
+				"expiredCode": "Code expired. Please request a new code.",
+				"passwordMismatch": "Passwords do not match.",
+				"passwordPolicy": "Password does not meet requirements.",
+				"connectionError": "Could not connect to the server."
+			},
+			"success": "Password reset successfully! You can now log in."
+		},
 		"logout": "Logout"
 	},
 	"home": {

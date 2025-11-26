@@ -42,3 +42,8 @@ type AuthenticationTokenResult struct {
 	UserID       int64  `json:"userId"`
 	Username     string `json:"username"`
 }
+
+// LogoutResponse represents the response from /auth/logout
+type LogoutResponse struct {
+	Success bool `json:"success"`
+}
