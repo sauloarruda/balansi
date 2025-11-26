@@ -40,7 +40,7 @@ export default defineConfig({
 		{
 			command: process.env.SKIP_BUILD
 				? 'cd ../../services/auth && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api'
-				: 'cd ../../services/auth && (make build-local || echo "Build failed, using existing binary") && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api',
+				: 'cd ../../services/auth && go build -o bin/api cmd/api/main.go && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api',
 			port: 3001, // Test API port (dev uses 3000)
 			reuseExistingServer: false, // Always create new server for tests
 			timeout: 30000, // 30 seconds for build and startup
@@ -49,6 +49,15 @@ export default defineConfig({
 			shell: true,
 			env: {
 				PORT: "3001",
+				DATABASE_URL: process.env.DATABASE_URL || "postgres://test:test@localhost:5432/balansi_test?sslmode=disable",
+				ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET || "test-secret-key-for-ci-testing-only-32-chars",
+				AWS_REGION: process.env.AWS_REGION || "us-east-1",
+				COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "local_test_pool",
+				COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "test_client_id",
+				COGNITO_ENDPOINT: process.env.COGNITO_ENDPOINT || "http://127.0.0.1:9229",
+				FRONTEND_DOMAIN: process.env.FRONTEND_DOMAIN || "localhost:8081",
+				API_DOMAIN: process.env.API_DOMAIN || "localhost:3001",
+				COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || "localhost",
 			},
 		},
 		{
