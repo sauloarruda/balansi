@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"services/auth/internal/config"
@@ -19,6 +18,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+)
+
+// Test constants to reduce duplication and improve maintainability.
+const (
+	testClientSecret     = "test_secret"
+	testEndpoint         = "http://localhost:9229"
+	testEmail            = "test@example.com"
+	testUserSub          = "test-user-sub"
+	testPassword         = "TestPassword123!"
+	testName             = "Test User"
+	testUsername         = "test-username"
+	testConfirmationCode = "123456"
 )
 
 // Helper functions to reduce code duplication
@@ -37,36 +48,6 @@ func testConfig(overrides ...func(*config.Config)) *config.Config {
 	return cfg
 }
 
-// localTestConfig creates a configuration for cognito-local integration tests.
-// It reads from environment variables or uses default values from cognito-local setup.
-func localTestConfig() *config.Config {
-	// Try to get values from environment variables first (set by cognito-setup script)
-	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
-	if userPoolID == "" {
-		// Default value from cognito-local setup (can be found in .cognito/db/)
-		userPoolID = "local_6eLCsRav"
-	}
-
-	clientID := os.Getenv("COGNITO_CLIENT_ID")
-	if clientID == "" {
-		// Default value from cognito-local setup (can be found in .cognito/db/clients.json)
-		clientID = "2qdfneigub7f5h79cnej0i3fo"
-	}
-
-	clientSecret := os.Getenv("COGNITO_CLIENT_SECRET")
-	endpoint := os.Getenv("COGNITO_ENDPOINT")
-	if endpoint == "" {
-		endpoint = "http://localhost:9229"
-	}
-
-	return &config.Config{
-		CognitoUserPoolID:   userPoolID,
-		CognitoClientID:     clientID,
-		CognitoClientSecret: clientSecret,
-		CognitoEndpoint:     endpoint,
-	}
-}
-
 // newTestClient creates a new client for testing, failing the test if creation fails.
 func newTestClient(t *testing.T, cfg *config.Config) *Client {
 	client, err := NewClient(cfg)
@@ -81,6 +62,31 @@ func assertArgumentError(t *testing.T, err error, expectedArgument string) {
 	var argErr *apperrors.ArgumentError
 	assert.True(t, errors.As(err, &argErr), "Error should be ArgumentError")
 	assert.Equal(t, expectedArgument, argErr.Argument)
+}
+
+// setupMockClient creates a new mock client and test client for testing.
+// This reduces duplication in test setup across multiple test functions.
+func setupMockClient(t *testing.T, cfg *config.Config) (*mockCognitoClient, *Client) {
+	t.Helper()
+	mockAWSClient := new(mockCognitoClient)
+	client := newClientWithMock(mockAWSClient, cfg)
+	return mockAWSClient, client
+}
+
+// runValidationTests runs validation tests for empty parameters using table-driven approach.
+// This consolidates repetitive validation test patterns.
+func runValidationTests(t *testing.T, testName string, testCases []struct {
+	name        string
+	testFunc    func() error
+	expectedArg string
+}) {
+	t.Helper()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.testFunc()
+			assertArgumentError(t, err, tc.expectedArg)
+		})
+	}
 }
 
 // mockCognitoClient is a mock implementation of cognitoClientInterface for testing.
@@ -177,8 +183,8 @@ func TestNewClient_Success(t *testing.T) {
 	t.Run("with local endpoint", func(t *testing.T) {
 		cfg := testConfig(func(c *config.Config) {
 			c.CognitoUserPoolID = "local_test_pool"
-			c.CognitoClientSecret = "test_secret"
-			c.CognitoEndpoint = "http://localhost:9229"
+			c.CognitoClientSecret = testClientSecret
+			c.CognitoEndpoint = testEndpoint
 		})
 
 		client := newTestClient(t, cfg)
@@ -189,7 +195,7 @@ func TestNewClient_Success(t *testing.T) {
 
 	t.Run("without endpoint", func(t *testing.T) {
 		cfg := testConfig(func(c *config.Config) {
-			c.CognitoClientSecret = "test_secret"
+			c.CognitoClientSecret = testClientSecret
 		})
 
 		client := newTestClient(t, cfg)
@@ -204,25 +210,43 @@ func TestSignUp_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	t.Run("empty email", func(t *testing.T) {
-		_, err := client.SignUp(ctx, "", "Password123!", "Test User")
-		assertArgumentError(t, err, "email")
-	})
-
-	t.Run("empty password", func(t *testing.T) {
-		_, err := client.SignUp(ctx, "test@example.com", "", "Test User")
-		assertArgumentError(t, err, "password")
-	})
-
-	t.Run("empty name", func(t *testing.T) {
-		_, err := client.SignUp(ctx, "test@example.com", "Password123!", "")
-		assertArgumentError(t, err, "name")
-	})
-
-	t.Run("all empty", func(t *testing.T) {
-		_, err := client.SignUp(ctx, "", "", "")
-		// Should return error for email first
-		assertArgumentError(t, err, "email")
+	runValidationTests(t, "SignUp", []struct {
+		name        string
+		testFunc    func() error
+		expectedArg string
+	}{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, "", testPassword, testName)
+				return err
+			},
+			expectedArg: "email",
+		},
+		{
+			name: "empty password",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, testEmail, "", testName)
+				return err
+			},
+			expectedArg: "password",
+		},
+		{
+			name: "empty name",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, testEmail, testPassword, "")
+				return err
+			},
+			expectedArg: "name",
+		},
+		{
+			name: "all empty",
+			testFunc: func() error {
+				_, err := client.SignUp(ctx, "", "", "")
+				return err
+			},
+			expectedArg: "email", // Should return error for email first
+		},
 	})
 }
 
@@ -243,7 +267,7 @@ func TestSignUp_Success(t *testing.T) {
 		{
 			name: "with secret hash",
 			configFn: func(c *config.Config) {
-				c.CognitoClientSecret = "test_secret"
+				c.CognitoClientSecret = testClientSecret
 			},
 			validateHash: true,
 			useLocal:     false,
@@ -251,7 +275,7 @@ func TestSignUp_Success(t *testing.T) {
 		{
 			name: "local endpoint uses email as username",
 			configFn: func(c *config.Config) {
-				c.CognitoEndpoint = "http://localhost:9229"
+				c.CognitoEndpoint = testEndpoint
 			},
 			validateHash: false,
 			useLocal:     true,
@@ -260,19 +284,18 @@ func TestSignUp_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			var cfg *config.Config
 			if tt.configFn != nil {
 				cfg = testConfig(tt.configFn)
 			} else {
 				cfg = testConfig()
 			}
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			email := "test@example.com"
-			password := "TestPassword123!"
-			name := "Test User"
+			email := testEmail
+			password := testPassword
+			name := testName
 
 			// Setup mock to return success
 			mockAWSClient.On("SignUp", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.SignUpInput) bool {
@@ -346,14 +369,13 @@ func TestSignUp_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			cfg := testConfig()
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			email := "test@example.com"
-			password := "TestPassword123!"
-			name := "Test User"
+			email := testEmail
+			password := testPassword
+			name := testName
 
 			// Setup mock to return error
 			mockAWSClient.On("SignUp", ctx, mock.Anything).Return(nil, tt.errType)
@@ -374,9 +396,19 @@ func TestIsUserConfirmed_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	t.Run("empty email", func(t *testing.T) {
-		_, _, _, err := client.IsUserConfirmed(ctx, "")
-		assertArgumentError(t, err, "email")
+	runValidationTests(t, "IsUserConfirmed", []struct {
+		name        string
+		testFunc    func() error
+		expectedArg string
+	}{
+		{
+			name: "empty email",
+			testFunc: func() error {
+				_, _, _, err := client.IsUserConfirmed(ctx, "")
+				return err
+			},
+			expectedArg: "email",
+		},
 	})
 }
 
@@ -401,14 +433,13 @@ func TestIsUserConfirmed_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			cfg := testConfig()
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			email := "test@example.com"
-			username := "test-username"
-			userSub := "test-user-sub"
+			email := testEmail
+			username := testUsername
+			userSub := testUserSub
 
 			// Setup mock to return user with sub attribute
 			mockAWSClient.On("ListUsers", ctx, mock.MatchedBy(func(input *cognitoidentityprovider.ListUsersInput) bool {
@@ -445,12 +476,11 @@ func TestIsUserConfirmed_Success(t *testing.T) {
 
 // TestIsUserConfirmed_FallbackToAdminGetUser tests the fallback to AdminGetUser when sub attribute is not in ListUsers response.
 func TestIsUserConfirmed_FallbackToAdminGetUser(t *testing.T) {
-	mockAWSClient := new(mockCognitoClient)
 	cfg := testConfig()
-	client := newClientWithMock(mockAWSClient, cfg)
+	mockAWSClient, client := setupMockClient(t, cfg)
 	ctx := context.Background()
 
-	email := "test@example.com"
+	email := testEmail
 	username := "test-username"
 	userSub := "test-user-sub"
 
@@ -527,12 +557,11 @@ func TestIsUserConfirmed_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			cfg := testConfig()
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			email := "test@example.com"
+			email := testEmail
 
 			// Setup mock
 			if tt.errType != nil {
@@ -558,9 +587,18 @@ func TestResendConfirmationCode_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	t.Run("empty username", func(t *testing.T) {
-		err := client.ResendConfirmationCode(ctx, "")
-		assertArgumentError(t, err, "username")
+	runValidationTests(t, "ResendConfirmationCode", []struct {
+		name        string
+		testFunc    func() error
+		expectedArg string
+	}{
+		{
+			name: "empty username",
+			testFunc: func() error {
+				return client.ResendConfirmationCode(ctx, "")
+			},
+			expectedArg: "username",
+		},
 	})
 }
 
@@ -581,7 +619,7 @@ func TestResendConfirmationCode_Success(t *testing.T) {
 		{
 			name: "with secret hash",
 			configFn: func(c *config.Config) {
-				c.CognitoClientSecret = "test_secret"
+				c.CognitoClientSecret = testClientSecret
 			},
 			validateHash: true,
 			isLocal:      false,
@@ -589,7 +627,7 @@ func TestResendConfirmationCode_Success(t *testing.T) {
 		{
 			name: "local endpoint returns nil",
 			configFn: func(c *config.Config) {
-				c.CognitoEndpoint = "http://localhost:9229"
+				c.CognitoEndpoint = testEndpoint
 			},
 			validateHash: false,
 			isLocal:      true,
@@ -598,17 +636,16 @@ func TestResendConfirmationCode_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			var cfg *config.Config
 			if tt.configFn != nil {
 				cfg = testConfig(tt.configFn)
 			} else {
 				cfg = testConfig()
 			}
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			username := "test@example.com"
+			username := testEmail
 
 			if tt.isLocal {
 				// Local endpoint doesn't call the API
@@ -660,12 +697,11 @@ func TestResendConfirmationCode_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			cfg := testConfig()
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			username := "test@example.com"
+			username := testEmail
 
 			// Setup mock to return error
 			mockAWSClient.On("ResendConfirmationCode", ctx, mock.Anything).Return(nil, tt.errType)
@@ -686,20 +722,32 @@ func TestConfirmSignUp_Validation(t *testing.T) {
 	client := newTestClient(t, testConfig())
 	ctx := context.Background()
 
-	t.Run("empty cognitoId", func(t *testing.T) {
-		err := client.ConfirmSignUp(ctx, "", "123456")
-		assertArgumentError(t, err, "cognitoId")
-	})
-
-	t.Run("empty confirmationCode", func(t *testing.T) {
-		err := client.ConfirmSignUp(ctx, "test-user-sub", "")
-		assertArgumentError(t, err, "confirmationCode")
-	})
-
-	t.Run("both empty", func(t *testing.T) {
-		err := client.ConfirmSignUp(ctx, "", "")
-		// Should return error for cognitoId first
-		assertArgumentError(t, err, "cognitoId")
+	runValidationTests(t, "ConfirmSignUp", []struct {
+		name        string
+		testFunc    func() error
+		expectedArg string
+	}{
+		{
+			name: "empty cognitoId",
+			testFunc: func() error {
+				return client.ConfirmSignUp(ctx, "", testConfirmationCode)
+			},
+			expectedArg: "cognitoId",
+		},
+		{
+			name: "empty confirmationCode",
+			testFunc: func() error {
+				return client.ConfirmSignUp(ctx, "test-user-sub", "")
+			},
+			expectedArg: "confirmationCode",
+		},
+		{
+			name: "both empty",
+			testFunc: func() error {
+				return client.ConfirmSignUp(ctx, "", "")
+			},
+			expectedArg: "cognitoId", // Should return error for cognitoId first
+		},
 	})
 }
 
@@ -718,7 +766,7 @@ func TestConfirmSignUp_Success(t *testing.T) {
 		{
 			name: "with secret hash",
 			configFn: func(c *config.Config) {
-				c.CognitoClientSecret = "test_secret"
+				c.CognitoClientSecret = testClientSecret
 			},
 			validateHash: true,
 		},
@@ -726,19 +774,18 @@ func TestConfirmSignUp_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			var cfg *config.Config
 			if tt.configFn != nil {
 				cfg = testConfig(tt.configFn)
 			} else {
 				cfg = testConfig()
 			}
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			userSub := "test-user-sub"
+			userSub := testUserSub
 			username := "test-username-uuid" // AWS Cognito uses UUID as username
-			confirmationCode := "123456"
+			confirmationCode := testConfirmationCode
 
 			// No ListUsers mock needed - username is passed directly to ConfirmSignUp
 			// Setup mock: ConfirmSignUp to confirm with username
@@ -788,14 +835,13 @@ func TestConfirmSignUp_Errors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAWSClient := new(mockCognitoClient)
 			cfg := testConfig()
-			client := newClientWithMock(mockAWSClient, cfg)
+			mockAWSClient, client := setupMockClient(t, cfg)
 			ctx := context.Background()
 
-			userSub := "test-user-sub"
+			userSub := testUserSub
 			username := "test-username-uuid" // AWS Cognito uses UUID as username
-			confirmationCode := "123456"
+			confirmationCode := testConfirmationCode
 
 			// No ListUsers mock needed - username is passed directly to ConfirmSignUp
 			// Setup mock: ConfirmSignUp to return error
@@ -870,6 +916,7 @@ func TestCalculateSecretHash_Success(t *testing.T) {
 }
 
 // TestCalculateSecretHash_Algorithm tests that our implementation matches the expected HMAC-SHA256 calculation.
+// This test ensures the cryptographic implementation is correct and serves as a regression test.
 func TestCalculateSecretHash_Algorithm(t *testing.T) {
 	username := "testuser"
 	clientID := "testclient"
