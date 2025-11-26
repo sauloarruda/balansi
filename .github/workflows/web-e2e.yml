@@ -1,4 +1,273 @@
+name: Web E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "services/web/**"
+      - "services/auth/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: balansi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: services/web/package-lock.json
+
+      - name: Install auth service dependencies
+        run: |
+          cd services/auth
+          go mod download
+
+      - name: Install web service dependencies
+        run: |
+          cd services/web
+          # Use npm install to ensure platform-specific optional dependencies (like @rollup/rollup-linux-x64-gnu) are installed
+          # npm ci may skip optional dependencies if package-lock.json was generated on a different platform
+          npm install
+          # Explicitly ensure Rollup platform-specific dependencies are installed
+          npm install --no-save @rollup/rollup-linux-x64-gnu || npm install rollup --force
+
+      - name: Generate API client from OpenAPI spec
+        run: |
+          cd services/web
+          npm run generate:api
+
+      - name: Install Playwright browsers
+        run: |
+          cd services/web
+          npx playwright install --with-deps chromium
+
+      - name: Setup database
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/balansi_test?sslmode=disable
+        run: |
+          cd services/auth
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          migrate -path ./migrations -database "$DATABASE_URL" up
+
+      - name: Start cognito-local
+        timeout-minutes: 3
+        run: |
+          cd services/auth
+
+          # Pre-install cognito-local to avoid long download during startup
+          echo "Pre-installing cognito-local..."
+          npm install cognito-local --no-save 2>&1 | head -20 || echo "Installation may have completed or failed, continuing..."
+
+          # Start cognito-local in background
+          echo "Starting cognito-local..."
+          npx cognito-local > cognito-local.log 2>&1 &
+          COGNITO_PID=$!
+          echo "Started cognito-local with PID: $COGNITO_PID"
+          echo $COGNITO_PID > cognito-local.pid
+
+          # Give it more time to start (cognito-local can take 10-15 seconds)
+          echo "Waiting for cognito-local to initialize (this may take 15-20 seconds)..."
+          sleep 10
+
+          # Verify process is still running
+          if ! ps -p $COGNITO_PID > /dev/null 2>&1; then
+            echo "ERROR: cognito-local process died!"
+            echo "Logs:"
+            cat cognito-local.log || true
+            exit 1
+          fi
+          echo "Process $COGNITO_PID is running"
+
+          # Check logs for readiness indicators
+          echo "Checking cognito-local logs..."
+          if [ -f cognito-local.log ]; then
+            echo "Recent logs:"
+            tail -20 cognito-local.log || true
+            # Check if we see "running" or "listening" messages
+            if grep -q "running\|listening\|Cognito Local" cognito-local.log 2>/dev/null; then
+              echo "Found startup messages in logs"
+            fi
+          fi
+
+          # Wait for cognito-local to be ready (max 90 seconds)
+          # Try both IPv4, IPv6, and localhost
+          echo "Waiting for cognito-local to be ready..."
+          MAX_ATTEMPTS=90
+          ATTEMPT=0
+          COGNITO_READY=false
+          COGNITO_ENDPOINT=""
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            # Check logs periodically
+            if [ $((ATTEMPT % 15)) -eq 0 ] && [ -f cognito-local.log ]; then
+              echo "Logs at attempt $ATTEMPT:"
+              tail -5 cognito-local.log || true
+            fi
+
+            # Try IPv6 first (as it seems to be what cognito-local prefers)
+            # Accept any HTTP response (including 404) as success - means server is responding
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://[::1]:9229 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "" ]; then
+              echo "✓ cognito-local is ready on IPv6 ([::1]:9229) - HTTP $HTTP_CODE!"
+              COGNITO_READY=true
+              COGNITO_ENDPOINT="http://localhost:9229"
+              break
+            fi
+            # Try IPv4
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://127.0.0.1:9229 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "" ]; then
+              echo "✓ cognito-local is ready on IPv4 (127.0.0.1:9229) - HTTP $HTTP_CODE!"
+              COGNITO_READY=true
+              COGNITO_ENDPOINT="http://localhost:9229"
+              break
+            fi
+            # Try localhost (should work for both)
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://localhost:9229 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "" ]; then
+              echo "✓ cognito-local is ready on localhost - HTTP $HTTP_CODE!"
+              COGNITO_READY=true
+              COGNITO_ENDPOINT="http://localhost:9229"
+              break
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "ERROR: cognito-local failed to start after $MAX_ATTEMPTS seconds"
+              echo "Process status:"
+              ps aux | grep cognito || true
+              echo "Full logs:"
+              cat cognito-local.log || true
+              echo "Port check:"
+              netstat -tuln | grep 9229 || ss -tuln | grep 9229 || true
+              "Testing connectivity:"
+              curl -v http://127.0.0.1:9229 || true
+              curl -v http://localhost:9229 || true
+              curl -v http://[::1]:9229 || true
+              exit 1
+            fi
+            if [ $((ATTEMPT % 10)) -eq 0 ]; then
+              echo "Still waiting... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+              echo "Process check:"
+              ps -p $COGNITO_PID || echo "Process not found!"
+              echo "Port check:"
+              netstat -tuln | grep 9229 || ss -tuln | grep 9229 || true
+            fi
+            sleep 1
+          done
+
+          if [ "$COGNITO_READY" != "true" ]; then
+            echo "ERROR: cognito-local never became ready"
+            exit 1
+          fi
+
+          echo "Using endpoint: $COGNITO_ENDPOINT"
+
+          # For AWS CLI, use localhost instead of IPv6 format (AWS CLI may not support [::1])
+          # localhost should work for both IPv4 and IPv6
+          if [[ "$COGNITO_ENDPOINT" == *"[::1]"* ]]; then
+            SETUP_ENDPOINT="http://localhost:9229"
+            echo "Converting IPv6 endpoint to localhost for AWS CLI compatibility"
+          else
+            SETUP_ENDPOINT="$COGNITO_ENDPOINT"
+          fi
+
+          # Save endpoint for tests (use localhost for compatibility)
+          echo "COGNITO_ENDPOINT=http://localhost:9229" >> $GITHUB_ENV
+
+          # Setup Cognito User Pool and Client
+          echo "Setting up Cognito..."
+          export COGNITO_ENDPOINT=$SETUP_ENDPOINT
+          SETUP_OUTPUT=$(make cognito-local-setup 2>&1)
+          SETUP_EXIT_CODE=$?
+
+          if [ $SETUP_EXIT_CODE -ne 0 ]; then
+            echo "Cognito setup failed!"
+            echo "Setup output:"
+            echo "$SETUP_OUTPUT"
+            echo "Checking if cognito-local is still running..."
+            ps aux | grep cognito || true
+            echo "Testing connectivity..."
+            curl -v $COGNITO_ENDPOINT || curl -v http://127.0.0.1:9229 || curl -v http://[::1]:9229 || true
+            exit 1
+          fi
+
+          # Extract User Pool ID and Client ID from setup script output
+          echo "Extracting Cognito configuration..."
+          echo "Setup output:"
+          echo "$SETUP_OUTPUT"
+
+          COGNITO_USER_POOL_ID=$(echo "$SETUP_OUTPUT" | grep "^COGNITO_USER_POOL_ID=" | head -1 | cut -d'=' -f2 | tr -d ' ')
+          COGNITO_CLIENT_ID=$(echo "$SETUP_OUTPUT" | grep "^COGNITO_CLIENT_ID=" | head -1 | cut -d'=' -f2 | tr -d ' ')
+
+          if [ -n "$COGNITO_USER_POOL_ID" ] && [ -n "$COGNITO_CLIENT_ID" ]; then
+            echo "COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID" >> $GITHUB_ENV
+            echo "COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID" >> $GITHUB_ENV
+            echo "✓ Cognito configured: Pool=$COGNITO_USER_POOL_ID, Client=$COGNITO_CLIENT_ID"
+          else
+            echo "WARNING: Could not extract Cognito IDs from setup output"
+            echo "Trying alternative extraction method..."
+            COGNITO_USER_POOL_ID=$(echo "$SETUP_OUTPUT" | grep "User Pool created:" | sed 's/.*User Pool created: \([^ ]*\).*/\1/')
+            COGNITO_CLIENT_ID=$(echo "$SETUP_OUTPUT" | grep "User Pool Client created:" | sed 's/.*User Pool Client created: \([^ ]*\).*/\1/')
+            if [ -n "$COGNITO_USER_POOL_ID" ] && [ -n "$COGNITO_CLIENT_ID" ]; then
+              echo "COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID" >> $GITHUB_ENV
+              echo "COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID" >> $GITHUB_ENV
+              echo "✓ Cognito configured: Pool=$COGNITO_USER_POOL_ID, Client=$COGNITO_CLIENT_ID"
+            else
+              echo "ERROR: Could not extract Cognito IDs, using defaults"
+              echo "COGNITO_USER_POOL_ID=local_test_pool" >> $GITHUB_ENV
+              echo "COGNITO_CLIENT_ID=test_client_id" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Run E2E tests
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/balansi_test?sslmode=disable
+          PORT: "3001"
+          ENCRYPTION_SECRET: test-secret-key-for-ci-testing-only-32-chars
+          AWS_REGION: us-east-1
+          COGNITO_USER_POOL_ID: ${{ env.COGNITO_USER_POOL_ID || 'local_test_pool' }}
+          COGNITO_CLIENT_ID: ${{ env.COGNITO_CLIENT_ID || 'test_client_id' }}
+          COGNITO_ENDPOINT: ${{ env.COGNITO_ENDPOINT || 'http://127.0.0.1:9229' }}
+        run: |
+          cd services/web
+          npm run test
+
+      - name: Stop cognito-local
+        if: always()
+        run: |
+          if [ -f services/auth/cognito-local.pid ]; then
+            kill $(cat services/auth/cognito-local.pid) || true
+            rm -f services/auth/cognito-local.pid
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: services/web/playwright-report/
+          retention-days: 30
