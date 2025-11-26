@@ -158,6 +158,7 @@ func (s *PasswordRecoveryService) mapResetPasswordError(err error) error {
 	var expiredCodeErr *types.ExpiredCodeException
 	var invalidPasswordErr *types.InvalidPasswordException
 	var userNotFoundErr *types.UserNotFoundException
+	var limitExceededErr *types.LimitExceededException
 	var tooManyAttemptsErr *types.TooManyFailedAttemptsException
 
 	if errors.As(err, &codeMismatchErr) {
@@ -172,7 +173,7 @@ func (s *PasswordRecoveryService) mapResetPasswordError(err error) error {
 	if errors.As(err, &userNotFoundErr) {
 		return ErrUserNotFoundForRecovery
 	}
-	if errors.As(err, &tooManyAttemptsErr) {
+	if errors.As(err, &limitExceededErr) || errors.As(err, &tooManyAttemptsErr) {
 		return ErrTooManyAttempts
 	}
 
@@ -190,7 +191,7 @@ func (s *PasswordRecoveryService) mapResetPasswordError(err error) error {
 	if strings.Contains(errStr, "UserNotFoundException") || strings.Contains(errStr, "User does not exist") {
 		return ErrUserNotFoundForRecovery
 	}
-	if strings.Contains(errStr, "TooManyFailedAttemptsException") {
+	if strings.Contains(errStr, "LimitExceededException") || strings.Contains(errStr, "TooManyFailedAttemptsException") {
 		return ErrTooManyAttempts
 	}
 

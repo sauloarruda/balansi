@@ -169,6 +169,22 @@ func TestPasswordRecoveryService_ResetPassword(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 		mockCognito.AssertExpectations(t)
 	})
+
+	t.Run("CognitoError_LimitExceeded", func(t *testing.T) {
+		mockRepo := new(testhelpers.MockUserRepository)
+		mockCognito := new(testhelpers.MockCognitoClient)
+		service := NewPasswordRecoveryServiceWithInterfaces(mockRepo, mockCognito)
+
+		user := &models.User{Email: email, CognitoID: &cognitoID}
+		mockRepo.On("FindByEmail", ctx, email).Return(user, nil)
+		mockCognito.On("ResetPassword", ctx, email, code, newPassword).Return(&types.LimitExceededException{})
+
+		err := service.ResetPassword(ctx, email, code, newPassword)
+
+		assert.ErrorIs(t, err, ErrTooManyAttempts)
+		mockRepo.AssertExpectations(t)
+		mockCognito.AssertExpectations(t)
+	})
 }
 
 // Note: MaskEmail is private, so we can't test it directly here unless we export it.
