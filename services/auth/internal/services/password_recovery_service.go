@@ -18,6 +18,7 @@ var (
 	ErrExpiredRecoveryCode     = errors.New("expired recovery code")
 	ErrPasswordPolicyViolation = errors.New("password does not meet requirements")
 	ErrTooManyAttempts         = errors.New("too many failed attempts")
+	ErrLimitExceeded           = errors.New("rate limit exceeded")
 )
 
 // PasswordRecoveryService handles password recovery operations.
@@ -136,7 +137,10 @@ func (s *PasswordRecoveryService) mapForgotPasswordError(err error) error {
 	if errors.As(err, &userNotFoundErr) {
 		return ErrUserNotFoundForRecovery
 	}
-	if errors.As(err, &limitExceededErr) || errors.As(err, &tooManyAttemptsErr) {
+	if errors.As(err, &limitExceededErr) {
+		return ErrLimitExceeded
+	}
+	if errors.As(err, &tooManyAttemptsErr) {
 		return ErrTooManyAttempts
 	}
 
@@ -145,7 +149,10 @@ func (s *PasswordRecoveryService) mapForgotPasswordError(err error) error {
 	if strings.Contains(errStr, "UserNotFoundException") || strings.Contains(errStr, "User does not exist") {
 		return ErrUserNotFoundForRecovery
 	}
-	if strings.Contains(errStr, "LimitExceededException") || strings.Contains(errStr, "TooManyFailedAttemptsException") {
+	if strings.Contains(errStr, "LimitExceededException") {
+		return ErrLimitExceeded
+	}
+	if strings.Contains(errStr, "TooManyFailedAttemptsException") {
 		return ErrTooManyAttempts
 	}
 
@@ -173,7 +180,10 @@ func (s *PasswordRecoveryService) mapResetPasswordError(err error) error {
 	if errors.As(err, &userNotFoundErr) {
 		return ErrUserNotFoundForRecovery
 	}
-	if errors.As(err, &limitExceededErr) || errors.As(err, &tooManyAttemptsErr) {
+	if errors.As(err, &limitExceededErr) {
+		return ErrLimitExceeded
+	}
+	if errors.As(err, &tooManyAttemptsErr) {
 		return ErrTooManyAttempts
 	}
 
@@ -191,7 +201,10 @@ func (s *PasswordRecoveryService) mapResetPasswordError(err error) error {
 	if strings.Contains(errStr, "UserNotFoundException") || strings.Contains(errStr, "User does not exist") {
 		return ErrUserNotFoundForRecovery
 	}
-	if strings.Contains(errStr, "LimitExceededException") || strings.Contains(errStr, "TooManyFailedAttemptsException") {
+	if strings.Contains(errStr, "LimitExceededException") {
+		return ErrLimitExceeded
+	}
+	if strings.Contains(errStr, "TooManyFailedAttemptsException") {
 		return ErrTooManyAttempts
 	}
 
