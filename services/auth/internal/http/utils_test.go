@@ -8,45 +8,217 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Helper functions for DRY testing
+
+// runSimpleStringTests runs table-driven tests with simple string args
+func runSimpleStringTests(t *testing.T, tests []struct {
+	name   string
+	header string
+	want   string
+}, testFunc func(string) string) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testFunc(tt.header)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// runMapStringTests runs table-driven tests with map[string]string args
+func runMapStringTests(t *testing.T, tests []struct {
+	name    string
+	headers map[string]string
+	want    string
+}, testFunc func(map[string]string) string) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testFunc(tt.headers)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// runCookieTests runs table-driven tests for cookie extraction
+func runCookieTests(t *testing.T, tests []struct {
+	name       string
+	cookieName string
+	cookies    []string
+	want       string
+}, testFunc func([]string, string) string) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testFunc(tt.cookies, tt.cookieName)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// runCookieHeaderTests runs table-driven tests for cookie header building
+func runCookieHeaderTests(t *testing.T, tests []struct {
+	name         string
+	key          string
+	value        string
+	reqDomain    string
+	origin       string
+	wantContains []string
+}) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := createAPIGatewayRequest(map[string]string{"Origin": tt.origin}, tt.reqDomain)
+			got := BuildCookieHeader(tt.value, tt.key, req)
+			for _, want := range tt.wantContains {
+				assert.Contains(t, got, want)
+			}
+		})
+	}
+}
+
+// runDomainTests runs table-driven tests for domain functions
+func runDomainTests(t *testing.T, tests []struct {
+	name    string
+	domain1 string
+	domain2 string
+	want    string
+}, testFunc func(string, string) string) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testFunc(tt.domain1, tt.domain2)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// runOriginDomainTests runs table-driven tests for origin+domain functions
+func runOriginDomainTests(t *testing.T, tests []struct {
+	name      string
+	origin    string
+	apiDomain string
+	want      string
+}, testFunc func(string, string) string) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := testFunc(tt.origin, tt.apiDomain)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// runEnvDomainTests runs table-driven tests with environment variables
+func runEnvDomainTests(t *testing.T, tests []struct {
+	name      string
+	origin    string
+	apiDomain string
+	env       map[string]string
+	want      string
+}) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set env vars
+			for k, v := range tt.env {
+				os.Setenv(k, v)
+			}
+			// Cleanup
+			defer func() {
+				for k := range tt.env {
+					os.Unsetenv(k)
+				}
+			}()
+
+			got := getCookieDomain(tt.origin, tt.apiDomain)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// runPathTests runs table-driven tests for path extraction
+func runPathTests(t *testing.T, tests []struct {
+	name     string
+	httpPath string
+	rawPath  string
+	stage    string
+	want     string
+}) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := createAPIGatewayRequestWithPath(tt.httpPath, tt.rawPath, tt.stage)
+			got := ExtractRequestPath(req, tt.stage)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// createAPIGatewayRequest creates a basic APIGatewayV2HTTPRequest for testing
+func createAPIGatewayRequest(headers map[string]string, domain string) events.APIGatewayV2HTTPRequest {
+	return events.APIGatewayV2HTTPRequest{
+		Headers: headers,
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			DomainName: domain,
+		},
+	}
+}
+
+// createAPIGatewayRequestWithPath creates an APIGatewayV2HTTPRequest with path information
+func createAPIGatewayRequestWithPath(httpPath, rawPath, stage string) events.APIGatewayV2HTTPRequest {
+	return events.APIGatewayV2HTTPRequest{
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Path: httpPath,
+			},
+		},
+		RawPath: rawPath,
+	}
+}
+
+// withEnvVars temporarily sets environment variables and returns cleanup function
+func withEnvVars(env map[string]string) func() {
+	for k, v := range env {
+		os.Setenv(k, v)
+	}
+	return func() {
+		for k := range env {
+			os.Unsetenv(k)
+		}
+	}
+}
+
 func TestExtractBearerToken(t *testing.T) {
 	tests := []struct {
 		name   string
 		header string
 		want   string
 	}{
-		{
-			name:   "Valid Bearer Token",
-			header: "Bearer valid.token.123",
-			want:   "valid.token.123",
-		},
-		{
-			name:   "Case Insensitive Bearer",
-			header: "bearer valid.token.123",
-			want:   "valid.token.123",
-		},
-		{
-			name:   "Missing Bearer Prefix",
-			header: "valid.token.123",
-			want:   "",
-		},
-		{
-			name:   "Empty Header",
-			header: "",
-			want:   "",
-		},
-		{
-			name:   "Just Bearer",
-			header: "Bearer ",
-			want:   "",
-		},
+		{"Valid Bearer Token", "Bearer valid.token.123", "valid.token.123"},
+		{"Case Insensitive Bearer", "bearer valid.token.123", "valid.token.123"},
+		{"Missing Bearer Prefix", "valid.token.123", ""},
+		{"Empty Header", "", ""},
+		{"Just Bearer", "Bearer ", ""},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractBearerToken(tt.header)
-			assert.Equal(t, tt.want, got)
-		})
+	runSimpleStringTests(t, tests, ExtractBearerToken)
+}
+
+func TestExtractOrigin(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers map[string]string
+		want    string
+	}{
+		{"lowercase origin", map[string]string{"origin": "https://example.com"}, "https://example.com"},
+		{"capital Origin", map[string]string{"Origin": "https://example.com"}, "https://example.com"},
+		{"uppercase ORIGIN", map[string]string{"ORIGIN": "https://example.com"}, "https://example.com"},
+		{"multiple origins - lowercase takes precedence", map[string]string{
+			"origin": "https://lowercase.com",
+			"Origin": "https://capital.com",
+			"ORIGIN": "https://uppercase.com",
+		}, "https://lowercase.com"},
+		{"no origin headers", map[string]string{"content-type": "application/json"}, ""},
+		{"empty headers map", map[string]string{}, ""},
 	}
+
+	runMapStringTests(t, tests, func(headers map[string]string) string {
+		req := createAPIGatewayRequest(headers, "")
+		return ExtractOrigin(req)
+	})
 }
 
 func TestExtractCookieValue(t *testing.T) {
@@ -56,38 +228,13 @@ func TestExtractCookieValue(t *testing.T) {
 		cookies    []string
 		want       string
 	}{
-		{
-			name:       "Valid Cookie",
-			cookieName: "session_id",
-			cookies:    []string{"session_id=12345; Path=/"},
-			want:       "12345",
-		},
-		{
-			name:       "Multiple Cookies",
-			cookieName: "auth",
-			cookies:    []string{"theme=dark", "auth=token123; other=value"},
-			want:       "token123",
-		},
-		{
-			name:       "Cookie Not Found",
-			cookieName: "missing",
-			cookies:    []string{"session_id=12345"},
-			want:       "",
-		},
-		{
-			name:       "Empty Header",
-			cookieName: "session_id",
-			cookies:    []string{},
-			want:       "",
-		},
+		{"Valid Cookie", "session_id", []string{"session_id=12345; Path=/"}, "12345"},
+		{"Multiple Cookies", "auth", []string{"theme=dark", "auth=token123; other=value"}, "token123"},
+		{"Cookie Not Found", "missing", []string{"session_id=12345"}, ""},
+		{"Empty Header", "session_id", []string{}, ""},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ExtractCookieValue(tt.cookies, tt.cookieName)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+	runCookieTests(t, tests, ExtractCookieValue)
 }
 
 func TestBuildCookieHeader(t *testing.T) {
@@ -99,51 +246,21 @@ func TestBuildCookieHeader(t *testing.T) {
 		origin       string
 		wantContains []string
 	}{
-		{
-			name:      "Standard Production Cookie",
-			key:       "session",
-			value:     "123",
-			reqDomain: "api.example.com",
-			origin:    "https://app.example.com",
-			wantContains: []string{
-				"session=123",
-				"Max-Age=2592000",
-				"HttpOnly",
-				"Secure",
-				"SameSite=None",
-				"Domain=.example.com",
-			},
-		},
-		{
-			name:      "Localhost",
-			key:       "session",
-			value:     "123",
-			reqDomain: "localhost",
-			origin:    "http://localhost:3000",
-			wantContains: []string{
-				"session=123",
-				"SameSite=Lax",
-			},
-		},
+		{"Standard Production Cookie", "session", "123", "api.example.com", "https://app.example.com", []string{
+			"session=123",
+			"Max-Age=2592000",
+			"HttpOnly",
+			"Secure",
+			"SameSite=None",
+			"Domain=.example.com",
+		}},
+		{"Localhost", "session", "123", "localhost", "http://localhost:3000", []string{
+			"session=123",
+			"SameSite=Lax",
+		}},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := events.APIGatewayV2HTTPRequest{
-				RequestContext: events.APIGatewayV2HTTPRequestContext{
-					DomainName: tt.reqDomain,
-				},
-				Headers: map[string]string{
-					"Origin": tt.origin,
-				},
-			}
-
-			got := BuildCookieHeader(tt.value, tt.key, req)
-			for _, want := range tt.wantContains {
-				assert.Contains(t, got, want)
-			}
-		})
-	}
+	runCookieHeaderTests(t, tests)
 }
 
 func TestGetCookieDomain(t *testing.T) {
@@ -189,22 +306,7 @@ func TestGetCookieDomain(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set env
-			for k, v := range tt.env {
-				os.Setenv(k, v)
-			}
-			defer func() {
-				for k := range tt.env {
-					os.Unsetenv(k)
-				}
-			}()
-
-			got := getCookieDomain(tt.origin, tt.apiDomain)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+	runEnvDomainTests(t, tests)
 }
 
 func TestExtractSharedDomainFromStrings(t *testing.T) {
@@ -223,30 +325,37 @@ func TestExtractSharedDomainFromStrings(t *testing.T) {
 		{"With Port", "example.com:8080", "api.example.com:9000", ".example.com"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := extractSharedDomainFromStrings(tt.domain1, tt.domain2)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+	runDomainTests(t, tests, extractSharedDomainFromStrings)
 }
 
 func TestExtractSharedDomain(t *testing.T) {
 	tests := []struct {
-		name string
-		origin string
+		name      string
+		origin    string
 		apiDomain string
-		want string
+		want      string
 	}{
 		{"Standard", "https://app.example.com", "api.example.com", ".example.com"},
 		{"Invalid URL", ":/invalid", "api.example.com", ""},
 		{"Empty", "", "", ""},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := extractSharedDomain(tt.origin, tt.apiDomain)
-			assert.Equal(t, tt.want, got)
-		})
+	runOriginDomainTests(t, tests, extractSharedDomain)
+}
+
+func TestExtractRequestPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		httpPath string
+		rawPath  string
+		stage    string
+		want     string
+	}{
+		{"HTTP Path with stage", "/prod/auth/sign-up", "/prod/auth/sign-up", "prod", "/auth/sign-up"},
+		{"Raw path fallback", "", "/auth/me", "", "/auth/me"},
+		{"No stage prefix", "/auth/confirm", "/auth/confirm", "", "/auth/confirm"},
+		{"Stage with multiple path segments", "/bal-7/auth/refresh", "/bal-7/auth/refresh", "bal-7", "/auth/refresh"},
 	}
+
+	runPathTests(t, tests)
 }

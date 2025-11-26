@@ -202,9 +202,9 @@ func TestValidator_ValidateToken(t *testing.T) {
 	})
 
 	/*
-	t.Run("Skipped Key (Wrong Usage)", func(t *testing.T) {
-		// ...
-	})
+		t.Run("Skipped Key (Wrong Usage)", func(t *testing.T) {
+			// ...
+		})
 	*/
 
 	t.Run("Malformed Token", func(t *testing.T) {

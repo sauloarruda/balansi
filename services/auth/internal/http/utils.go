@@ -8,6 +8,37 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
+// ExtractRequestPath extracts and normalizes the request path from an API Gateway v2 request
+// It handles both HTTP path and raw path, and strips the stage prefix if configured
+func ExtractRequestPath(req events.APIGatewayV2HTTPRequest, stage string) string {
+	// Simple routing based on path
+	path := req.RequestContext.HTTP.Path
+	if path == "" {
+		path = req.RawPath
+	}
+
+	// Strip stage from path if present
+	if stage != "" {
+		prefix := "/" + stage
+		path = strings.TrimPrefix(path, prefix)
+	}
+
+	return path
+}
+
+// ExtractOrigin extracts the Origin header from API Gateway v2 request headers
+// Checks multiple variations: origin, Origin, ORIGIN
+func ExtractOrigin(req events.APIGatewayV2HTTPRequest) string {
+	origin := req.Headers["origin"]
+	if origin == "" {
+		origin = req.Headers["Origin"]
+	}
+	if origin == "" {
+		origin = req.Headers["ORIGIN"]
+	}
+	return origin
+}
+
 // ExtractBearerToken extracts the token from "Bearer <token>" format
 func ExtractBearerToken(authHeader string) string {
 	parts := strings.Split(authHeader, " ")
@@ -116,12 +147,8 @@ func extractSharedDomainFromStrings(domain1, domain2 string) string {
 	}
 
 	// Remove ports if present
-	if idx := strings.Index(domain1, ":"); idx != -1 {
-		domain1 = domain1[:idx]
-	}
-	if idx := strings.Index(domain2, ":"); idx != -1 {
-		domain2 = domain2[:idx]
-	}
+	domain1 = normalizeHost(domain1)
+	domain2 = normalizeHost(domain2)
 
 	// If same domain, no need for Domain attribute
 	if domain1 == domain2 {
@@ -165,17 +192,8 @@ func extractSharedDomain(origin, apiDomain string) string {
 		return ""
 	}
 
-	originHost := originURL.Host
-	// Remove port if present
-	if idx := strings.Index(originHost, ":"); idx != -1 {
-		originHost = originHost[:idx]
-	}
-
-	// Remove port from API domain if present
-	apiHost := apiDomain
-	if idx := strings.Index(apiHost, ":"); idx != -1 {
-		apiHost = apiHost[:idx]
-	}
+	originHost := normalizeHost(originURL.Host)
+	apiHost := normalizeHost(apiDomain)
 
 	// If same domain, no need for Domain attribute
 	if originHost == apiHost {
