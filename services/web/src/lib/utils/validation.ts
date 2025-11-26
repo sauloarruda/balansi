@@ -38,7 +38,7 @@ export interface PasswordRequirements {
  */
 export function isValidPassword(password: string): boolean {
 	if (!password || typeof password !== "string") return false;
-	
+
 	const requirements = getPasswordRequirements(password);
 	return Object.values(requirements).every(req => req === true);
 }
