@@ -22,12 +22,13 @@ import (
 
 // Validator validates JWT tokens using Cognito's JWKS endpoint
 type Validator struct {
-	userPoolID string
-	jwksURL    string
-	keys       map[string]*rsa.PublicKey
-	keysMutex  sync.RWMutex
-	lastFetch  time.Time
-	cacheTTL   time.Duration
+	userPoolID         string
+	jwksURL            string
+	keys               map[string]*rsa.PublicKey
+	keysMutex          sync.RWMutex
+	lastFetch          time.Time
+	cacheTTL           time.Duration
+	minRefreshInterval time.Duration // Minimum time between JWKS fetches to prevent abuse
 }
 
 // NewValidator creates a new JWT validator for Cognito tokens
@@ -43,10 +44,11 @@ func NewValidator(cfg *config.Config) *Validator {
 	}
 
 	return &Validator{
-		userPoolID: cfg.CognitoUserPoolID,
-		jwksURL:    jwksURL,
-		keys:       make(map[string]*rsa.PublicKey),
-		cacheTTL:   24 * time.Hour, // Cache keys for 24 hours
+		userPoolID:         cfg.CognitoUserPoolID,
+		jwksURL:            jwksURL,
+		keys:               make(map[string]*rsa.PublicKey),
+		cacheTTL:           24 * time.Hour,   // Cache keys for 24 hours
+		minRefreshInterval: 30 * time.Second, // Minimum 30 seconds between fetches to prevent abuse
 	}
 }
 
@@ -118,15 +120,18 @@ func (v *Validator) getPublicKey(ctx context.Context, kid string) (*rsa.PublicKe
 		return key, nil
 	}
 
-	// Check if cache is stale
-	if time.Since(v.lastFetch) > v.cacheTTL {
-		// Fetch fresh keys from JWKS endpoint
+	// Fetch fresh keys if cache is stale OR if we have an unknown kid and enough time has passed
+	// This handles key rotation while preventing abuse
+	timeSinceLastFetch := time.Since(v.lastFetch)
+	shouldFetch := timeSinceLastFetch > v.cacheTTL || (len(v.keys) > 0 && timeSinceLastFetch >= v.minRefreshInterval)
+
+	if shouldFetch {
 		if err := v.fetchKeys(ctx); err != nil {
 			return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 		}
 	}
 
-	// Get key from cache
+	// Get key from cache after potential refresh
 	key, ok := v.keys[kid]
 	if !ok {
 		return nil, fmt.Errorf("key with kid %s not found in JWKS", kid)

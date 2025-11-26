@@ -249,4 +249,60 @@ func TestValidator_ValidateToken(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to fetch JWKS")
 	})
+
+	t.Run("Refresh on Unknown Key ID", func(t *testing.T) {
+		// Create validator with short intervals for testing
+		testValidator := NewValidator(cfg)
+		testValidator.SetJWKSURL(server.URL)
+		testValidator.cacheTTL = 1 * time.Hour // Long TTL
+		testValidator.minRefreshInterval = 1 * time.Millisecond // Very short for testing
+
+		// First, validate a known token to populate cache
+		tok, err := jwt.NewBuilder().
+			Subject("user-123").
+			Expiration(time.Now().Add(1 * time.Hour)).
+			Build()
+		require.NoError(t, err)
+
+		payload, err := json.Marshal(tok)
+		require.NoError(t, err)
+
+		hdrs := jws.NewHeaders()
+		hdrs.Set(jws.KeyIDKey, "test-key-id")
+		hdrs.Set(jws.TypeKey, "JWT")
+
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256, key, jws.WithProtectedHeaders(hdrs)))
+		require.NoError(t, err)
+
+		// This should work and populate cache
+		sub, err := testValidator.ValidateToken(context.Background(), string(signed))
+		assert.NoError(t, err)
+		assert.Equal(t, "user-123", sub)
+
+		// Now try with unknown key - should attempt refresh due to short minRefreshInterval
+		// (In real scenario, this would succeed if JWKS had the key, but here it will fail)
+		unknownKey, _ := jwk.FromRaw(privateKey)
+		unknownKey.Set(jwk.KeyIDKey, "unknown-key")
+
+		tok2, err := jwt.NewBuilder().
+			Subject("user-456").
+			Expiration(time.Now().Add(1 * time.Hour)).
+			Build()
+		require.NoError(t, err)
+
+		payload2, err := json.Marshal(tok2)
+		require.NoError(t, err)
+
+		hdrs2 := jws.NewHeaders()
+		hdrs2.Set(jws.KeyIDKey, "unknown-key")
+		hdrs2.Set(jws.TypeKey, "JWT")
+
+		signed2, err := jws.Sign(payload2, jws.WithKey(jwa.RS256, unknownKey, jws.WithProtectedHeaders(hdrs2)))
+		require.NoError(t, err)
+
+		// This should attempt refresh and then fail (since unknown-key is not in JWKS)
+		_, err = testValidator.ValidateToken(context.Background(), string(signed2))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "key with kid unknown-key not found")
+	})
 }
