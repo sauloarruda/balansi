@@ -9,6 +9,8 @@ import (
 	"services/auth/internal/services"
 	"services/auth/internal/testhelpers"
 
+	"services/auth/internal/http"
+
 	"github.com/aws/aws-lambda-go/events"
 )
 
@@ -35,7 +37,7 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 	var confirmReq models.ConfirmRequest
 	if err := json.Unmarshal([]byte(req.Body), &confirmReq); err != nil {
 		logger.Error("Invalid request body: %v", err)
-		return errorResponse(400, "invalid_request", "Invalid request body"), nil
+		return http.ErrorResponse(400, "invalid_request", "Invalid request body"), nil
 	}
 
 	// Validate fields
@@ -43,7 +45,7 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 	// This is safe because user IDs must be positive. If we add more fields in the future,
 	// consider using pointer types (*int64) or a validation library for better field-level error messages.
 	if confirmReq.UserID <= 0 || confirmReq.Code == "" {
-		return errorResponse(400, "missing_fields", "User ID and code are required"), nil
+		return http.ErrorResponse(400, "missing_fields", "User ID and code are required"), nil
 	}
 
 	// Call service
@@ -51,17 +53,17 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrUserNotFound):
-			return errorResponse(404, "user_not_found", "User not found"), nil
+			return http.ErrorResponse(404, "user_not_found", "User not found"), nil
 		case errors.Is(err, services.ErrUserAlreadyConfirmed):
-			return errorResponse(409, "user_already_confirmed", "User is already confirmed"), nil
+			return http.ErrorResponse(409, "user_already_confirmed", "User is already confirmed"), nil
 		case errors.Is(err, services.ErrInvalidConfirmationCode):
-			return errorResponse(422, "invalid_code", "Incorrect confirmation code"), nil
+			return http.ErrorResponse(422, "invalid_code", "Incorrect confirmation code"), nil
 		case errors.Is(err, services.ErrExpiredConfirmationCode):
-			return errorResponse(422, "expired_code", "Confirmation code expired"), nil
+			return http.ErrorResponse(422, "expired_code", "Confirmation code expired"), nil
 		default:
 			// Log the actual error for debugging
 			logger.Error("Confirm service error: %v", err)
-			return errorResponse(500, "internal_error", "Internal server error"), nil
+			return http.ErrorResponse(500, "internal_error", "Internal server error"), nil
 		}
 	}
 
@@ -74,7 +76,7 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 	)
 	if err != nil {
 		logger.Error("Failed to create session cookie: %v", err)
-		return errorResponse(500, "internal_error", "Failed to create session"), nil
+		return http.ErrorResponse(500, "internal_error", "Failed to create session"), nil
 	}
 
 	// Return success response with cookie

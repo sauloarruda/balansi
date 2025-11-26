@@ -40,31 +40,31 @@ func (h *MeHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPReque
 	}
 
 	if authHeader == "" {
-		return errorResponse(401, "unauthorized", "Missing authorization header"), nil
+		return http.ErrorResponse(401, "unauthorized", "Missing authorization header"), nil
 	}
 
 	// Extract access token from "Bearer <token>"
 	accessToken := http.ExtractBearerToken(authHeader)
 	if accessToken == "" {
-		return errorResponse(401, "unauthorized", "Invalid authorization header"), nil
+		return http.ErrorResponse(401, "unauthorized", "Invalid authorization header"), nil
 	}
 
 	// Validate token signature using JWKS and get user sub (Cognito ID)
 	userSub, err := h.jwtValidator.ValidateToken(ctx, accessToken)
 	if err != nil {
 		logger.Error("Failed to validate access token: %v", err)
-		return errorResponse(401, "invalid_token", "Invalid access token"), nil
+		return http.ErrorResponse(401, "invalid_token", "Invalid access token"), nil
 	}
 
 	// Find user by CognitoID
 	user, err := h.userRepo.FindByCognitoID(ctx, userSub)
 	if err != nil {
 		logger.Error("Failed to find user: %v", err)
-		return errorResponse(500, "internal_error", "Internal server error"), nil
+		return http.ErrorResponse(500, "internal_error", "Internal server error"), nil
 	}
 
 	if user == nil {
-		return errorResponse(404, "user_not_found", "User not found"), nil
+		return http.ErrorResponse(404, "user_not_found", "User not found"), nil
 	}
 
 	// Return user info
@@ -76,7 +76,7 @@ func (h *MeHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPReque
 	body, err := json.Marshal(userInfo)
 	if err != nil {
 		logger.Error("Failed to marshal response: %v", err)
-		return errorResponse(500, "internal_error", "Failed to marshal response"), nil
+		return http.ErrorResponse(500, "internal_error", "Failed to marshal response"), nil
 	}
 
 	return events.APIGatewayV2HTTPResponse{

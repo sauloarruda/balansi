@@ -324,11 +324,44 @@ func TestRefreshHandler_Handle_ContextCancellation(t *testing.T) {
 }
 
 func TestRefreshHandler_Handle_JSONMarshalingError(t *testing.T) {
-	// This test is tricky because we can't easily inject a marshaling error
-	// without modifying the code. In a real scenario, we might use dependency injection
-	// for JSON marshaling, but for now we'll document this limitation.
+	mockSessionService := new(testhelpers.MockSessionService)
 
-	t.Skip("JSON marshaling error test requires dependency injection for json.Marshal")
+	// Create a marshaling function that always fails
+	failingMarshal := func(v interface{}) ([]byte, error) {
+		return nil, errors.New("marshaling failed")
+	}
+
+	handler := NewRefreshHandlerWithMarshaler(mockSessionService, failingMarshal)
+
+	ctx := context.Background()
+
+	// Mock successful session refresh
+	mockSessionService.On("RefreshAccessToken", ctx, "encrypted_session_data").Return(&models.AccessTokenResponse{
+		AccessToken: "new_token",
+		ExpiresIn:   3600,
+	}, nil).Once()
+
+	req := events.APIGatewayV2HTTPRequest{
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+				Method: "POST",
+			},
+		},
+		Cookies: []string{"session_id=encrypted_session_data"},
+	}
+
+	resp, err := handler.Handle(ctx, req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 500, resp.StatusCode)
+
+	var errorResp models.ErrorResponse
+	err = json.Unmarshal([]byte(resp.Body), &errorResp)
+	assert.NoError(t, err)
+	assert.Equal(t, "internal_error", errorResp.Code)
+	assert.Equal(t, "Failed to marshal response", errorResp.Message)
+
+	mockSessionService.AssertExpectations(t)
 }
 
 // Benchmark test to ensure performance

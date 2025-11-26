@@ -1,11 +1,13 @@
 package http
 
 import (
+	"encoding/json"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
+	"services/auth/internal/models"
 )
 
 // ExtractRequestPath extracts and normalizes the request path from an API Gateway v2 request
@@ -224,4 +226,21 @@ func extractSharedDomain(origin, apiDomain string) string {
 	}
 
 	return ""
+}
+
+// ErrorResponse creates a standardized error response for HTTP handlers
+func ErrorResponse(statusCode int, code, message string) events.APIGatewayV2HTTPResponse {
+	payload := models.ErrorResponse{
+		Code:    code,
+		Message: message,
+	}
+
+	body, _ := json.Marshal(payload)
+	return events.APIGatewayV2HTTPResponse{
+		StatusCode: statusCode,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: string(body),
+	}
 }
