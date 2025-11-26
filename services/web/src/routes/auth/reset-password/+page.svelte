@@ -94,13 +94,13 @@
 			// Clear recovery data
 			passwordRecoveryData.clear();
 
-			// Show success message
-			success = true;
+		// Show success message
+		success = true;
 
-			// Redirect to login after a short delay
-			setTimeout(() => {
-				goto("/auth");
-			}, 2000);
+		// Redirect to login after a short delay
+		window.setTimeout(() => {
+			goto("/auth");
+		}, 2000);
 		} catch (err) {
 			console.error("Error resetting password:", err);
 			pinError = true;
