@@ -39,13 +39,13 @@ export default defineConfig({
 	webServer: [
 		{
 			command: process.env.SKIP_BUILD
-				? 'cd ../../services/auth && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api'
-				: 'cd ../../services/auth && go build -o bin/api cmd/api/main.go && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api',
+				? 'cd ../../services/auth && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api 2>&1'
+				: 'cd ../../services/auth && echo "Building auth service..." && go build -o bin/api cmd/api/main.go 2>&1 && echo "Build completed, starting server..." && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api 2>&1',
 			port: 3001, // Test API port (dev uses 3000)
 			reuseExistingServer: false, // Always create new server for tests
 			timeout: 30000, // 30 seconds for build and startup
-			stdout: "pipe",
-			stderr: "pipe",
+			stdout: "inherit",
+			stderr: "inherit",
 			shell: true,
 			env: {
 				PORT: "3001",

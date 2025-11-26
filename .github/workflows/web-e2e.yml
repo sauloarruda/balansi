@@ -252,6 +252,9 @@ jobs:
           COGNITO_USER_POOL_ID: ${{ env.COGNITO_USER_POOL_ID || 'local_test_pool' }}
           COGNITO_CLIENT_ID: ${{ env.COGNITO_CLIENT_ID || 'test_client_id' }}
           COGNITO_ENDPOINT: ${{ env.COGNITO_ENDPOINT || 'http://127.0.0.1:9229' }}
+          FRONTEND_DOMAIN: localhost:8081
+          API_DOMAIN: localhost:3001
+          COOKIE_DOMAIN: localhost
         run: |
           cd services/web
           npm run test
