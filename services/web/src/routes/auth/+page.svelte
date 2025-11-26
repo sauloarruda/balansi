@@ -135,6 +135,15 @@
 					{$_("common.continue")}
 				</Button>
 			</form>
+
+			<div class="text-center mt-4">
+				<a
+					href="/auth/forgot-password"
+					class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+				>
+					{$_("auth.forgotPassword.title")}
+				</a>
+			</div>
 		{/if}
 	{/snippet}
 </Container>
