@@ -18,11 +18,13 @@ type RouteConfig struct {
 
 // HandlerRegistry holds references to all HTTP handlers and route configurations
 type HandlerRegistry struct {
-	SignupHandler  HandlerFunc
-	ConfirmHandler HandlerFunc
-	RefreshHandler HandlerFunc
-	MeHandler      HandlerFunc
-	Routes         []RouteConfig
+	SignupHandler         HandlerFunc
+	ConfirmHandler        HandlerFunc
+	RefreshHandler        HandlerFunc
+	MeHandler             HandlerFunc
+	ForgotPasswordHandler HandlerFunc
+	ResetPasswordHandler  HandlerFunc
+	Routes                []RouteConfig
 }
 
 // NewHandlerRegistry creates a new handler registry with predefined routes
@@ -33,6 +35,8 @@ func NewHandlerRegistry() *HandlerRegistry {
 			{Path: "/auth/confirm", Method: "POST"},
 			{Path: "/auth/refresh", Method: "POST"},
 			{Path: "/auth/me", Method: "GET"},
+			{Path: "/auth/forgot-password", Method: "POST"},
+			{Path: "/auth/reset-password", Method: "POST"},
 		},
 	}
 	return registry
@@ -112,8 +116,11 @@ func routeRequest(ctx context.Context, req events.APIGatewayV2HTTPRequest, path,
 		handler = handlers.RefreshHandler
 	case "/auth/me":
 		handler = handlers.MeHandler
+	case "/auth/forgot-password":
+		handler = handlers.ForgotPasswordHandler
+	case "/auth/reset-password":
+		handler = handlers.ResetPasswordHandler
 	}
-
 
 	// Check method and call handler
 	if req.RequestContext.HTTP.Method == routeConfig.Method && handler != nil {

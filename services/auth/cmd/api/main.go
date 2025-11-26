@@ -20,13 +20,15 @@ import (
 )
 
 var (
-	signupHandler   *handlers.SignupHandler
-	confirmHandler  *handlers.ConfirmHandler
-	refreshHandler  *handlers.RefreshHandler
-	meHandler       *handlers.MeHandler
-	dbPool          *pgxpool.Pool
-	cfg             *config.Config
-	handlerRegistry *httputils.HandlerRegistry
+	signupHandler         *handlers.SignupHandler
+	confirmHandler        *handlers.ConfirmHandler
+	refreshHandler        *handlers.RefreshHandler
+	meHandler             *handlers.MeHandler
+	forgotPasswordHandler *handlers.ForgotPasswordHandler
+	resetPasswordHandler  *handlers.ResetPasswordHandler
+	dbPool                *pgxpool.Pool
+	cfg                   *config.Config
+	handlerRegistry       *httputils.HandlerRegistry
 )
 
 // loadConfiguration loads and returns the application configuration
@@ -70,18 +72,21 @@ func initializeJWTValidator(cfg *config.Config) *jwt.Validator {
 }
 
 // initializeServices creates and returns the application services
-func initializeServices(userRepo *repositories.UserRepository, cognitoClient *cognito.Client, cfg *config.Config) (*services.SignupService, *services.SessionService) {
+func initializeServices(userRepo *repositories.UserRepository, cognitoClient *cognito.Client, cfg *config.Config) (*services.SignupService, *services.SessionService, *services.PasswordRecoveryService) {
 	signupService := services.NewSignupService(userRepo, cognitoClient, cfg.EncryptionSecret)
 	sessionService := services.NewSessionService(userRepo, cognitoClient, cfg.EncryptionSecret)
-	return signupService, sessionService
+	passwordRecoveryService := services.NewPasswordRecoveryService(userRepo, cognitoClient)
+	return signupService, sessionService, passwordRecoveryService
 }
 
 // initializeHandlers creates and initializes all the HTTP handlers
-func initializeHandlers(signupService *services.SignupService, sessionService *services.SessionService, userRepo *repositories.UserRepository, cognitoClient *cognito.Client, jwtValidator *jwt.Validator) {
+func initializeHandlers(signupService *services.SignupService, sessionService *services.SessionService, passwordRecoveryService *services.PasswordRecoveryService, userRepo *repositories.UserRepository, cognitoClient *cognito.Client, jwtValidator *jwt.Validator) {
 	signupHandler = handlers.NewSignupHandler(signupService)
 	confirmHandler = handlers.NewConfirmHandler(signupService, sessionService)
 	refreshHandler = handlers.NewRefreshHandler(sessionService)
 	meHandler = handlers.NewMeHandler(userRepo, cognitoClient, jwtValidator)
+	forgotPasswordHandler = handlers.NewForgotPasswordHandler(passwordRecoveryService)
+	resetPasswordHandler = handlers.NewResetPasswordHandler(passwordRecoveryService)
 }
 
 func init() {
@@ -102,10 +107,10 @@ func init() {
 	jwtValidator := initializeJWTValidator(cfg)
 
 	// Initialize services
-	signupService, sessionService := initializeServices(userRepo, cognitoClient, cfg)
+	signupService, sessionService, passwordRecoveryService := initializeServices(userRepo, cognitoClient, cfg)
 
 	// Initialize handlers
-	initializeHandlers(signupService, sessionService, userRepo, cognitoClient, jwtValidator)
+	initializeHandlers(signupService, sessionService, passwordRecoveryService, userRepo, cognitoClient, jwtValidator)
 
 	// Create handler registry for unified processing
 	handlerRegistry = &httputils.HandlerRegistry{
@@ -114,6 +119,8 @@ func init() {
 			{Path: "/auth/confirm", Method: "POST"},
 			{Path: "/auth/refresh", Method: "POST"},
 			{Path: "/auth/me", Method: "GET"},
+			{Path: "/auth/forgot-password", Method: "POST"},
+			{Path: "/auth/reset-password", Method: "POST"},
 		},
 		SignupHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 			return signupHandler.Handle(ctx, req)
@@ -126,6 +133,12 @@ func init() {
 		},
 		MeHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 			return meHandler.Handle(ctx, req)
+		},
+		ForgotPasswordHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return forgotPasswordHandler.Handle(ctx, req)
+		},
+		ResetPasswordHandler: func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return resetPasswordHandler.Handle(ctx, req)
 		},
 	}
 
