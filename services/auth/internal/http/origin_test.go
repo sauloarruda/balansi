@@ -119,8 +119,8 @@ func (m *mockHTTPRequest) GetPath() string   { return "" }
 func (m *mockHTTPRequest) GetHeaders() map[string]string {
 	return map[string]string{"origin": m.origin}
 }
-func (m *mockHTTPRequest) GetBody() string   { return "" }
-func (m *mockHTTPRequest) GetOrigin() string { return m.origin }
+func (m *mockHTTPRequest) GetBody() string      { return "" }
+func (m *mockHTTPRequest) GetOrigin() string    { return m.origin }
 func (m *mockHTTPRequest) GetCookies() []string { return []string{} }
 
 func TestProcessOriginValidation(t *testing.T) {

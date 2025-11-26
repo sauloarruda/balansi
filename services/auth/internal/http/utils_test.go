@@ -260,7 +260,7 @@ func TestLocalRequestAdapter_GetCookies(t *testing.T) {
 			expected: []string{"session_id=abc123", "theme=dark"},
 		},
 		{
-			name: "No Cookies",
+			name:     "No Cookies",
 			cookies:  []*http.Cookie{},
 			expected: []string{},
 		},
