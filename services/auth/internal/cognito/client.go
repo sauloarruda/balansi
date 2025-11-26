@@ -66,7 +66,7 @@ func (c *Client) getSecretHash(username string) *string {
 
 func NewClient(cfg *config.Config) (*Client, error) {
 	opts := []func(*awsconfig.LoadOptions) error{
-		awsconfig.WithRegion("us-east-2"), // Default region, can be overridden by env
+		awsconfig.WithRegion(cfg.AWSRegion),
 	}
 
 	// Use dummy credentials for cognito-local/LocalStack
@@ -412,32 +412,10 @@ func (c *Client) ConfirmSignUp(ctx context.Context, cognitoID string, confirmati
 	var username string
 	var err error
 
-	// If username is provided directly, use it (optimization to avoid ListUsers)
-	if len(usernameOrEmail) > 0 && usernameOrEmail[0] != "" {
-		// Check if it's a username (UUID format) or email
-		// For cognito-local, username = email, so we can use it directly
-		if c.isLocalEndpoint() {
-			username = usernameOrEmail[0]
-		} else {
-			// For AWS Cognito, check if it looks like a UUID (username) or email
-			// UUIDs are 36 chars with dashes, emails contain @
-			if strings.Contains(usernameOrEmail[0], "@") {
-				// It's an email, need to fetch username
-				username, err = c.GetUsernameByUserSub(ctx, cognitoID, usernameOrEmail[0])
-				if err != nil {
-					return fmt.Errorf("failed to get username for UserSub: %w", err)
-				}
-			} else {
-				// It's likely a username (UUID), use it directly
-				username = usernameOrEmail[0]
-			}
-		}
-	} else {
-		// No username/email provided, need to fetch it
-		username, err = c.GetUsernameByUserSub(ctx, cognitoID)
-		if err != nil {
-			return fmt.Errorf("failed to get username for UserSub: %w", err)
-		}
+	// Resolve username from provided parameter or fetch it
+	username, err = c.resolveUsernameForConfirmation(ctx, cognitoID, usernameOrEmail...)
+	if err != nil {
+		return fmt.Errorf("failed to resolve username for confirmation: %w", err)
 	}
 
 	input := &cognitoidentityprovider.ConfirmSignUpInput{
@@ -458,6 +436,40 @@ func (c *Client) ConfirmSignUp(ctx context.Context, cognitoID string, confirmati
 
 	logger.Info("Confirmation code validated successfully - UserSub: %s", cognitoID)
 	return nil
+}
+
+// resolveUsernameForConfirmation resolves the username needed for ConfirmSignUp.
+// It optimizes to avoid duplicate calls by reusing already resolved usernames.
+func (c *Client) resolveUsernameForConfirmation(ctx context.Context, cognitoID string, usernameOrEmail ...string) (string, error) {
+	// If username is provided directly, use it (optimization to avoid ListUsers)
+	if len(usernameOrEmail) > 0 && usernameOrEmail[0] != "" {
+		// Check if it's a username (UUID format) or email
+		// For cognito-local, username = email, so we can use it directly
+		if c.isLocalEndpoint() {
+			return usernameOrEmail[0], nil
+		} else {
+			// For AWS Cognito, check if it looks like a UUID (username) or email
+			// UUIDs are 36 chars with dashes, emails contain @
+			if strings.Contains(usernameOrEmail[0], "@") {
+				// It's an email, need to fetch username
+				username, err := c.GetUsernameByUserSub(ctx, cognitoID, usernameOrEmail[0])
+				if err != nil {
+					return "", fmt.Errorf("failed to get username for UserSub: %w", err)
+				}
+				return username, nil
+			} else {
+				// It's likely a username (UUID), use it directly
+				return usernameOrEmail[0], nil
+			}
+		}
+	} else {
+		// No username/email provided, need to fetch it
+		username, err := c.GetUsernameByUserSub(ctx, cognitoID)
+		if err != nil {
+			return "", fmt.Errorf("failed to get username for UserSub: %w", err)
+		}
+		return username, nil
+	}
 }
 
 // InitiateAuth initiates authentication for a user and returns tokens.
@@ -505,13 +517,6 @@ func (c *Client) InitiateAuth(ctx context.Context, cognitoID, password string) (
 
 	logger.Info("Auth successful - CognitoID: %s", cognitoID)
 	return output.AuthenticationResult, nil
-}
-
-// RefreshToken refreshes an access token using a refresh token.
-// It uses REFRESH_TOKEN_AUTH flow.
-// DEPRECATED: Use RefreshTokenWithUsername instead
-func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*types.AuthenticationResultType, error) {
-	return nil, errors.New("RefreshToken requires username - use RefreshTokenWithUsername instead")
 }
 
 // RefreshTokenWithUsername refreshes an access token using a refresh token and username.

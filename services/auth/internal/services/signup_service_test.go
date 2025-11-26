@@ -476,8 +476,8 @@ func TestSignupService_Confirm_Idempotency_UserAlreadyConfirmedInCognito(t *test
 
 	// Setup mocks
 	mockRepo.On("FindByID", ctx, userID).Return(user, nil)
+	mockCognito.On("ConfirmSignUp", ctx, cognitoID, code, []string{email}).Return(notAuthorizedErr)
 	mockCognito.On("GetUsernameByUserSub", ctx, cognitoID, []string{email}).Return(username, nil)
-	mockCognito.On("ConfirmSignUp", ctx, cognitoID, code, []string{username}).Return(notAuthorizedErr)
 	// Verify user is actually confirmed in Cognito
 	mockCognito.On("IsUserConfirmed", ctx, email).Return(true, username, cognitoID, nil)
 	// Update DB status to confirmed
