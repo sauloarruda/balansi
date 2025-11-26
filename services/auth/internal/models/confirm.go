@@ -13,9 +13,9 @@ type TokenResponse struct {
 	TokenType    string `json:"tokenType"`
 }
 
-// ConfirmResult represents the result of a successful confirmation
-// Contains data needed to create session cookie
-type ConfirmResult struct {
+// AuthenticationTokenResult represents the result of a successful authentication
+// Contains data needed to create session cookie for any authentication flow
+type AuthenticationTokenResult struct {
 	RefreshToken string `json:"refreshToken"`
 	UserID       int64  `json:"userId"`
 	Username     string `json:"username"`

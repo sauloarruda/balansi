@@ -106,10 +106,10 @@ func (m *MockSignupService) Signup(ctx context.Context, name, email string) (*mo
 	return args.Get(0).(*models.SignupOutcome), args.Error(1)
 }
 
-func (m *MockSignupService) Confirm(ctx context.Context, userID int64, code string) (*models.ConfirmResult, error) {
+func (m *MockSignupService) Confirm(ctx context.Context, userID int64, code string) (*models.AuthenticationTokenResult, error) {
 	args := m.Called(ctx, userID, code)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.ConfirmResult), args.Error(1)
+	return args.Get(0).(*models.AuthenticationTokenResult), args.Error(1)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"services/auth/internal/http"
 	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/services"
@@ -66,30 +65,17 @@ func (h *ConfirmHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTP
 		}
 	}
 
-	// Create session cookie data
-	sessionData := &models.SessionCookieData{
-		RefreshToken: confirmResult.RefreshToken,
-		UserID:       confirmResult.UserID,
-		Username:     confirmResult.Username,
-	}
-
-	// Encrypt session data for cookie
-	encryptedSessionData, err := h.sessionService.EncryptSessionData(sessionData)
+	// Create session cookie
+	cookieValue, err := h.sessionService.CreateSessionCookie(
+		confirmResult.RefreshToken,
+		confirmResult.UserID,
+		confirmResult.Username,
+		req,
+	)
 	if err != nil {
-		logger.Error("Failed to encrypt session data: %v", err)
+		logger.Error("Failed to create session cookie: %v", err)
 		return errorResponse(500, "internal_error", "Failed to create session"), nil
 	}
-
-	// Create cookie header
-	// Cookie expires in 30 days (same as Cognito refresh token)
-	cookieValue := http.BuildCookieHeader(encryptedSessionData, "session_id", req)
-
-	// Log cookie configuration for debugging
-	origin := req.Headers["origin"]
-	if origin == "" {
-		origin = req.Headers["Origin"]
-	}
-	logger.Info("Setting cookie - Origin: %s, API Domain: %s", origin, req.RequestContext.DomainName)
 
 	// Return success response with cookie
 	return events.APIGatewayV2HTTPResponse{

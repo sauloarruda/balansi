@@ -23,29 +23,29 @@ func TestConfirmHandler_Handle_Success(t *testing.T) {
 	reqBody := `{"userId": 1, "code": "123456"}`
 	req := events.APIGatewayV2HTTPRequest{
 		Body: reqBody,
+		Headers: map[string]string{
+			"origin": "https://example.com",
+		},
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			DomainName: "api.example.com",
+		},
 	}
 
-	expectedResult := &models.ConfirmResult{
+	expectedResult := &models.AuthenticationTokenResult{
 		RefreshToken: "refresh-token-123",
 		UserID:       1,
 		Username:     "testuser",
 	}
 
-	sessionData := &models.SessionCookieData{
-		RefreshToken: expectedResult.RefreshToken,
-		UserID:       expectedResult.UserID,
-		Username:     expectedResult.Username,
-	}
-
 	mockService.On("Confirm", ctx, int64(1), "123456").Return(expectedResult, nil)
-	mockSessionService.On("EncryptSessionData", sessionData).Return("encrypted-session-data", nil)
+	mockSessionService.On("CreateSessionCookie", "refresh-token-123", int64(1), "testuser", req).Return("session_id=encrypted-session-data; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax", nil)
 
 	resp, err := handler.Handle(ctx, req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
 	assert.Equal(t, "application/json", resp.Headers["Content-Type"])
-	assert.Contains(t, resp.Headers["Set-Cookie"], "session_id=encrypted-session-data")
+	assert.Equal(t, "session_id=encrypted-session-data; Path=/; HttpOnly; Max-Age=2592000; SameSite=Lax", resp.Headers["Set-Cookie"])
 
 	var successResp map[string]interface{}
 	err = json.Unmarshal([]byte(resp.Body), &successResp)

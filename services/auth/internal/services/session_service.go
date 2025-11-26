@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"services/auth/internal/cognito"
 	"services/auth/internal/encryption"
+	"services/auth/internal/http"
+	"services/auth/internal/logger"
 	"services/auth/internal/models"
 	"services/auth/internal/repositories"
 	"services/auth/internal/testhelpers"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
@@ -78,6 +81,36 @@ func (s *SessionService) DecryptSessionData(encryptedData string) (*models.Sessi
 	}
 
 	return &sessionData, nil
+}
+
+// CreateSessionCookie creates a session cookie from authentication data
+// This encapsulates the logic for creating encrypted session cookies that can be reused across different auth flows
+func (s *SessionService) CreateSessionCookie(refreshToken string, userID int64, username string, req events.APIGatewayV2HTTPRequest) (string, error) {
+	// Create session cookie data
+	sessionData := &models.SessionCookieData{
+		RefreshToken: refreshToken,
+		UserID:       userID,
+		Username:     username,
+	}
+
+	// Encrypt session data for cookie
+	encryptedSessionData, err := s.EncryptSessionData(sessionData)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt session data: %w", err)
+	}
+
+	// Create cookie header
+	// Cookie expires in 30 days (same as Cognito refresh token)
+	cookieValue := http.BuildCookieHeader(encryptedSessionData, "session_id", req)
+
+	// Log cookie configuration for debugging
+	origin := req.Headers["origin"]
+	if origin == "" {
+		origin = req.Headers["Origin"]
+	}
+	logger.Info("Setting cookie - Origin: %s, API Domain: %s", origin, req.RequestContext.DomainName)
+
+	return cookieValue, nil
 }
 
 // RefreshAccessToken uses the session data from cookie to get a new access token

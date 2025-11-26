@@ -301,7 +301,7 @@ func (s *SignupService) saveUser(ctx context.Context, user *models.User, update 
 	return nil
 }
 
-func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.ConfirmResult, error) {
+func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) (*models.AuthenticationTokenResult, error) {
 	// 1. Find user by ID
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -386,7 +386,7 @@ func (s *SignupService) Confirm(ctx context.Context, userID int64, code string) 
 	}
 
 	// 9. Return session data for cookie
-	return &models.ConfirmResult{
+	return &models.AuthenticationTokenResult{
 		RefreshToken: aws.ToString(authResult.RefreshToken),
 		UserID:       user.ID,
 		Username:     username,
