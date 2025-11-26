@@ -308,23 +308,25 @@ func (c *Client) ResendConfirmationCode(ctx context.Context, username string) er
 // This is needed because ConfirmSignUp requires username, not UserSub.
 // For cognito-local, if email is provided, it uses email directly as username (since username = email in cognito-local).
 // For AWS Cognito, if email is provided, it uses ListUsers to find the user by email and get the username.
+// When only email is provided (userSub empty), it resolves username directly from email.
 func (c *Client) GetUsernameByUserSub(ctx context.Context, userSub string, email ...string) (string, error) {
-	// Validate input parameters
-	if userSub == "" {
-		return "", apperrors.NewArgumentError("userSub", "cannot be empty")
+	// Validate input parameters - userSub is required unless email is provided
+	hasEmail := len(email) > 0 && email[0] != ""
+	if userSub == "" && !hasEmail {
+		return "", apperrors.NewArgumentError("userSub", "cannot be empty when email is not provided")
 	}
 
-	// For cognito-local, username is the email, so we can use it directly if provided
-	if c.isLocalEndpoint() && len(email) > 0 && email[0] != "" {
-		username := email[0]
-		logger.Debug("Using email as username for cognito-local - UserSub: %s, Email: %s", userSub, username)
-		return username, nil
-	}
+	// If email is provided, try to resolve username using ListUsers first
+	if hasEmail {
+		// For cognito-local, username is the email, so we can use it directly
+		if c.isLocalEndpoint() {
+			username := email[0]
+			logger.Debug("Using email as username for cognito-local - UserSub: %s, Email: %s", userSub, username)
+			return username, nil
+		}
 
-	// For AWS Cognito, AdminGetUser doesn't accept UserSub directly as Username
-	// If we have email, use ListUsers to find the user by email and get the username
-	if len(email) > 0 && email[0] != "" && !c.isLocalEndpoint() {
-		logger.Debug("Fetching username for UserSub: %s using email: %s", userSub, email[0])
+		// For AWS Cognito, use ListUsers to find the user by email and get the username
+		logger.Debug("Fetching username using email: %s (UserSub: %s)", email[0], userSub)
 
 		listInput := &cognitoidentityprovider.ListUsersInput{
 			UserPoolId: aws.String(c.userPoolID),
@@ -338,7 +340,10 @@ func (c *Client) GetUsernameByUserSub(ctx context.Context, userSub string, email
 		if err != nil {
 			logger.Error("Error listing users by email: %v", err)
 			logger.DebugJSON("ListUsers Error", err)
-			// Fall through to try AdminGetUser
+			// If we have userSub, fall through to try AdminGetUser, otherwise fail
+			if userSub == "" {
+				return "", fmt.Errorf("failed to find user by email: %w", err)
+			}
 		} else {
 			logger.DebugJSON("ListUsers Output", listOutput)
 
@@ -349,6 +354,10 @@ func (c *Client) GetUsernameByUserSub(ctx context.Context, userSub string, email
 					logger.Debug("Found username via ListUsers - UserSub: %s, Username: %s", userSub, username)
 					return username, nil
 				}
+			}
+			// If we have userSub, fall through to try AdminGetUser, otherwise fail
+			if userSub == "" {
+				return "", errors.New("user not found by email")
 			}
 		}
 	}
@@ -453,7 +462,7 @@ func (c *Client) resolveUsernameForConfirmation(ctx context.Context, cognitoID s
 			// For AWS Cognito, check if it looks like a UUID (username) or email
 			// UUIDs are 36 chars with dashes, emails contain @
 			if strings.Contains(usernameOrEmail[0], "@") {
-				// It's an email, need to fetch username
+				// It's an email, resolve username using GetUsernameByUserSub
 				username, err := c.GetUsernameByUserSub(ctx, cognitoID, usernameOrEmail[0])
 				if err != nil {
 					return "", fmt.Errorf("failed to get username for UserSub: %w", err)
@@ -465,7 +474,7 @@ func (c *Client) resolveUsernameForConfirmation(ctx context.Context, cognitoID s
 			}
 		}
 	} else {
-		// No username/email provided, need to fetch it
+		// No username/email provided, resolve using GetUsernameByUserSub
 		username, err := c.GetUsernameByUserSub(ctx, cognitoID)
 		if err != nil {
 			return "", fmt.Errorf("failed to get username for UserSub: %w", err)
@@ -567,46 +576,6 @@ func (c *Client) RefreshTokenWithUsername(ctx context.Context, refreshToken, use
 	return output.AuthenticationResult, nil
 }
 
-// resolveUsernameFromEmail resolves the Cognito username from email.
-// For cognito-local, returns email directly. For AWS Cognito, queries ListUsers.
-func (c *Client) resolveUsernameFromEmail(ctx context.Context, email string) (string, error) {
-	if c.isLocalEndpoint() {
-		logger.Debug("Using email as username for cognito-local")
-		return email, nil
-	}
-
-	// For AWS Cognito, find username by email
-	listInput := &cognitoidentityprovider.ListUsersInput{
-		UserPoolId: aws.String(c.userPoolID),
-		Filter:     aws.String(fmt.Sprintf("email = \"%s\"", email)),
-		Limit:      aws.Int32(1),
-	}
-
-	logger.DebugJSON("ListUsers Input (resolveUsernameFromEmail)", listInput)
-
-	listOutput, err := c.client.ListUsers(ctx, listInput)
-	if err != nil {
-		logger.Error("Error listing users for email resolution: %v", err)
-		logger.DebugJSON("ListUsers Error", err)
-		return "", fmt.Errorf("failed to find user: %w", err)
-	}
-
-	logger.DebugJSON("ListUsers Output (resolveUsernameFromEmail)", listOutput)
-
-	if len(listOutput.Users) == 0 {
-		return "", errors.New("user not found")
-	}
-
-	if listOutput.Users[0].Username == nil {
-		return "", errors.New("user found but username is empty")
-	}
-
-	username := *listOutput.Users[0].Username
-	logger.Debug("Found username for email resolution - Email: %s, Username: %s", email, username)
-
-	return username, nil
-}
-
 // ForgotPassword initiates password recovery by sending a confirmation code to user's email.
 // Returns delivery details (destination, medium).
 // For cognito-local, email is used as username. For AWS Cognito, we need to resolve username from email.
@@ -617,7 +586,7 @@ func (c *Client) ForgotPassword(ctx context.Context, email string) (*types.CodeD
 	}
 
 	// Resolve username from email
-	username, err := c.resolveUsernameFromEmail(ctx, email)
+	username, err := c.GetUsernameByUserSub(ctx, "", email)
 	if err != nil {
 		return nil, err
 	}
@@ -665,7 +634,7 @@ func (c *Client) ResetPassword(ctx context.Context, email, code, newPassword str
 	}
 
 	// Resolve username from email
-	username, err := c.resolveUsernameFromEmail(ctx, email)
+	username, err := c.GetUsernameByUserSub(ctx, "", email)
 	if err != nil {
 		return err
 	}
