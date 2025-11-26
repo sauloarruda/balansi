@@ -126,3 +126,18 @@ func (m *MockSignupService) Confirm(ctx context.Context, userID int64, code stri
 	}
 	return args.Get(0).(*models.AuthenticationTokenResult), args.Error(1)
 }
+
+// MockPasswordRecoveryService is a mock implementation of PasswordRecoveryServiceInterface.
+type MockPasswordRecoveryService struct {
+	mock.Mock
+}
+
+func (m *MockPasswordRecoveryService) ForgotPassword(ctx context.Context, email string) error {
+	args := m.Called(ctx, email)
+	return args.Error(0)
+}
+
+func (m *MockPasswordRecoveryService) ResetPassword(ctx context.Context, email, code, newPassword string) error {
+	args := m.Called(ctx, email, code, newPassword)
+	return args.Error(0)
+}
