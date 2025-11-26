@@ -79,6 +79,12 @@ functions:
       - httpApi:
           path: /auth/reset-password
           method: options
+      - httpApi:
+          path: /auth/logout
+          method: post
+      - httpApi:
+          path: /auth/logout
+          method: options
 
 package:
   patterns:

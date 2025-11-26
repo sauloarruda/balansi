@@ -128,6 +128,9 @@ func StartLocalServer(handlerRegistry *HandlerRegistry) {
 	logger.Info("Test endpoint: POST http://localhost:%s/auth/confirm", port)
 	logger.Info("Test endpoint: POST http://localhost:%s/auth/refresh", port)
 	logger.Info("Test endpoint: GET http://localhost:%s/auth/me", port)
+	logger.Info("Test endpoint: POST http://localhost:%s/auth/forgot-password", port)
+	logger.Info("Test endpoint: POST http://localhost:%s/auth/reset-password", port)
+	logger.Info("Test endpoint: POST http://localhost:%s/auth/logout", port)
 
 	server := NewLocalServer(port, frontendDomain, handlerRegistry)
 	if err := server.ListenAndServe(); err != nil {
