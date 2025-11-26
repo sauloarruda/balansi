@@ -32,6 +32,8 @@ provider:
             - cognito-idp:ResendConfirmationCode
             - cognito-idp:ConfirmSignUp
             - cognito-idp:InitiateAuth
+            - cognito-idp:ForgotPassword
+            - cognito-idp:ConfirmForgotPassword
           Resource:
             - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${env:COGNITO_USER_POOL_ID}
   httpApi:
@@ -64,6 +66,18 @@ functions:
           method: get
       - httpApi:
           path: /auth/me
+          method: options
+      - httpApi:
+          path: /auth/forgot-password
+          method: post
+      - httpApi:
+          path: /auth/forgot-password
+          method: options
+      - httpApi:
+          path: /auth/reset-password
+          method: post
+      - httpApi:
+          path: /auth/reset-password
           method: options
 
 package:

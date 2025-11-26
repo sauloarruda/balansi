@@ -87,7 +87,7 @@ func TestPasswordRecoveryService_ForgotPassword(t *testing.T) {
 
 		err := service.ForgotPassword(ctx, email)
 
-		assert.ErrorIs(t, err, ErrTooManyAttempts)
+		assert.ErrorIs(t, err, ErrLimitExceeded)
 		mockRepo.AssertExpectations(t)
 		mockCognito.AssertExpectations(t)
 	})
@@ -181,7 +181,7 @@ func TestPasswordRecoveryService_ResetPassword(t *testing.T) {
 
 		err := service.ResetPassword(ctx, email, code, newPassword)
 
-		assert.ErrorIs(t, err, ErrTooManyAttempts)
+		assert.ErrorIs(t, err, ErrLimitExceeded)
 		mockRepo.AssertExpectations(t)
 		mockCognito.AssertExpectations(t)
 	})
