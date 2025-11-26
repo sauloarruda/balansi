@@ -7,6 +7,7 @@
 		onChange?: (value: string) => void;
 		error?: boolean;
 		errorMessage?: string;
+		autoFocus?: boolean;
 	}
 
 	let {
@@ -17,10 +18,23 @@
 		onChange,
 		error = false,
 		errorMessage = "",
+		autoFocus = true,
 	}: Props = $props();
 
 	// Array to hold input references - initialize with correct length
 	let inputRefs: (HTMLInputElement | null)[] = $state(Array(length).fill(null));
+
+	// Auto-focus first input on mount
+	$effect(() => {
+		if (autoFocus && !disabled && inputRefs[0]) {
+			// Small delay to ensure the input is fully rendered and interactive
+			const timeoutId = setTimeout(() => {
+				inputRefs[0]?.focus();
+			}, 100);
+
+			return () => clearTimeout(timeoutId);
+		}
+	});
 
 	// Sync internal state with bound value prop
 	$effect(() => {

@@ -10,10 +10,9 @@
 	import Input from "$lib/components/ds/Input.svelte";
 	import PinInput from "$lib/components/ds/PinInput.svelte";
 	import { _ } from "$lib/i18n";
-	import { focusPinInput } from "$lib/utils/focus";
 	import { getPasswordRequirements, isValidPassword } from "$lib/utils/validation";
 
-	let checking = $state(true);
+	let _checking = $state(true);
 	let loading = $state(true);
 	let email = $state("");
 	let destination = $state("");
@@ -40,7 +39,7 @@
 		if (browser) {
 			checkAuthAndRedirect().then((redirected) => {
 				if (!redirected) {
-					checking = false;
+					_checking = false;
 
 					// Get recovery data from localStorage
 					const recovery = passwordRecoveryData.get();
@@ -55,13 +54,6 @@
 					loading = false;
 				}
 			});
-		}
-	});
-
-	// Focus PIN input when page loads
-	$effect(() => {
-		if (!loading && !checking && !submitting) {
-			focusPinInput();
 		}
 	});
 

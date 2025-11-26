@@ -9,9 +9,8 @@
 	import Container from "$lib/components/ds/Container.svelte";
 	import PinInput from "$lib/components/ds/PinInput.svelte";
 	import { _ } from "$lib/i18n";
-	import { focusPinInput } from "$lib/utils/focus";
 
-	let checking = $state(true);
+	let _checking = $state(true);
 	let loading = $state(true);
 	let name = $state("");
 	let email = $state("");
@@ -26,7 +25,7 @@
 		if (browser) {
 			checkAuthAndRedirect().then((redirected) => {
 				if (!redirected) {
-					checking = false;
+					_checking = false;
 
 					// Get auth data from localStorage
 					const authData = getAuthData();
@@ -42,13 +41,6 @@
 					loading = false;
 				}
 			});
-		}
-	});
-
-	// Focus PIN input when page loads
-	$effect(() => {
-		if (!loading && !checking && !submitting) {
-			focusPinInput();
 		}
 	});
 </script>
