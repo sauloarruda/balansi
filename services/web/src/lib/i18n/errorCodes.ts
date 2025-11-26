@@ -18,6 +18,13 @@ export const API_ERROR_CODES = {
 	invalid_code: "auth.confirmation.errors.invalidCode",
 	expired_code: "auth.confirmation.errors.expiredCode",
 
+	// Erros de recuperação de senha (404, 422, 429)
+	recovery_code_invalid: "auth.resetPassword.errors.invalidCode",
+	recovery_code_expired: "auth.resetPassword.errors.expiredCode",
+	password_policy_violation: "auth.resetPassword.errors.passwordPolicy",
+	too_many_attempts: "auth.forgotPassword.errors.tooManyAttempts",
+	limit_exceeded: "auth.forgotPassword.errors.tooManyAttempts",
+
 	// Erros de servidor (500)
 	internal_error: "errors.serverError",
 } as const;
