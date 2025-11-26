@@ -94,13 +94,8 @@
 			// Clear recovery data
 			passwordRecoveryData.clear();
 
-		// Show success message
-		success = true;
-
-		// Redirect to login after a short delay
-		window.setTimeout(() => {
-			goto("/auth");
-		}, 2000);
+			// Show success message
+			success = true;
 		} catch (err) {
 			console.error("Error resetting password:", err);
 			pinError = true;
@@ -146,10 +141,12 @@
 							/>
 						</svg>
 					</div>
-					<h2 class="text-xl font-semibold mb-4">
+					<h2 class="text-xl font-semibold mb-6">
 						{$_("auth.resetPassword.success")}
 					</h2>
-					<p class="text-gray-600 dark:text-gray-400">{$_("common.loading")}</p>
+					<Button type="button" onclick={() => goto("/auth/sign-in")}>
+						{$_("auth.forgotPassword.backToLogin")}
+					</Button>
 				</div>
 			{:else}
 				<h2 class="text-xl font-semibold mb-6 text-center">
@@ -292,4 +289,3 @@
 		{/if}
 	{/snippet}
 </Container>
-
