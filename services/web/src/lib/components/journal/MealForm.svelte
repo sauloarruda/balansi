@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { _ } from "$lib/i18n";
 	import type { CreateMealRequest } from "$lib/api/journal";
+	import { _ } from "$lib/i18n";
 
 	interface Props {
 		onSubmit: (meal: CreateMealRequest) => Promise<void>;
@@ -9,17 +9,17 @@
 
 	let { onSubmit, loading = false }: Props = $props();
 
-	type MealType = 'breakfast' | 'lunch' | 'snack' | 'dinner';
+	type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 
-	let mealType = $state<MealType>('lunch');
-	let description = $state('');
-	let date = $state(new Date().toISOString().split('T')[0]);
+	let mealType = $state<MealType>("lunch");
+	let description = $state("");
+	let date = $state(new Date().toISOString().split("T")[0]);
 
 	const mealTypes: { value: MealType; icon: string; label: string }[] = [
-		{ value: 'breakfast', icon: '🌅', label: 'journal.mealTypes.breakfast' },
-		{ value: 'lunch', icon: '☀️', label: 'journal.mealTypes.lunch' },
-		{ value: 'snack', icon: '🍎', label: 'journal.mealTypes.snack' },
-		{ value: 'dinner', icon: '🌙', label: 'journal.mealTypes.dinner' },
+		{ value: "breakfast", icon: "🌅", label: "journal.mealTypes.breakfast" },
+		{ value: "lunch", icon: "☀️", label: "journal.mealTypes.lunch" },
+		{ value: "snack", icon: "🍎", label: "journal.mealTypes.snack" },
+		{ value: "dinner", icon: "🌙", label: "journal.mealTypes.dinner" },
 	];
 
 	async function handleSubmit(e: Event) {
@@ -33,7 +33,7 @@
 		});
 
 		// Clear form after successful submit
-		description = '';
+		description = "";
 	}
 
 	function selectMealType(type: MealType) {
@@ -65,7 +65,8 @@
 				<button
 					type="button"
 					onclick={() => selectMealType(type.value)}
-					class="flex flex-col items-center p-3 rounded-xl transition-all duration-200 {mealType === type.value
+					class="flex flex-col items-center p-3 rounded-xl transition-all duration-200 {mealType ===
+					type.value
 						? 'bg-gradient-to-br from-amber-400 to-orange-400 text-white shadow-md scale-105'
 						: 'bg-stone-50 text-stone-600 hover:bg-amber-50 hover:scale-102'}"
 				>
@@ -101,8 +102,8 @@
 		disabled={!description.trim() || loading}
 		class="w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-200 flex items-center justify-center gap-3
 			{!description.trim() || loading
-				? 'bg-stone-300 cursor-not-allowed'
-				: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5'}"
+			? 'bg-stone-300 cursor-not-allowed'
+			: 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl hover:-translate-y-0.5'}"
 	>
 		{#if loading}
 			<div
@@ -112,7 +113,11 @@
 			<span>{$_("journal.form.analyzing")}</span>
 		{:else}
 			<svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
+				/>
 			</svg>
 			<span>{$_("journal.form.submit")}</span>
 		{/if}

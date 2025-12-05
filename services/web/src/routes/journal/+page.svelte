@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import type { CreateMealRequest } from "$lib/api/journal";
 	import { journalApi, type MealEntry } from "$lib/api/journal";
 	import MealCard from "$lib/components/journal/MealCard.svelte";
@@ -12,18 +13,11 @@
 	let error = $state<string | null>(null);
 	let selectedDate = $state(new Date().toISOString().split("T")[0]);
 
-	// Check authentication and load meals on mount
-	// $effect(() => {
-	// 	if (!browser) return;
-
-	// 	hasSession().then(async (isAuth) => {
-	// 		if (!isAuth) {
-	// 			goto("/auth");
-	// 			return;
-	// 		}
-	// 		await loadMeals();
-	// 	});
-	// });
+	// Load meals on mount
+	$effect(() => {
+		if (!browser) return;
+		loadMeals();
+	});
 
 	async function loadMeals() {
 		loading = true;
@@ -104,6 +98,7 @@
 				</div>
 				<a
 					href="/"
+					aria-label="Close"
 					class="p-2 rounded-xl hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
 				>
 					<svg
