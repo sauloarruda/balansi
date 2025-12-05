@@ -32,7 +32,7 @@ Thumbs.db
 node_modules/
 
 # Documentation plans
-doc/plans/
+doc/*
 
 # Test coverage and binaries
 coverage.out
