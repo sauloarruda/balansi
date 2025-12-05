@@ -11,8 +11,11 @@ if System.get_env("PHX_SERVER") do
 end
 
 # Port configuration (Lambda uses PORT env var)
-config :journal, JournalWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT") || "4000")]
+# Skip in test environment to preserve test.exs port setting (4002)
+if config_env() != :test do
+  config :journal, JournalWeb.Endpoint,
+    http: [port: String.to_integer(System.get_env("PORT") || "4000")]
+end
 
 # OpenAI configuration
 if openai_key = System.get_env("OPENAI_API_KEY") do
