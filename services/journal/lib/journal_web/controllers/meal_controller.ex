@@ -6,7 +6,7 @@ defmodule JournalWeb.MealController do
 
   @doc """
   Creates a new meal entry with pending status.
-  
+
   POST /meals
   Body: { "meal_type": "breakfast", "original_description": "2 eggs and toast" }
   """
@@ -39,7 +39,7 @@ defmodule JournalWeb.MealController do
 
   @doc """
   Lists meals for the current user, optionally filtered by date.
-  
+
   GET /meals?date=YYYY-MM-DD
   """
   def index(conn, params) do
@@ -64,4 +64,3 @@ defmodule JournalWeb.MealController do
   # POC: Returns constant user_id. Replace with Bearer token extraction in production.
   defp get_user_id(_conn), do: @poc_user_id
 end
-

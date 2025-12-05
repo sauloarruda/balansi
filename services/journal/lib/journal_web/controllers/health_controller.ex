@@ -15,4 +15,3 @@ defmodule JournalWeb.HealthController do
     })
   end
 end
-
