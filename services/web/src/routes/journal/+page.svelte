@@ -2,6 +2,7 @@
 	import { browser } from "$app/environment";
 	import type { CreateMealRequest } from "$lib/api/journal";
 	import { journalApi, type MealEntry } from "$lib/api/journal";
+	import DateSelector from "$lib/components/journal/DateSelector.svelte";
 	import MealCard from "$lib/components/journal/MealCard.svelte";
 	import MealForm from "$lib/components/journal/MealForm.svelte";
 	import { _ } from "$lib/i18n";
@@ -13,9 +14,11 @@
 	let error = $state<string | null>(null);
 	let selectedDate = $state(new Date().toISOString().split("T")[0]);
 
-	// Load meals on mount
+	// Load meals on mount and when date changes
 	$effect(() => {
 		if (!browser) return;
+		// Track selectedDate as dependency
+		const _ = selectedDate;
 		loadMeals();
 	});
 
@@ -62,10 +65,8 @@
 		}
 	}
 
-	function handleDateChange(e: Event) {
-		const target = e.target as HTMLInputElement;
-		selectedDate = target.value;
-		loadMeals();
+	function handleDateChange(date: string) {
+		selectedDate = date;
 	}
 
 	// Calculate daily totals
@@ -88,7 +89,7 @@
 	<!-- Header -->
 	<header class="bg-white/80 backdrop-blur-sm border-b border-amber-100 sticky top-0 z-10">
 		<div class="max-w-2xl mx-auto px-4 py-4">
-			<div class="flex items-center justify-between">
+			<div class="flex items-center justify-between mb-4">
 				<div class="flex items-center gap-3">
 					<span class="text-3xl">🍽️</span>
 					<div>
@@ -111,6 +112,10 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 					</svg>
 				</a>
+			</div>
+			<!-- Date Selector -->
+			<div class="flex items-center justify-center">
+				<DateSelector date={selectedDate} onDateChange={handleDateChange} />
 			</div>
 		</div>
 	</header>
@@ -137,7 +142,7 @@
 		{/if}
 
 		<!-- Meal Form -->
-		<MealForm onSubmit={handleSubmit} loading={submitting} />
+		<MealForm date={selectedDate} onSubmit={handleSubmit} loading={submitting} />
 
 		<!-- Daily Summary -->
 		{#if meals.length > 0}
@@ -147,12 +152,6 @@
 						<span>📊</span>
 						{$_("journal.dailySummary")}
 					</h2>
-					<input
-						type="date"
-						value={selectedDate}
-						onchange={handleDateChange}
-						class="text-sm px-3 py-1.5 rounded-lg border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none"
-					/>
 				</div>
 				<div class="grid grid-cols-4 gap-3">
 					<div class="text-center">

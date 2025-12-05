@@ -3,17 +3,17 @@
 	import { _ } from "$lib/i18n";
 
 	interface Props {
+		date: string;
 		onSubmit: (meal: CreateMealRequest) => Promise<void>;
 		loading?: boolean;
 	}
 
-	let { onSubmit, loading = false }: Props = $props();
+	let { date, onSubmit, loading = false }: Props = $props();
 
 	type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 
 	let mealType = $state<MealType>("lunch");
 	let description = $state("");
-	let date = $state(new Date().toISOString().split("T")[0]);
 
 	const mealTypes: { value: MealType; icon: string; label: string }[] = [
 		{ value: "breakfast", icon: "🌅", label: "journal.mealTypes.breakfast" },
@@ -42,19 +42,6 @@
 </script>
 
 <form onsubmit={handleSubmit} class="bg-white rounded-2xl shadow-lg p-6 border border-amber-100">
-	<!-- Date picker -->
-	<div class="mb-5">
-		<label for="meal-date" class="block text-sm font-medium text-stone-600 mb-2">
-			{$_("journal.form.date")}
-		</label>
-		<input
-			type="date"
-			id="meal-date"
-			bind:value={date}
-			class="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none transition-all text-stone-700"
-		/>
-	</div>
-
 	<!-- Meal type selector -->
 	<div class="mb-5">
 		<label class="block text-sm font-medium text-stone-600 mb-3">
