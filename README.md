@@ -25,6 +25,7 @@ This repository is organized as a monorepo with the following services:
 balansi/
 ├── services/
 │   ├── auth/          # Go backend service (AWS Lambda)
+│   ├── journal/       # Elixir/Phoenix API service (AWS Lambda)
 │   └── web/           # SvelteKit frontend application
 ├── .cursor/           # Cursor AI rules for each service
 ├── .vscode/           # VSCode/Cursor workspace settings
@@ -35,6 +36,8 @@ balansi/
 
 - **`services/auth`** - Go backend service for authentication and user management, deployed on AWS Lambda. See [Auth Service README](services/auth/README.md) for details.
 
+- **`services/journal`** - Elixir/Phoenix API service for the Journal module (meals, exercises, tracking), deployed on AWS Lambda. See [Journal Service README](services/journal/README.md) for details.
+
 - **`services/web`** - SvelteKit frontend application with TypeScript, TailwindCSS, and Preline UI components. See [Web Service README](services/web/README.md) for details.
 
 ## Quick Start
@@ -42,6 +45,7 @@ balansi/
 ### Prerequisites
 
 - **Go** 1.21+ (for auth service)
+- **Elixir** 1.15+ (for journal service)
 - **Node.js** 20+ and npm (for web service)
 - **PostgreSQL** (for local development)
 - **Docker** (for running tests with testcontainers)
@@ -130,6 +134,14 @@ cd services/web && make help
 - **Authentication:** AWS Cognito
 - **Testing:** testify, testcontainers-go
 - **Linting:** golangci-lint
+
+### Journal Service
+- **Language:** Elixir 1.15+
+- **Framework:** Phoenix 1.8 (API mode)
+- **Database:** PostgreSQL
+- **Deployment:** AWS Lambda (via Lambda Web Adapter)
+- **Testing:** ExUnit
+- **Linting:** Credo
 
 ### Web Service
 - **Framework:** SvelteKit 2.0
