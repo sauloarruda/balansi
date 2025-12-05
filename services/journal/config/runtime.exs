@@ -21,7 +21,7 @@ end
 if openai_key = System.get_env("OPENAI_API_KEY") do
   config :journal, :openai,
     api_key: openai_key,
-    model: System.get_env("OPENAI_MODEL") || "gpt-4.1-mini"
+    model: System.get_env("OPENAI_MODEL") || "gpt-4o-mini"
 end
 
 # CORS configuration from environment
