@@ -12,8 +12,10 @@ defmodule JournalWeb.Router do
     # Health check
     get "/health", HealthController, :index
 
-    # Meal endpoints (user_id will come from Bearer token, using constant for POC)
-    post "/meals", MealController, :create
+    # Meal endpoints (patient_id will come from Bearer token, using constant for POC)
     get "/meals", MealController, :index
+    post "/meals", MealController, :create
+    get "/meals/:id", MealController, :show
+    post "/meals/:id/confirm", MealController, :confirm
   end
 end
