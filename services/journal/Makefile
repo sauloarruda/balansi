@@ -16,6 +16,7 @@ help:
 	@echo "    make build            - Build release for Lambda"
 	@echo "    make deploy           - Deploy to AWS Lambda (uses SERVERLESS_STAGE or 'dev')"
 	@echo "    make deploy-function  - Deploy function only (faster)"
+	@echo "    make setup-domain     - Configure custom domain (journal.balansi.me)"
 	@echo "    make clean            - Remove generated files"
 	@echo ""
 	@echo "  Database:"
@@ -180,3 +181,12 @@ generate-secret:
 # Install Serverless Framework (if needed)
 install-serverless:
 	npm install -g serverless
+
+# Setup custom domain for API Gateway
+setup-domain:
+	@if [ ! -f scripts/setup-custom-domain.sh ]; then \
+		echo "❌ Script not found: scripts/setup-custom-domain.sh"; \
+		exit 1; \
+	fi; \
+	chmod +x scripts/setup-custom-domain.sh; \
+	./scripts/setup-custom-domain.sh

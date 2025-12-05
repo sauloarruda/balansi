@@ -15,6 +15,7 @@ provider:
     DATABASE_URL: ${env:DATABASE_URL}
     SECRET_KEY_BASE: ${env:SECRET_KEY_BASE}
     OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+    FRONTEND_DOMAIN: ${env:FRONTEND_DOMAIN, ''}
     PHX_HOST: ${env:PHX_HOST, 'localhost'}
     PHX_SERVER: true
     PORT: 4000

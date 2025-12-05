@@ -26,8 +26,13 @@ end
 
 # CORS configuration from environment
 if frontend_domain = System.get_env("FRONTEND_DOMAIN") do
+  # Split by comma and trim whitespace
+  origins = frontend_domain
+    |> String.split(",")
+    |> Enum.map(&String.trim/1)
+
   config :journal, :cors,
-    origins: String.split(frontend_domain, ","),
+    origins: origins,
     allow_headers: ["content-type", "authorization"],
     allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 end

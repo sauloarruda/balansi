@@ -32,38 +32,46 @@ echo "Branch: $BRANCH_NAME"
 echo "Region: $REGION"
 echo ""
 
-# Use custom domain for API Gateway
+# Use custom domains for API Gateway
 API_URL="https://api.demo.balansi.me"
-echo "🔍 Using API Gateway custom domain: $API_URL"
+JOURNAL_API_URL="https://journal.demo.balansi.me"
+echo "🔍 Using API Gateway custom domains:"
+echo "   Auth API: $API_URL"
+echo "   Journal API: $JOURNAL_API_URL"
 echo ""
-echo "🔧 Configuring VITE_API_URL environment variable..."
+echo "🔧 Configuring environment variables..."
 
-    # Get current environment variables and merge with VITE_API_URL
+    # Get current environment variables and merge with new ones
     CURRENT_ENV=$(aws amplify get-app \
       --app-id "$APP_ID" \
       --region "$REGION" \
       --output json 2>/dev/null | jq -r '.app.environmentVariables // {}')
 
-    # Merge with VITE_API_URL
-    UPDATED_ENV=$(echo "$CURRENT_ENV" | jq --arg url "$API_URL" '. + {"VITE_API_URL": $url}')
+    # Merge with VITE_API_URL and VITE_JOURNAL_API_URL
+    UPDATED_ENV=$(echo "$CURRENT_ENV" | jq \
+      --arg api_url "$API_URL" \
+      --arg journal_url "$JOURNAL_API_URL" \
+      '. + {"VITE_API_URL": $api_url, "VITE_JOURNAL_API_URL": $journal_url}')
 
     # Convert to AWS CLI format: key1=value1,key2=value2
     ENV_STRING=$(echo "$UPDATED_ENV" | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
 
     # Update app with new environment variables
-    aws amplify update-app \
+    if aws amplify update-app \
       --app-id "$APP_ID" \
       --region "$REGION" \
       --environment-variables "$ENV_STRING" \
-      --output json > /dev/null 2>&1
-
-if [ $? -eq 0 ]; then
-    echo "✅ Environment variable VITE_API_URL configured successfully!"
-else
-    echo "⚠️  WARNING: Could not configure environment variable automatically."
-    echo "   Please configure VITE_API_URL manually in Amplify Console:"
-    echo "   App settings → Environment variables → Add VITE_API_URL = $API_URL"
-fi
+      --output json > /dev/null 2>&1; then
+        echo "✅ Environment variables configured successfully!"
+        echo "   VITE_API_URL = $API_URL"
+        echo "   VITE_JOURNAL_API_URL = $JOURNAL_API_URL"
+    else
+        echo "⚠️  WARNING: Could not configure environment variables automatically."
+        echo "   Please configure manually in Amplify Console:"
+        echo "   App settings → Environment variables → Add:"
+        echo "   - VITE_API_URL = $API_URL"
+        echo "   - VITE_JOURNAL_API_URL = $JOURNAL_API_URL"
+    fi
 echo ""
 
 # Check if AWS CLI is installed
@@ -83,13 +91,15 @@ if ! command -v jq &> /dev/null; then
     fi
 fi
 
-# Build with API URL if available
+# Build with API URLs if available
 if [ -n "$API_URL" ] && [ "$API_URL" != "" ]; then
-    echo "🔨 Building with VITE_API_URL=$API_URL..."
-    VITE_API_URL="$API_URL" npm run build
+    echo "🔨 Building with environment variables..."
+    echo "   VITE_API_URL=$API_URL"
+    echo "   VITE_JOURNAL_API_URL=$JOURNAL_API_URL"
+    VITE_API_URL="$API_URL" VITE_JOURNAL_API_URL="$JOURNAL_API_URL" npm run build
 else
-    echo "⚠️  Building without VITE_API_URL (will use localhost:3000 fallback)..."
-    echo "   Make sure to configure VITE_API_URL in Amplify Console for future builds"
+    echo "⚠️  Building without API URLs (will use localhost fallbacks)..."
+    echo "   Make sure to configure environment variables in Amplify Console for future builds"
     if [ ! -d "build" ]; then
         echo "❌ Build directory not found. Running build first..."
         npm run build

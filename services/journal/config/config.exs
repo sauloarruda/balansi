@@ -36,7 +36,7 @@ config :journal, :openai,
 
 # CORS configuration
 config :journal, :cors,
-  origins: ["http://localhost:5173", "http://localhost:3000"],
+  origins: ["http://localhost:5173", "http://localhost:8080", "http://localhost:3000"],
   allow_headers: ["content-type", "authorization"],
   allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
