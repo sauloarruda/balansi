@@ -47,6 +47,16 @@
 			<p class="text-center mb-6">
 				{$_("home.ready")}
 			</p>
+
+			<!-- Journal Link -->
+			<a
+				href="/journal"
+				class="w-full mb-4 py-4 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-3"
+			>
+				<span class="text-xl">🍽️</span>
+				<span>{$_("journal.title")}</span>
+			</a>
+
 			<Button type="button" loading={loggingOut} disabled={loggingOut} onclick={handleLogout}>
 				{$_("auth.logout")}
 			</Button>
