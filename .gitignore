@@ -6,6 +6,7 @@ bin/
 # Environment files
 .env
 .env.local
+.env.dev
 
 # Local development
 .cognito/
@@ -37,4 +38,3 @@ doc/plans/
 coverage.out
 coverage.html
 *.test
-
