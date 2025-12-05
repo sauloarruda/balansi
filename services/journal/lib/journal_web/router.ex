@@ -5,8 +5,14 @@ defmodule JournalWeb.Router do
     plug :accepts, ["json"]
   end
 
-  # Routes without /api prefix - API Gateway handles path routing
+  # Health check at root (for Lambda Web Adapter readiness check)
   scope "/", JournalWeb do
+    pipe_through :api
+    get "/health", HealthController, :index
+  end
+
+  # API routes with /journal prefix (API Gateway path)
+  scope "/journal", JournalWeb do
     pipe_through :api
 
     # Health check

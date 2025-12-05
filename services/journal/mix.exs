@@ -10,7 +10,8 @@ defmodule Journal.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      releases: releases()
     ]
   end
 
@@ -57,6 +58,17 @@ defmodule Journal.MixProject do
       {:ex_machina, "~> 2.8", only: :test},
       # Code analysis
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  # Release configuration for AWS Lambda
+  defp releases do
+    [
+      journal: [
+        include_executables_for: [:unix],
+        applications: [runtime_tools: :permanent],
+        steps: [:assemble, :tar]
+      ]
     ]
   end
 

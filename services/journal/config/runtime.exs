@@ -45,7 +45,9 @@ if config_env() == :prod do
   config :journal, Journal.Repo,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    socket_options: maybe_ipv6
+    socket_options: maybe_ipv6,
+    ssl: true,
+    ssl_opts: [verify: :verify_none]
 
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||

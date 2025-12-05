@@ -67,12 +67,34 @@ iex:
 routes:
 	mix phx.routes
 
-# Build release for Lambda (Linux ARM64)
-build:
-	@echo "Building release for Lambda..."
+# Build release locally (for testing)
+build-local:
+	@echo "Building release locally..."
 	MIX_ENV=prod mix deps.get --only prod
 	MIX_ENV=prod mix compile
 	MIX_ENV=prod mix release --overwrite
+	@echo "Release built successfully!"
+
+# Build release for Lambda (Linux ARM64) using Docker
+# Uses Debian Bookworm for Lambda AL2023 compatibility
+# Copies source to /build to avoid volume mount issues
+build:
+	@echo "Building release for Lambda (Linux ARM64)..."
+	@rm -rf _build deps
+	docker run --rm \
+		-v $$(pwd):/src:ro \
+		-v $$(pwd)/_build:/src/_build \
+		-w /build \
+		--platform linux/arm64 \
+		hexpm/elixir:1.15.2-erlang-26.2.5.7-debian-bookworm-20251117-slim \
+		sh -c "apt-get update && apt-get install -y git rsync && \
+			rsync -a --exclude '_build' --exclude 'deps' /src/ /build/ && \
+			mix local.hex --force && \
+			mix local.rebar --force && \
+			MIX_ENV=prod mix deps.get --only prod && \
+			MIX_ENV=prod mix compile && \
+			MIX_ENV=prod mix release --overwrite && \
+			cp -r /build/_build/prod /src/_build/"
 	@echo "Release built successfully!"
 
 # Deploy to AWS Lambda

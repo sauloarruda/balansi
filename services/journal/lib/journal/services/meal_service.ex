@@ -170,4 +170,3 @@ defmodule Journal.Services.MealService do
     Map.put_new(attrs, "date", Date.utc_today())
   end
 end
-

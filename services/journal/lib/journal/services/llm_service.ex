@@ -86,4 +86,3 @@ defmodule Journal.Services.LLMService do
     }
   end
 end
-
