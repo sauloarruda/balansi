@@ -38,12 +38,27 @@ defmodule JournalWeb.Endpoint do
   plug Plug.Head
 
   # CORS configuration - must be before Router
+  # Origins are read from application config at runtime for security
   plug Corsica,
-    origins: "*",
-    allow_headers: ["content-type", "authorization"],
-    allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    origins: &JournalWeb.Endpoint.allowed_origin?/1,
+    allow_headers: ~w(content-type authorization),
+    allow_methods: ~w(GET POST PUT PATCH DELETE OPTIONS),
     allow_credentials: false
 
   plug Plug.Session, @session_options
   plug JournalWeb.Router
+
+  @doc """
+  Checks if the given origin is allowed based on application configuration.
+
+  Reads from `:journal, :cors, :origins` which can be set via:
+  - `config/config.exs` for development defaults
+  - `FRONTEND_DOMAIN` environment variable in production (via `runtime.exs`)
+  """
+  def allowed_origin?(origin) do
+    cors_config = Application.get_env(:journal, :cors, [])
+    allowed_origins = Keyword.get(cors_config, :origins, [])
+
+    origin in allowed_origins
+  end
 end
