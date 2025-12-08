@@ -1,0 +1,86 @@
+name: Journal Service Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/journal/**'
+      - '.github/workflows/journal-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'services/journal/**'
+      - '.github/workflows/journal-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: balansi
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: journal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-elixir@v2
+        with:
+          elixir-version: '1.15.9'
+          otp-version: '26.2.5.7'
+
+      - name: Cache Elixir dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            services/journal/deps
+            services/journal/_build
+          key: ${{ runner.os }}-elixir-${{ hashFiles('services/journal/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-
+
+      - name: Install dependencies
+        working-directory: services/journal
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+
+      - name: Run tests with coverage
+        working-directory: services/journal
+        env:
+          MIX_ENV: test
+          DATABASE_URL: postgresql://balansi:password@localhost:5432/journal_test
+        run: mix test --cover
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: services/journal/cover/
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          directory: ./services/journal/cover
+          flags: journal
+          name: journal-service
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
