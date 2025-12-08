@@ -1,0 +1,182 @@
+name: Journal Service Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/journal/**'
+      - '.github/workflows/journal-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'services/journal/**'
+      - '.github/workflows/journal-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: balansi
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: journal_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.15.8'
+          otp-version: '26.2.5.7'
+
+      - name: Cache Elixir hex and rebar
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.mix/archives
+            ~/.mix/rebar
+          key: ${{ runner.os }}-mix-tools-${{ hashFiles('services/journal/mix.exs') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-tools-
+
+      - name: Cache Elixir dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            services/journal/deps
+          key: ${{ runner.os }}-elixir-deps-${{ hashFiles('services/journal/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-deps-
+
+      - name: Cache Elixir build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            services/journal/_build/test
+          key: ${{ runner.os }}-elixir-build-test-${{ hashFiles('services/journal/mix.exs', 'services/journal/mix.lock', 'services/journal/lib/**/*.ex') }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-build-test-
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
+      - name: Install dependencies
+        working-directory: services/journal
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+
+      - name: Compile
+        working-directory: services/journal
+        env:
+          MIX_ENV: test
+        run: mix compile
+
+      - name: Wait for PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          for i in {1..30}; do
+            if PGPASSWORD=password psql -h localhost -U balansi -d postgres -c '\q' 2>/dev/null; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Waiting for PostgreSQL to be ready... ($i/30)"
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time"
+          exit 1
+
+      - name: Run tests
+        working-directory: services/journal
+        env:
+          MIX_ENV: test
+          DATABASE_URL: postgresql://balansi:password@localhost:5432/journal_test
+        run: mix test
+
+      - name: Generate coverage report
+        working-directory: services/journal
+        env:
+          MIX_ENV: test
+          DATABASE_URL: postgresql://balansi:password@localhost:5432/journal_test
+        continue-on-error: true
+        run: |
+          # Generate coverage report, ignore any failures
+          mix test --cover || {
+            EXIT_CODE=$?
+            echo "Coverage generation exited with code $EXIT_CODE"
+            # Exit code 3 = threshold not met, but tests passed
+            # Exit code 1 = other errors, but we continue anyway
+            if [ $EXIT_CODE -eq 3 ]; then
+              echo "⚠️ Coverage threshold not met, but tests passed. Continuing..."
+            else
+              echo "⚠️ Coverage generation had issues, but continuing..."
+            fi
+            exit 0
+          }
+
+      - name: Check and upload coverage reports
+        working-directory: services/journal
+        if: always()
+        run: |
+          if [ -d "cover" ] && [ "$(ls -A cover 2>/dev/null)" ]; then
+            echo "Coverage reports found, will be uploaded as artifact"
+            ls -la cover/ | head -10
+          else
+            echo "No coverage reports found, skipping upload"
+          fi
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: coverage-report
+          path: services/journal/cover/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Check coverage directory exists
+        id: check-coverage
+        working-directory: services/journal
+        if: always()
+        run: |
+          if [ -d "cover" ] && [ "$(ls -A cover 2>/dev/null)" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Coverage directory exists with files"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Coverage directory does not exist or is empty"
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always() && steps.check-coverage.outputs.exists == 'true'
+        continue-on-error: true
+        with:
+          directory: ./services/journal/cover
+          flags: journal
+          name: journal-service
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

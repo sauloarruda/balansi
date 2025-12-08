@@ -10,9 +10,9 @@ if database_url = System.get_env("DATABASE_URL") do
     pool_size: 10
 else
   config :journal, Journal.Repo,
-    username: "postgres",
-    password: "postgres",
-    hostname: "localhost",
+    username: System.get_env("DB_USER") || "balansi",
+    password: System.get_env("DB_PASSWORD") || "password",
+    hostname: System.get_env("DB_HOST") || "localhost",
     database: "journal_dev",
     stacktrace: true,
     show_sensitive_data_on_connection_error: true,

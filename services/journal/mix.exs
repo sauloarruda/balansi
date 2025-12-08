@@ -46,7 +46,6 @@ defmodule Journal.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
@@ -56,6 +55,10 @@ defmodule Journal.MixProject do
       {:corsica, "~> 2.0"},
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
+      # Mocking library
+      {:mox, "~> 1.1", only: :test},
+      {:meck, "~> 0.9", only: :test},
+      {:mock, "~> 0.3", only: :test},
       # Code analysis
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]

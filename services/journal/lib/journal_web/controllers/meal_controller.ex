@@ -2,6 +2,8 @@ defmodule JournalWeb.MealController do
   use JournalWeb, :controller
 
   alias Journal.Services.MealService
+  alias Journal.Helpers.DateHelper
+  alias JournalWeb.ErrorHandler
 
   # POC: Using constant patient_id. In production, extract from Bearer token.
   @poc_patient_id 1
@@ -26,44 +28,45 @@ defmodule JournalWeb.MealController do
       |> put_status(:created)
       |> json(%{data: serialize_meal(processed_meal)})
     else
-      {:error, %Ecto.Changeset{} = changeset} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{errors: format_errors(changeset)})
-
-      {:error, reason} when is_binary(reason) ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: reason})
+      error -> ErrorHandler.handle_service_error(conn, error)
     end
   end
 
   @doc """
-  Lists meals for the current patient, optionally filtered by date.
+  Lists meals for the current patient filtered by date.
 
-  GET /meals
   GET /meals?date=2025-12-05
-  GET /meals?status=confirmed
+
+  The date parameter is required and must be a valid ISO8601 date string.
   """
   def index(conn, params) do
     patient_id = get_patient_id(conn)
 
-    opts =
-      []
-      |> maybe_add_date_filter(params)
-      |> maybe_add_status_filter(params)
+    case get_date_param(params) do
+      {:ok, date} ->
+        meals = MealService.list_meals(patient_id, date)
 
-    meals = MealService.list_meals(patient_id, opts)
+        conn
+        |> put_status(:ok)
+        |> json(%{
+          data: Enum.map(meals, &serialize_meal/1),
+          meta: %{
+            patient_id: patient_id,
+            date: Date.to_iso8601(date),
+            count: length(meals)
+          }
+        })
 
-    conn
-    |> put_status(:ok)
-    |> json(%{
-      data: Enum.map(meals, &serialize_meal/1),
-      meta: %{
-        patient_id: patient_id,
-        count: length(meals)
-      }
-    })
+      {:error, :missing_date} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Missing required parameter: date"})
+
+      {:error, :invalid_date} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Invalid date format. Expected ISO8601 format (YYYY-MM-DD)"})
+    end
   end
 
   @doc """
@@ -80,10 +83,8 @@ defmodule JournalWeb.MealController do
         |> put_status(:ok)
         |> json(%{data: serialize_meal(meal)})
 
-      {:error, :not_found} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Meal not found"})
+      error ->
+        ErrorHandler.handle_service_error(conn, error)
     end
   end
 
@@ -101,15 +102,7 @@ defmodule JournalWeb.MealController do
       |> put_status(:ok)
       |> json(%{data: serialize_meal(confirmed_meal)})
     else
-      {:error, :not_found} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Meal not found"})
-
-      {:error, reason} when is_binary(reason) ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: reason})
+      error -> ErrorHandler.handle_service_error(conn, error)
     end
   end
 
@@ -140,28 +133,9 @@ defmodule JournalWeb.MealController do
   defp decimal_to_float(nil), do: nil
   defp decimal_to_float(%Decimal{} = d), do: Decimal.to_float(d)
 
-  defp format_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
+  defp get_date_param(%{"date" => date_string}) when is_binary(date_string) do
+    DateHelper.parse_iso8601(date_string)
   end
 
-  defp maybe_add_date_filter(opts, %{"date" => date_string}) do
-    case Date.from_iso8601(date_string) do
-      {:ok, date} -> Keyword.put(opts, :date, date)
-      _ -> opts
-    end
-  end
-
-  defp maybe_add_date_filter(opts, _), do: opts
-
-  defp maybe_add_status_filter(opts, %{"status" => status}) do
-    Keyword.put(opts, :status, String.to_existing_atom(status))
-  rescue
-    ArgumentError -> opts
-  end
-
-  defp maybe_add_status_filter(opts, _), do: opts
+  defp get_date_param(_), do: {:error, :missing_date}
 end
