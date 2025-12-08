@@ -75,15 +75,6 @@ jobs:
           echo "PostgreSQL did not become ready in time"
           exit 1
 
-      - name: Setup database
-        working-directory: services/journal
-        env:
-          MIX_ENV: test
-          DATABASE_URL: postgresql://balansi:password@localhost:5432/journal_test
-        run: |
-          mix ecto.create
-          mix ecto.migrate
-
       - name: Run tests with coverage
         working-directory: services/journal
         env:
@@ -91,9 +82,21 @@ jobs:
           DATABASE_URL: postgresql://balansi:password@localhost:5432/journal_test
         run: mix test --cover
 
+      - name: Check and upload coverage reports
+        working-directory: services/journal
+        if: always()
+        run: |
+          if [ -d "cover" ] && [ "$(ls -A cover 2>/dev/null)" ]; then
+            echo "Coverage reports found, will be uploaded as artifact"
+            ls -la cover/ | head -10
+          else
+            echo "No coverage reports found, skipping upload"
+          fi
+
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: coverage-report
           path: services/journal/cover/
@@ -102,6 +105,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         if: always()
+        continue-on-error: true
         with:
           directory: ./services/journal/cover
           flags: journal
