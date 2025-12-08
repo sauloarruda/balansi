@@ -44,15 +44,41 @@ jobs:
           elixir-version: '1.15.8'
           otp-version: '26.2.5.7'
 
+      - name: Cache Elixir hex and rebar
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.mix/archives
+            ~/.mix/rebar
+          key: ${{ runner.os }}-mix-tools-${{ hashFiles('services/journal/mix.exs') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-tools-
+
       - name: Cache Elixir dependencies
         uses: actions/cache@v4
         with:
           path: |
             services/journal/deps
-            services/journal/_build
-          key: ${{ runner.os }}-elixir-${{ hashFiles('services/journal/mix.lock') }}
+          key: ${{ runner.os }}-elixir-deps-${{ hashFiles('services/journal/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-elixir-
+            ${{ runner.os }}-elixir-deps-
+
+      - name: Cache Elixir build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            services/journal/_build/test
+          key: ${{ runner.os }}-elixir-build-test-${{ hashFiles('services/journal/mix.exs', 'services/journal/mix.lock', 'services/journal/lib/**/*.ex') }}
+          restore-keys: |
+            ${{ runner.os }}-elixir-build-test-
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-cache-key') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
 
       - name: Install dependencies
         working-directory: services/journal
@@ -60,6 +86,12 @@ jobs:
           mix local.hex --force
           mix local.rebar --force
           mix deps.get
+
+      - name: Compile
+        working-directory: services/journal
+        env:
+          MIX_ENV: test
+        run: mix compile
 
       - name: Wait for PostgreSQL
         run: |
