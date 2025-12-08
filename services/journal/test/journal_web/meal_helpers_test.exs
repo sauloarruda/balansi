@@ -12,7 +12,8 @@ defmodule JournalWeb.MealHelpersTest do
   require JournalWeb.MealHelpers
 
   describe "create_meal/1" do
-    test "creates meal with default attributes" do
+    test "creates meal with default attributes using default parameter" do
+      # Test without passing attrs (uses default %{})
       {:ok, meal} = MealHelpers.create_meal()
 
       assert meal.patient_id == MealHelpers.poc_patient_id()
@@ -37,7 +38,7 @@ defmodule JournalWeb.MealHelpersTest do
       assert meal.date == date
     end
 
-    test "creates meal with partial overrides" do
+    test "creates meal with partial overrides - status only" do
       {:ok, meal} = MealHelpers.create_meal(%{status: :in_review})
 
       assert meal.patient_id == MealHelpers.poc_patient_id()
@@ -45,22 +46,42 @@ defmodule JournalWeb.MealHelpersTest do
       assert meal.status == :in_review
     end
 
-    test "creates meal with snack meal type" do
-      {:ok, meal} = MealHelpers.create_meal(%{meal_type: :snack})
+    test "creates meal with partial overrides - meal_type only" do
+      {:ok, meal} = MealHelpers.create_meal(%{meal_type: :lunch})
 
-      assert meal.meal_type == :snack
+      assert meal.patient_id == MealHelpers.poc_patient_id()
+      assert meal.meal_type == :lunch
+      assert meal.status == :pending
     end
 
-    test "creates meal with dinner meal type" do
-      {:ok, meal} = MealHelpers.create_meal(%{meal_type: :dinner})
+    test "creates meal with partial overrides - original_description only" do
+      {:ok, meal} = MealHelpers.create_meal(%{original_description: "Custom description"})
 
-      assert meal.meal_type == :dinner
+      assert meal.patient_id == MealHelpers.poc_patient_id()
+      assert meal.meal_type == :breakfast
+      assert meal.original_description == "Custom description"
     end
 
-    test "creates meal with processing status" do
-      {:ok, meal} = MealHelpers.create_meal(%{status: :processing})
+    test "creates meal with partial overrides - date only" do
+      date = ~D[2025-01-27]
+      {:ok, meal} = MealHelpers.create_meal(%{date: date})
 
-      assert meal.status == :processing
+      assert meal.patient_id == MealHelpers.poc_patient_id()
+      assert meal.date == date
+    end
+
+    test "creates meal with all meal types" do
+      for meal_type <- [:breakfast, :lunch, :snack, :dinner] do
+        {:ok, meal} = MealHelpers.create_meal(%{meal_type: meal_type})
+        assert meal.meal_type == meal_type
+      end
+    end
+
+    test "creates meal with all statuses" do
+      for status <- [:pending, :processing, :in_review, :confirmed] do
+        {:ok, meal} = MealHelpers.create_meal(%{status: status})
+        assert meal.status == status
+      end
     end
 
     test "creates meal with empty attrs map" do
@@ -69,10 +90,18 @@ defmodule JournalWeb.MealHelpersTest do
       assert meal.patient_id == MealHelpers.poc_patient_id()
       assert meal.meal_type == :breakfast
     end
+
+    test "creates meal with other patient_id" do
+      {:ok, meal} = MealHelpers.create_meal(%{patient_id: MealHelpers.other_patient_id()})
+
+      assert meal.patient_id == MealHelpers.other_patient_id()
+      assert meal.meal_type == :breakfast
+    end
   end
 
   describe "create_meal_attrs/1" do
-    test "creates attrs with defaults" do
+    test "creates attrs with defaults using default parameter" do
+      # Test without passing overrides (uses default %{})
       attrs = MealHelpers.create_meal_attrs()
 
       assert attrs["meal_type"] == "breakfast"
@@ -89,11 +118,18 @@ defmodule JournalWeb.MealHelpersTest do
       assert attrs["original_description"] == "Grilled chicken"
     end
 
-    test "creates attrs with partial overrides" do
+    test "creates attrs with partial overrides - meal_type only" do
       attrs = MealHelpers.create_meal_attrs(%{"meal_type" => "dinner"})
 
       assert attrs["meal_type"] == "dinner"
       assert attrs["original_description"] == "2 eggs and toast"
+    end
+
+    test "creates attrs with partial overrides - original_description only" do
+      attrs = MealHelpers.create_meal_attrs(%{"original_description" => "Custom meal"})
+
+      assert attrs["meal_type"] == "breakfast"
+      assert attrs["original_description"] == "Custom meal"
     end
 
     test "creates attrs with empty map" do
@@ -101,6 +137,17 @@ defmodule JournalWeb.MealHelpersTest do
 
       assert attrs["meal_type"] == "breakfast"
       assert attrs["original_description"] == "2 eggs and toast"
+    end
+
+    test "creates attrs with additional attributes" do
+      attrs = MealHelpers.create_meal_attrs(%{
+        "meal_type" => "snack",
+        "date" => "2025-01-27"
+      })
+
+      assert attrs["meal_type"] == "snack"
+      assert attrs["original_description"] == "2 eggs and toast"
+      assert attrs["date"] == "2025-01-27"
     end
   end
 
@@ -132,7 +179,17 @@ defmodule JournalWeb.MealHelpersTest do
   end
 
   describe "assert_meal_response/2" do
-    test "asserts meal response with default status 200" do
+    test "asserts meal response using default status (200)" do
+      {:ok, meal} = MealHelpers.create_meal()
+
+      conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+
+      # Test without passing expected_status (uses default 200)
+      data = MealHelpers.assert_meal_response(conn)
+      assert data["id"] == meal.id
+    end
+
+    test "asserts meal response with explicit status 200" do
       {:ok, meal} = MealHelpers.create_meal()
 
       conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
@@ -151,10 +208,40 @@ defmodule JournalWeb.MealHelpersTest do
       data = MealHelpers.assert_meal_response(conn, 201)
       assert data["meal_type"] == "breakfast"
     end
+
+    test "asserts meal response validates all meal types" do
+      for meal_type <- [:breakfast, :lunch, :snack, :dinner] do
+        {:ok, meal} = MealHelpers.create_meal(%{meal_type: meal_type})
+
+        conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+
+        data = MealHelpers.assert_meal_response(conn)
+        assert data["meal_type"] == to_string(meal_type)
+      end
+    end
+
+    test "asserts meal response validates all statuses" do
+      for status <- [:pending, :processing, :in_review, :confirmed] do
+        {:ok, meal} = MealHelpers.create_meal(%{status: status})
+
+        conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+
+        data = MealHelpers.assert_meal_response(conn)
+        assert data["status"] == to_string(status)
+      end
+    end
   end
 
   describe "assert_meal_data/2" do
-    test "asserts meal data without expected attrs" do
+    test "asserts meal data using default expected_attrs (empty list)" do
+      {:ok, meal} = MealHelpers.create_meal()
+      serialized = serialize_meal(meal)
+
+      # Test without passing expected_attrs (uses default [])
+      MealHelpers.assert_meal_data(serialized)
+    end
+
+    test "asserts meal data with explicit empty list" do
       {:ok, meal} = MealHelpers.create_meal()
       serialized = serialize_meal(meal)
 
@@ -248,11 +335,46 @@ defmodule JournalWeb.MealHelpersTest do
       ])
     end
 
-    test "asserts meal data without any expected attrs (empty list)" do
-      {:ok, meal} = MealHelpers.create_meal()
-      serialized = serialize_meal(meal)
+    test "asserts meal data with each expected attr individually" do
+      date = ~D[2025-01-27]
 
-      MealHelpers.assert_meal_data(serialized, [])
+      # Test meal_type
+      {:ok, meal1} = MealHelpers.create_meal(%{meal_type: :breakfast})
+      MealHelpers.assert_meal_data(serialize_meal(meal1), meal_type: "breakfast")
+
+      # Test status
+      {:ok, meal2} = MealHelpers.create_meal(%{status: :processing})
+      MealHelpers.assert_meal_data(serialize_meal(meal2), status: "processing")
+
+      # Test original_description
+      {:ok, meal3} = MealHelpers.create_meal(%{original_description: "Test desc"})
+      MealHelpers.assert_meal_data(serialize_meal(meal3), original_description: "Test desc")
+
+      # Test patient_id
+      {:ok, meal4} = MealHelpers.create_meal(%{patient_id: MealHelpers.poc_patient_id()})
+      MealHelpers.assert_meal_data(serialize_meal(meal4), patient_id: MealHelpers.poc_patient_id())
+
+      # Test date
+      {:ok, meal5} = MealHelpers.create_meal(%{date: date})
+      MealHelpers.assert_meal_data(serialize_meal(meal5), date: date)
+    end
+
+    test "asserts meal data validates all meal types in structure check" do
+      for meal_type <- [:breakfast, :lunch, :snack, :dinner] do
+        {:ok, meal} = MealHelpers.create_meal(%{meal_type: meal_type})
+        serialized = serialize_meal(meal)
+
+        MealHelpers.assert_meal_data(serialized)
+      end
+    end
+
+    test "asserts meal data validates all statuses in structure check" do
+      for status <- [:pending, :processing, :in_review, :confirmed] do
+        {:ok, meal} = MealHelpers.create_meal(%{status: status})
+        serialized = serialize_meal(meal)
+
+        MealHelpers.assert_meal_data(serialized)
+      end
     end
   end
 
