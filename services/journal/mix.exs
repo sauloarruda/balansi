@@ -11,7 +11,8 @@ defmodule Journal.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
-      releases: releases()
+      releases: releases(),
+      test_coverage: [tool: ExUnit.Coverage, summary: [threshold: 70]]
     ]
   end
 
