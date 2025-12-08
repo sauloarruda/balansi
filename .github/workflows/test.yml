@@ -156,7 +156,7 @@ jobs:
               echo "Logs at attempt $ATTEMPT:"
               tail -5 cognito-local.log || true
             fi
-            
+
             # Try IPv6 first (as it seems to be what cognito-local prefers)
             # Accept any HTTP response (including 404) as success - means server is responding
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://[::1]:9229 2>/dev/null || echo "000")
@@ -182,7 +182,7 @@ jobs:
               COGNITO_ENDPOINT="http://localhost:9229"
               break
             fi
-            
+
             ATTEMPT=$((ATTEMPT + 1))
             if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
               echo "cognito-local failed to start after $MAX_ATTEMPTS seconds"
