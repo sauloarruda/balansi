@@ -14,6 +14,14 @@ frontend:
             echo "✅ Using VITE_API_URL=$VITE_API_URL"
           fi
         - npm run build
+        - |
+          # Copy _redirects to build root for Amplify SPA routing
+          if [ -f "static/_redirects" ]; then
+            cp static/_redirects build/_redirects
+            echo "✅ Copied _redirects to build root"
+          else
+            echo "⚠️  _redirects file not found in static/"
+          fi
   artifacts:
     baseDirectory: build
     files:

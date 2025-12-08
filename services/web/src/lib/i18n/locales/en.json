@@ -112,5 +112,42 @@
 		"missingFields": "Required fields are missing.",
 		"serverError": "Internal server error.",
 		"unknown": "An unknown error occurred."
+	},
+	"journal": {
+		"title": "Food Journal",
+		"subtitle": "Track your meals with AI",
+		"form": {
+			"date": "Date",
+			"mealType": "Meal type",
+			"description": "What did you eat?",
+			"descriptionPlaceholder": "Describe your meal (e.g., grilled chicken with rice and salad)",
+			"descriptionHint": "Be as detailed as possible for better nutritional estimates",
+			"submit": "Analyze with AI",
+			"analyzing": "Analyzing..."
+		},
+		"mealTypes": {
+			"breakfast": "Breakfast",
+			"lunch": "Lunch",
+			"snack": "Snack",
+			"dinner": "Dinner"
+		},
+		"macros": {
+			"protein": "Protein",
+			"carbs": "Carbs",
+			"fat": "Fat",
+			"calories": "kcal"
+		},
+		"status": {
+			"pending": "Pending",
+			"processing": "Processing",
+			"inReview": "Review",
+			"confirmed": "Confirmed"
+		},
+		"dailySummary": "Daily Summary",
+		"todaysMeals": "Today's Meals",
+		"noMeals": "No meals logged yet",
+		"noMealsHint": "Add your first meal above",
+		"analyzing": "AI is analyzing your meal...",
+		"confirmMeal": "Confirm"
 	}
 }

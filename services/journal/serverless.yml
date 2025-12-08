@@ -1,0 +1,44 @@
+service: balansi-journal
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: provided.al2023
+  region: us-east-2
+  architecture: arm64
+  memorySize: 512
+  timeout: 30
+  stage: ${opt:stage, 'dev'}
+  environment:
+    STAGE: ${self:provider.stage}
+    DATABASE_URL: ${env:DATABASE_URL}
+    SECRET_KEY_BASE: ${env:SECRET_KEY_BASE}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+    FRONTEND_DOMAIN: ${env:FRONTEND_DOMAIN, ''}
+    PHX_HOST: ${env:PHX_HOST, 'localhost'}
+    PHX_SERVER: true
+    PORT: 4000
+    # Lambda Web Adapter settings
+    AWS_LWA_READINESS_CHECK_PATH: /health
+    AWS_LWA_PORT: 4000
+
+functions:
+  api:
+    handler: bootstrap
+    layers:
+      # Lambda Web Adapter for ARM64
+      - arn:aws:lambda:us-east-2:753240598075:layer:LambdaAdapterLayerArm64:22
+    events:
+      - httpApi:
+          path: /journal/{proxy+}
+          method: any
+      - httpApi:
+          path: /journal
+          method: any
+
+package:
+  patterns:
+    - '!**'
+    - '_build/prod/rel/journal/**'
+    - 'bootstrap'

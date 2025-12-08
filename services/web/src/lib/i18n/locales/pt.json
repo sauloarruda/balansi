@@ -112,5 +112,42 @@
 		"missingFields": "Campos obrigatórios faltando.",
 		"serverError": "Erro interno do servidor.",
 		"unknown": "Ocorreu um erro desconhecido."
+	},
+	"journal": {
+		"title": "Diário Alimentar",
+		"subtitle": "Registre suas refeições com IA",
+		"form": {
+			"date": "Data",
+			"mealType": "Tipo de refeição",
+			"description": "O que você comeu?",
+			"descriptionPlaceholder": "Descreva sua refeição (ex: frango grelhado com arroz e salada)",
+			"descriptionHint": "Seja o mais detalhado possível para melhores estimativas nutricionais",
+			"submit": "Analisar com IA",
+			"analyzing": "Analisando..."
+		},
+		"mealTypes": {
+			"breakfast": "Café",
+			"lunch": "Almoço",
+			"snack": "Lanche",
+			"dinner": "Jantar"
+		},
+		"macros": {
+			"protein": "Proteína",
+			"carbs": "Carbos",
+			"fat": "Gordura",
+			"calories": "kcal"
+		},
+		"status": {
+			"pending": "Pendente",
+			"processing": "Processando",
+			"inReview": "Revisar",
+			"confirmed": "Confirmado"
+		},
+		"dailySummary": "Resumo do Dia",
+		"todaysMeals": "Refeições de Hoje",
+		"noMeals": "Nenhuma refeição registrada",
+		"noMealsHint": "Adicione sua primeira refeição acima",
+		"analyzing": "A IA está analisando sua refeição...",
+		"confirmMeal": "Confirmar"
 	}
 }
