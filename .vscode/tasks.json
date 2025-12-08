@@ -117,6 +117,42 @@
 				"reveal": "always",
 				"panel": "dedicated"
 			}
+		},
+		{
+			"label": "Elixir: Test",
+			"type": "shell",
+			"command": "mix",
+			"args": ["test"],
+			"options": {
+				"cwd": "${workspaceFolder}/services/journal"
+			},
+			"problemMatcher": [],
+			"group": {
+				"kind": "test",
+				"isDefault": false
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "Elixir: Test File",
+			"type": "shell",
+			"command": "mix",
+			"args": ["test", "${file}"],
+			"options": {
+				"cwd": "${workspaceFolder}/services/journal"
+			},
+			"problemMatcher": [],
+			"group": {
+				"kind": "test",
+				"isDefault": false
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
 		}
 	]
 }

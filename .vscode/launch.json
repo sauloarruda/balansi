@@ -26,7 +26,6 @@
 			"name": "Debug SvelteKit",
 			"type": "node",
 			"request": "launch",
-			"name": "Launch SvelteKit",
 			"runtimeExecutable": "npm",
 			"runtimeArgs": ["run", "dev"],
 			"cwd": "${workspaceFolder}/services/web",
@@ -35,6 +34,21 @@
 				"uriFormat": "%s",
 				"action": "debugWithChrome"
 			}
+		},
+		{
+			"name": "Run Elixir Tests",
+			"type": "node",
+			"request": "launch",
+			"preLaunchTask": "Elixir: Test",
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "Run Elixir Test File",
+			"type": "node",
+			"request": "launch",
+			"cwd": "${workspaceFolder}/services/journal",
+			"preLaunchTask": "Elixir: Test File",
+			"console": "integratedTerminal"
 		}
 	],
 	"compounds": []
