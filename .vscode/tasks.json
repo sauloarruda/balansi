@@ -139,11 +139,7 @@
 		{
 			"label": "Elixir: Test File",
 			"type": "shell",
-			"command": "mix",
-			"args": ["test", "${file}"],
-			"options": {
-				"cwd": "${workspaceFolder}/services/journal"
-			},
+			"command": "cd '${workspaceFolder}/services/journal' && mix test '${file}'",
 			"problemMatcher": [],
 			"group": {
 				"kind": "test",

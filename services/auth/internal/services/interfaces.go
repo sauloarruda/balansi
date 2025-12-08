@@ -9,3 +9,4 @@ type UserRepositoryInterface = testhelpers.UserRepositoryInterface
 
 // CognitoClientInterface defines Cognito client operations (aliased for convenience).
 type CognitoClientInterface = testhelpers.CognitoClientInterface
+

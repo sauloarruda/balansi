@@ -36,19 +36,15 @@
 			}
 		},
 		{
-			"name": "Run Elixir Tests",
-			"type": "node",
-			"request": "launch",
-			"preLaunchTask": "Elixir: Test",
-			"console": "integratedTerminal"
-		},
-		{
 			"name": "Run Elixir Test File",
 			"type": "node",
 			"request": "launch",
-			"cwd": "${workspaceFolder}/services/journal",
 			"preLaunchTask": "Elixir: Test File",
-			"console": "integratedTerminal"
+			"program": "${workspaceFolder}/.vscode/elixir-test-runner.js",
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"skipFiles": ["<node_internals>/**"],
+			"stopOnEntry": false
 		}
 	],
 	"compounds": []
