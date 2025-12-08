@@ -170,14 +170,28 @@ defmodule JournalWeb.HealthControllerTest do
         :meck.unload(Repo)
       end
     end
+  end
 
+end
+
+# Separate test module for DateTime mocking tests
+# These tests must run synchronously (async: false) to prevent DateTime mocks
+# from affecting other tests that use DateTime.utc_now (e.g., Ecto timestamp generation)
+defmodule JournalWeb.HealthControllerDateTimeMockTest do
+  use JournalWeb.ConnCase, async: false
+
+  alias Journal.Repo
+
+  describe "GET /health with DateTime mocking" do
     test "returns timestamp as unavailable when DateTime.utc_now raises exception", %{conn: conn} do
       # Mock DateTime.utc_now to raise an exception
       # This covers line 67: _ -> "unavailable"
-      :meck.new(DateTime, [:passthrough])
-      :meck.expect(DateTime, :utc_now, fn -> raise "DateTime error" end)
+      cleanup_mock_safely(DateTime)
 
       try do
+        :meck.new(DateTime, [:passthrough])
+        :meck.expect(DateTime, :utc_now, fn -> raise "DateTime error" end)
+
         conn = get(conn, ~p"/health")
 
         assert response(conn, 200)
@@ -188,20 +202,23 @@ defmodule JournalWeb.HealthControllerTest do
         assert data["database"] == "connected"
         assert data["timestamp"] == "unavailable"
       after
-        :meck.unload(DateTime)
+        cleanup_mock_safely(DateTime)
       end
     end
 
     test "returns 503 with unavailable timestamp when both database and DateTime fail", %{conn: conn} do
       # Mock both Repo.query and DateTime.utc_now to fail
-      :meck.new(Repo, [:passthrough])
-      :meck.new(DateTime, [:passthrough])
-      :meck.expect(Repo, :query, fn _query, _params ->
-        {:error, %Postgrex.Error{message: "db error"}}
-      end)
-      :meck.expect(DateTime, :utc_now, fn -> raise "DateTime error" end)
+      cleanup_mock_safely(Repo)
+      cleanup_mock_safely(DateTime)
 
       try do
+        :meck.new(Repo, [:passthrough])
+        :meck.new(DateTime, [:passthrough])
+        :meck.expect(Repo, :query, fn _query, _params ->
+          {:error, %Postgrex.Error{message: "db error"}}
+        end)
+        :meck.expect(DateTime, :utc_now, fn -> raise "DateTime error" end)
+
         conn = get(conn, ~p"/health")
 
         assert response(conn, 503)
@@ -212,8 +229,21 @@ defmodule JournalWeb.HealthControllerTest do
         assert data["timestamp"] == "unavailable"
         assert data["error"] =~ "Database health check failed"
       after
-        :meck.unload(Repo)
-        :meck.unload(DateTime)
+        cleanup_mock_safely(Repo)
+        cleanup_mock_safely(DateTime)
+      end
+    end
+
+    # Helper function to safely clean up mocks
+    defp cleanup_mock_safely(module) do
+      try do
+        if :meck.validate(module) do
+          :meck.unload(module)
+        end
+      rescue
+        _ -> :ok
+      catch
+        :exit, _ -> :ok
       end
     end
   end

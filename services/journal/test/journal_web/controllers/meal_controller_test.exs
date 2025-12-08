@@ -14,8 +14,13 @@ defmodule JournalWeb.MealControllerTest do
   """
   use JournalWeb.ConnCase, async: true
 
+  # Tests that use LLM mocks are safe to run in parallel due to the lock mechanism
+  # in LLMHelpers. The @moduletag :llm_mock is kept for documentation purposes
+  # to identify tests that use LLM mocking infrastructure.
+
   alias Journal.Meals.MealEntry
   alias Journal.Repo
+  alias Journal.TestHelpers.LLMHelpers
   alias JournalWeb.MealHelpers
 
   require JournalWeb.MealHelpers
@@ -24,18 +29,20 @@ defmodule JournalWeb.MealControllerTest do
     test "creates and processes meal successfully", %{conn: conn} do
       attrs = MealHelpers.create_meal_attrs()
 
-      conn = post(conn, ~p"/journal/meals", attrs)
+      LLMHelpers.with_openai_mock(fn ->
+        conn = post(conn, ~p"/journal/meals", attrs)
 
-      data = MealHelpers.assert_meal_response(conn, 201)
-      assert data["meal_type"] == "breakfast"
-      assert data["original_description"] == "2 eggs and toast"
-      assert data["status"] == "in_review"
-      assert data["protein_g"] != nil
-      assert data["carbs_g"] != nil
-      assert data["fat_g"] != nil
-      assert data["calories_kcal"] != nil
-      assert data["weight_g"] != nil
-      assert data["ai_comment"] != nil
+        data = MealHelpers.assert_meal_response(conn, 201)
+        assert data["meal_type"] == "breakfast"
+        assert data["original_description"] == "2 eggs and toast"
+        assert data["status"] == "in_review"
+        assert data["protein_g"] != nil
+        assert data["carbs_g"] != nil
+        assert data["fat_g"] != nil
+        assert data["calories_kcal"] != nil
+        assert data["weight_g"] != nil
+        assert data["ai_comment"] != nil
+      end)
     end
 
     test "creates meal with date parameter", %{conn: conn} do
@@ -46,10 +53,12 @@ defmodule JournalWeb.MealControllerTest do
         "date" => Date.to_iso8601(date)
       })
 
-      conn = post(conn, ~p"/journal/meals", attrs)
+      LLMHelpers.with_openai_mock(fn ->
+        conn = post(conn, ~p"/journal/meals", attrs)
 
-      data = MealHelpers.assert_meal_response(conn, 201)
-      assert data["date"] == Date.to_iso8601(date)
+        data = MealHelpers.assert_meal_response(conn, 201)
+        assert data["date"] == Date.to_iso8601(date)
+      end)
     end
 
     test "returns 422 for invalid changeset - missing meal_type", %{conn: conn} do

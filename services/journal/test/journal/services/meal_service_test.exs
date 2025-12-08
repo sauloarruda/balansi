@@ -2,7 +2,11 @@ defmodule Journal.Services.MealServiceTest do
   use ExUnit.Case, async: true
   use Journal.DataCase
 
+  # Tests that use LLM mocks should not run in parallel to avoid race conditions
+  @moduletag :llm_mock
+
   alias Journal.Services.MealService
+  alias Journal.TestHelpers.LLMHelpers
   alias JournalWeb.MealHelpers
 
   describe "create_meal/2" do
@@ -157,14 +161,16 @@ defmodule Journal.Services.MealServiceTest do
         status: :pending
       })
 
-      assert {:ok, processed_meal} = MealService.process_with_llm(meal)
-      assert processed_meal.status == :in_review
-      assert processed_meal.protein_g != nil
-      assert processed_meal.carbs_g != nil
-      assert processed_meal.fat_g != nil
-      assert processed_meal.calories_kcal != nil
-      assert processed_meal.weight_g != nil
-      assert processed_meal.ai_comment != nil
+      LLMHelpers.with_openai_mock(fn ->
+        assert {:ok, processed_meal} = MealService.process_with_llm(meal)
+        assert processed_meal.status == :in_review
+        assert processed_meal.protein_g != nil
+        assert processed_meal.carbs_g != nil
+        assert processed_meal.fat_g != nil
+        assert processed_meal.calories_kcal != nil
+        assert processed_meal.weight_g != nil
+        assert processed_meal.ai_comment != nil
+      end)
     end
 
     test "returns error when meal is not in pending status" do
@@ -176,6 +182,30 @@ defmodule Journal.Services.MealServiceTest do
 
       assert {:error, {:invalid_status, :in_review, expected: :pending}} =
                MealService.process_with_llm(meal)
+    end
+
+    test "returns error when LLM service fails" do
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "2 eggs and toast",
+        status: :pending
+      })
+
+      LLMHelpers.with_openai_mock_error({:error, :timeout}, fn ->
+        assert {:error, :timeout} = MealService.process_with_llm(meal)
+      end)
+    end
+
+    test "returns error when OpenAI API key is not configured" do
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "2 eggs and toast",
+        status: :pending
+      })
+
+      LLMHelpers.with_openai_not_configured(fn ->
+        assert {:error, :api_key_not_configured} = MealService.process_with_llm(meal)
+      end)
     end
   end
 

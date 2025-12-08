@@ -7,6 +7,7 @@ defmodule JournalWeb.MealHelpersTest do
   """
   use JournalWeb.ConnCase, async: true
 
+  alias Journal.TestHelpers.LLMHelpers
   alias JournalWeb.MealHelpers
 
   require JournalWeb.MealHelpers
@@ -201,12 +202,14 @@ defmodule JournalWeb.MealHelpersTest do
     test "asserts meal response with custom status 201" do
       attrs = MealHelpers.create_meal_attrs()
 
-      conn =
-        build_conn()
-        |> post(~p"/journal/meals", attrs)
+      LLMHelpers.with_openai_mock(fn ->
+        conn =
+          build_conn()
+          |> post(~p"/journal/meals", attrs)
 
-      data = MealHelpers.assert_meal_response(conn, 201)
-      assert data["meal_type"] == "breakfast"
+        data = MealHelpers.assert_meal_response(conn, 201)
+        assert data["meal_type"] == "breakfast"
+      end)
     end
 
     test "asserts meal response validates all meal types" do
