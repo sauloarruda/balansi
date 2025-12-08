@@ -55,6 +55,10 @@ defmodule Journal.MixProject do
       {:corsica, "~> 2.0"},
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
+      # Mocking library
+      {:mox, "~> 1.1", only: :test},
+      {:meck, "~> 0.9", only: :test},
+      {:mock, "~> 0.3", only: :test},
       # Code analysis
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
