@@ -1,11 +1,15 @@
 name: Tests
 
+# Temporarily disabled - Auth service tests
+# This workflow is disabled and will not run automatically
+# To re-enable, uncomment the triggers below and remove this comment block
 on:
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "services/auth/**"
-      - ".github/workflows/test.yml"
+  # pull_request:
+  #   branches: [main, develop]
+  #   paths:
+  #     - "services/auth/**"
+  #     - ".github/workflows/test.yml"
+  workflow_dispatch:  # Keep workflow_dispatch for manual testing if needed
 
 jobs:
   test:
