@@ -58,3 +58,4 @@ func buildLogoutCookieHeader(req events.APIGatewayV2HTTPRequest) string {
 
 	return cookie
 }
+

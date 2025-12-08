@@ -38,3 +38,5 @@ doc/*
 coverage.out
 coverage.html
 *.test
+
+.elixir_ls/
