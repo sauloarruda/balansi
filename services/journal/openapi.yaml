@@ -201,6 +201,10 @@ paths:
       description: |
         Returns the health status of the API.
         Used by Lambda Web Adapter for readiness checks.
+
+        Verifies:
+        - Service is running
+        - Database (PostgreSQL) connectivity
       operationId: healthCheck
       tags:
         - Health
@@ -211,10 +215,63 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - status
+                  - service
+                  - database
+                  - timestamp
                 properties:
                   status:
                     type: string
                     example: "ok"
+                    description: Health status of the service
+                  service:
+                    type: string
+                    example: "journal"
+                    description: Service identifier
+                  database:
+                    type: string
+                    example: "connected"
+                    description: Database connectivity status
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-27T10:30:00Z"
+                    description: ISO8601 timestamp of the health check
+        "503":
+          description: Service is unhealthy (database disconnected)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                  - database
+                  - error
+                  - timestamp
+                properties:
+                  status:
+                    type: string
+                    example: "unhealthy"
+                    description: Health status of the service
+                  service:
+                    type: string
+                    example: "journal"
+                    description: Service identifier
+                  database:
+                    type: string
+                    example: "disconnected"
+                    description: Database connectivity status
+                  error:
+                    type: string
+                    example: "Database health check failed: connection refused"
+                    description: Error message describing the health check failure
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-27T10:30:00Z"
+                    description: ISO8601 timestamp of the health check
 
 components:
   schemas:
