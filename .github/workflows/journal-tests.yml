@@ -60,6 +60,30 @@ jobs:
           mix local.rebar --force
           mix deps.get
 
+      - name: Wait for PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          for i in {1..30}; do
+            if PGPASSWORD=password psql -h localhost -U balansi -d postgres -c '\q' 2>/dev/null; then
+              echo "PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "Waiting for PostgreSQL to be ready... ($i/30)"
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time"
+          exit 1
+
+      - name: Setup database
+        working-directory: services/journal
+        env:
+          MIX_ENV: test
+          DATABASE_URL: postgresql://balansi:password@localhost:5432/journal_test
+        run: |
+          mix ecto.create
+          mix ecto.migrate
+
       - name: Run tests with coverage
         working-directory: services/journal
         env:
