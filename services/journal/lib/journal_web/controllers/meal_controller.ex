@@ -3,6 +3,7 @@ defmodule JournalWeb.MealController do
 
   alias Journal.Services.MealService
   alias Journal.Helpers.DateHelper
+  alias JournalWeb.ErrorHandler
 
   # POC: Using constant patient_id. In production, extract from Bearer token.
   @poc_patient_id 1
@@ -27,20 +28,7 @@ defmodule JournalWeb.MealController do
       |> put_status(:created)
       |> json(%{data: serialize_meal(processed_meal)})
     else
-      {:error, %Ecto.Changeset{} = changeset} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{errors: format_errors(changeset)})
-
-      {:error, {:invalid_status, status, expected: expected_status}} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Cannot process meal with status: #{status}. Expected: #{expected_status}"})
-
-      {:error, reason} when is_binary(reason) ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: reason})
+      error -> ErrorHandler.handle_service_error(conn, error)
     end
   end
 
@@ -95,10 +83,8 @@ defmodule JournalWeb.MealController do
         |> put_status(:ok)
         |> json(%{data: serialize_meal(meal)})
 
-      {:error, :not_found} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Meal not found"})
+      error ->
+        ErrorHandler.handle_service_error(conn, error)
     end
   end
 
@@ -116,20 +102,7 @@ defmodule JournalWeb.MealController do
       |> put_status(:ok)
       |> json(%{data: serialize_meal(confirmed_meal)})
     else
-      {:error, :not_found} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "Meal not found"})
-
-      {:error, {:invalid_status, status, expected: expected_status}} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Cannot confirm meal with status: #{status}. Expected: #{expected_status}"})
-
-      {:error, reason} when is_binary(reason) ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: reason})
+      error -> ErrorHandler.handle_service_error(conn, error)
     end
   end
 
@@ -159,14 +132,6 @@ defmodule JournalWeb.MealController do
 
   defp decimal_to_float(nil), do: nil
   defp decimal_to_float(%Decimal{} = d), do: Decimal.to_float(d)
-
-  defp format_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
-  end
 
   defp get_date_param(%{"date" => date_string}) when is_binary(date_string) do
     DateHelper.parse_iso8601(date_string)

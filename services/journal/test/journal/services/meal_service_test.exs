@@ -3,8 +3,7 @@ defmodule Journal.Services.MealServiceTest do
   use Journal.DataCase
 
   alias Journal.Services.MealService
-  alias Journal.Meals.MealEntry
-  alias Journal.Repo
+  alias JournalWeb.MealHelpers
 
   describe "create_meal/2" do
     test "creates meal with valid attributes" do
@@ -114,16 +113,11 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "start_processing/1" do
     test "transitions meal from pending to processing" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :pending
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :pending
+      })
 
       assert {:ok, updated_meal} = MealService.start_processing(meal)
       assert updated_meal.status == :processing
@@ -131,16 +125,11 @@ defmodule Journal.Services.MealServiceTest do
     end
 
     test "returns error when meal is not in pending status" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :in_review
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :in_review
+      })
 
       assert {:error, {:invalid_status, :in_review, expected: :pending}} =
                MealService.start_processing(meal)
@@ -148,16 +137,11 @@ defmodule Journal.Services.MealServiceTest do
 
     test "returns error for all non-pending statuses" do
       for status <- [:processing, :in_review, :confirmed] do
-        {:ok, meal} =
-          %MealEntry{}
-          |> MealEntry.changeset(%{
-            patient_id: 1,
-            date: Date.utc_today(),
-            meal_type: :breakfast,
-            original_description: "Oatmeal",
-            status: status
-          })
-          |> Repo.insert()
+        {:ok, meal} = MealHelpers.create_meal(%{
+          meal_type: :breakfast,
+          original_description: "Oatmeal",
+          status: status
+        })
 
         assert {:error, {:invalid_status, ^status, expected: :pending}} =
                  MealService.start_processing(meal)
@@ -167,16 +151,11 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "process_with_llm/1" do
     test "successfully processes meal through full flow" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "2 eggs and toast",
-          status: :pending
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "2 eggs and toast",
+        status: :pending
+      })
 
       assert {:ok, processed_meal} = MealService.process_with_llm(meal)
       assert processed_meal.status == :in_review
@@ -189,16 +168,11 @@ defmodule Journal.Services.MealServiceTest do
     end
 
     test "returns error when meal is not in pending status" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :in_review
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :in_review
+      })
 
       assert {:error, {:invalid_status, :in_review, expected: :pending}} =
                MealService.process_with_llm(meal)
@@ -207,16 +181,11 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "complete_processing/2" do
     test "transitions meal from processing to in_review with estimation" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :processing
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :processing
+      })
 
       estimation = %{
         protein_g: Decimal.new("25.5"),
@@ -235,16 +204,11 @@ defmodule Journal.Services.MealServiceTest do
     end
 
     test "returns error when meal is not in processing status" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :pending
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :pending
+      })
 
       estimation = %{protein_g: Decimal.new("25.0")}
 
@@ -256,16 +220,11 @@ defmodule Journal.Services.MealServiceTest do
       estimation = %{protein_g: Decimal.new("25.0")}
 
       for status <- [:pending, :in_review, :confirmed] do
-        {:ok, meal} =
-          %MealEntry{}
-          |> MealEntry.changeset(%{
-            patient_id: 1,
-            date: Date.utc_today(),
-            meal_type: :breakfast,
-            original_description: "Oatmeal",
-            status: status
-          })
-          |> Repo.insert()
+        {:ok, meal} = MealHelpers.create_meal(%{
+          meal_type: :breakfast,
+          original_description: "Oatmeal",
+          status: status
+        })
 
         assert {:error, {:invalid_status, ^status, expected: :processing}} =
                  MealService.complete_processing(meal, estimation)
@@ -275,16 +234,11 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "confirm_meal/1" do
     test "transitions meal from in_review to confirmed" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :in_review
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :in_review
+      })
 
       assert {:ok, updated_meal} = MealService.confirm_meal(meal)
       assert updated_meal.status == :confirmed
@@ -292,16 +246,11 @@ defmodule Journal.Services.MealServiceTest do
     end
 
     test "returns error when meal is not in in_review status" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          status: :pending
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        status: :pending
+      })
 
       assert {:error, {:invalid_status, :pending, expected: :in_review}} =
                MealService.confirm_meal(meal)
@@ -309,16 +258,11 @@ defmodule Journal.Services.MealServiceTest do
 
     test "returns error for all non-in_review statuses" do
       for status <- [:pending, :processing, :confirmed] do
-        {:ok, meal} =
-          %MealEntry{}
-          |> MealEntry.changeset(%{
-            patient_id: 1,
-            date: Date.utc_today(),
-            meal_type: :breakfast,
-            original_description: "Oatmeal",
-            status: status
-          })
-          |> Repo.insert()
+        {:ok, meal} = MealHelpers.create_meal(%{
+          meal_type: :breakfast,
+          original_description: "Oatmeal",
+          status: status
+        })
 
         assert {:error, {:invalid_status, ^status, expected: :in_review}} =
                  MealService.confirm_meal(meal)
@@ -328,20 +272,15 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "override_values/2" do
     test "successfully overrides nutritional values" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          protein_g: Decimal.new("20.0"),
-          carbs_g: Decimal.new("30.0"),
-          fat_g: Decimal.new("10.0"),
-          calories_kcal: 250,
-          weight_g: 200
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        protein_g: Decimal.new("20.0"),
+        carbs_g: Decimal.new("30.0"),
+        fat_g: Decimal.new("10.0"),
+        calories_kcal: 250,
+        weight_g: 200
+      })
 
       attrs = %{
         "protein_g" => Decimal.new("25.0"),
@@ -358,16 +297,11 @@ defmodule Journal.Services.MealServiceTest do
     end
 
     test "handles atom keys in attrs" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal",
-          protein_g: Decimal.new("20.0")
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal",
+        protein_g: Decimal.new("20.0")
+      })
 
       attrs = %{protein_g: Decimal.new("25.0")}
 
@@ -376,15 +310,10 @@ defmodule Journal.Services.MealServiceTest do
     end
 
     test "returns error when validation fails" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal"
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal"
+      })
 
       # Negative values should fail validation
       attrs = %{protein_g: Decimal.new("-10.0")}
@@ -396,55 +325,43 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "list_meals/2" do
     setup do
-      patient_id = 1
+      patient_id = MealHelpers.poc_patient_id()
       other_patient_id = 2
 
       # Create meals for patient 1 on 2024-01-15
-      {:ok, meal1} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: patient_id,
-          date: ~D[2024-01-15],
-          meal_type: :breakfast,
-          original_description: "Breakfast 1",
-          status: :confirmed
-        })
-        |> Repo.insert()
+      {:ok, meal1} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
+        date: ~D[2024-01-15],
+        meal_type: :breakfast,
+        original_description: "Breakfast 1",
+        status: :confirmed
+      })
 
-      {:ok, meal2} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: patient_id,
-          date: ~D[2024-01-15],
-          meal_type: :lunch,
-          original_description: "Lunch 1",
-          status: :in_review
-        })
-        |> Repo.insert()
+      {:ok, meal2} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
+        date: ~D[2024-01-15],
+        meal_type: :lunch,
+        original_description: "Lunch 1",
+        status: :in_review
+      })
 
       # Create meal for patient 1 on different date
-      {:ok, meal3} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: patient_id,
-          date: ~D[2024-01-16],
-          meal_type: :dinner,
-          original_description: "Dinner 1",
-          status: :pending
-        })
-        |> Repo.insert()
+      {:ok, meal3} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
+        date: ~D[2024-01-16],
+        meal_type: :dinner,
+        original_description: "Dinner 1",
+        status: :pending
+      })
 
       # Create meal for other patient on same date
-      {:ok, _other_meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: other_patient_id,
-          date: ~D[2024-01-15],
-          meal_type: :breakfast,
-          original_description: "Other patient meal",
-          status: :confirmed
-        })
-        |> Repo.insert()
+      {:ok, _other_meal} = MealHelpers.create_meal(%{
+        patient_id: other_patient_id,
+        date: ~D[2024-01-15],
+        meal_type: :breakfast,
+        original_description: "Other patient meal",
+        status: :confirmed
+      })
 
       %{patient_id: patient_id, meal1: meal1, meal2: meal2, meal3: meal3}
     end
@@ -487,35 +404,25 @@ defmodule Journal.Services.MealServiceTest do
 
   describe "get_meal/2" do
     test "returns meal when found and belongs to patient" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal"
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal"
+      })
 
-      assert {:ok, found_meal} = MealService.get_meal(1, meal.id)
+      assert {:ok, found_meal} = MealService.get_meal(MealHelpers.poc_patient_id(), meal.id)
       assert found_meal.id == meal.id
-      assert found_meal.patient_id == 1
+      assert found_meal.patient_id == MealHelpers.poc_patient_id()
     end
 
     test "returns error when meal is not found" do
-      assert {:error, :not_found} = MealService.get_meal(1, 99999)
+      assert {:error, :not_found} = MealService.get_meal(MealHelpers.poc_patient_id(), MealHelpers.non_existent_id())
     end
 
     test "returns error when meal belongs to different patient" do
-      {:ok, meal} =
-        %MealEntry{}
-        |> MealEntry.changeset(%{
-          patient_id: 1,
-          date: Date.utc_today(),
-          meal_type: :breakfast,
-          original_description: "Oatmeal"
-        })
-        |> Repo.insert()
+      {:ok, meal} = MealHelpers.create_meal(%{
+        meal_type: :breakfast,
+        original_description: "Oatmeal"
+      })
 
       assert {:error, :not_found} = MealService.get_meal(2, meal.id)
     end

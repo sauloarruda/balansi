@@ -1,0 +1,371 @@
+openapi: 3.0.3
+info:
+  title: Balansi Journal API
+  version: 1.0.0
+  description: |
+    Balansi Journal API for tracking meals, exercises, and health data.
+
+    This API manages meal entries with AI-assisted nutritional estimation.
+
+servers:
+  - url: http://localhost:4000/journal
+    description: Local development server
+  - url: https://api.balansi.me/journal
+    description: Production server
+  - url: https://api.demo.balansi.me/journal
+    description: Staging server
+
+paths:
+  /meals:
+    post:
+      summary: Create a new meal entry
+      description: |
+        Creates a new meal entry and processes it with LLM for nutritional estimation.
+
+        The meal starts in `pending` status, is processed synchronously (POC),
+        and returns with `in_review` status and estimated nutritional values.
+      operationId: createMeal
+      tags:
+        - Meals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMealRequest"
+            examples:
+              breakfast:
+                summary: Breakfast meal
+                value:
+                  meal_type: "breakfast"
+                  original_description: "2 eggs and toast"
+              lunch:
+                summary: Lunch meal
+                value:
+                  meal_type: "lunch"
+                  original_description: "Grilled chicken salad with olive oil"
+                  date: "2025-01-27"
+      responses:
+        "201":
+          description: Meal created and processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                validationError:
+                  summary: Validation errors
+                  value:
+                    errors:
+                      meal_type: ["can't be blank"]
+                      original_description: ["can't be blank"]
+                invalidStatus:
+                  summary: Invalid status
+                  value:
+                    error: "Cannot process meal with status: confirmed. Expected: pending"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      summary: List meals for a date
+      description: |
+        Lists all meals for the authenticated patient on a specific date.
+
+        The date parameter is required and must be in ISO8601 format (YYYY-MM-DD).
+      operationId: listMeals
+      tags:
+        - Meals
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Date in ISO8601 format (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2025-01-27"
+      responses:
+        "200":
+          description: List of meals for the specified date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealListResponse"
+        "400":
+          description: Invalid or missing date parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingDate:
+                  summary: Missing date parameter
+                  value:
+                    error: "Missing required parameter: date"
+                invalidDate:
+                  summary: Invalid date format
+                  value:
+                    error: "Invalid date format. Expected ISO8601 format (YYYY-MM-DD)"
+
+  /meals/{id}:
+    get:
+      summary: Get a specific meal
+      description: |
+        Retrieves a single meal entry by ID for the authenticated patient.
+      operationId: getMeal
+      tags:
+        - Meals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Meal entry ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        "200":
+          description: Meal found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealResponse"
+        "404":
+          description: Meal not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  summary: Meal not found
+                  value:
+                    error: "Meal not found"
+
+  /meals/{id}/confirm:
+    post:
+      summary: Confirm a meal after review
+      description: |
+        Confirms a meal entry after user review.
+
+        Transitions the meal from `in_review` to `confirmed` status.
+      operationId: confirmMeal
+      tags:
+        - Meals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Meal entry ID
+          schema:
+            type: integer
+            example: 123
+      responses:
+        "200":
+          description: Meal confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealResponse"
+        "404":
+          description: Meal not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid status for confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidStatus:
+                  summary: Invalid status
+                  value:
+                    error: "Cannot confirm meal with status: pending. Expected: in_review"
+
+  /health:
+    get:
+      summary: Health check
+      description: |
+        Returns the health status of the API.
+        Used by Lambda Web Adapter for readiness checks.
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+components:
+  schemas:
+    CreateMealRequest:
+      type: object
+      required:
+        - meal_type
+        - original_description
+      properties:
+        meal_type:
+          type: string
+          enum: [breakfast, lunch, snack, dinner]
+          description: Type of meal
+          example: "breakfast"
+        original_description:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: User's description of the meal
+          example: "2 eggs and toast"
+        date:
+          type: string
+          format: date
+          description: Date of the meal (defaults to today if not provided)
+          example: "2025-01-27"
+
+    MealResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Meal"
+
+    MealListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Meal"
+        meta:
+          type: object
+          properties:
+            patient_id:
+              type: integer
+              example: 1
+            date:
+              type: string
+              format: date
+              example: "2025-01-27"
+            count:
+              type: integer
+              example: 3
+
+    Meal:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        patient_id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date
+          example: "2025-01-27"
+        meal_type:
+          type: string
+          enum: [breakfast, lunch, snack, dinner]
+          example: "breakfast"
+        original_description:
+          type: string
+          example: "2 eggs and toast"
+        protein_g:
+          type: number
+          format: float
+          nullable: true
+          description: Protein in grams (estimated by AI)
+          example: 14.5
+        carbs_g:
+          type: number
+          format: float
+          nullable: true
+          description: Carbohydrates in grams (estimated by AI)
+          example: 25.0
+        fat_g:
+          type: number
+          format: float
+          nullable: true
+          description: Fat in grams (estimated by AI)
+          example: 12.3
+        calories_kcal:
+          type: integer
+          nullable: true
+          description: Calories in kilocalories (estimated by AI)
+          example: 280
+        weight_g:
+          type: integer
+          nullable: true
+          description: Total weight in grams (estimated by AI)
+          example: 250
+        ai_comment:
+          type: string
+          nullable: true
+          description: AI-generated comment about the meal
+          example: "This meal provides a good balance of protein and carbohydrates."
+        status:
+          type: string
+          enum: [pending, processing, in_review, confirmed]
+          description: Current status of the meal entry
+          example: "in_review"
+        has_manual_override:
+          type: boolean
+          description: Whether any nutritional values were manually overridden
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-27T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-27T10:31:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message (for single errors)
+          example: "Meal not found"
+        errors:
+          type: object
+          description: Validation errors (for changeset errors)
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            meal_type: ["can't be blank"]
+            original_description: ["can't be blank"]
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token in Authorization header.
+        For POC, patient_id is hardcoded. In production, extract from token.
+
+# Note: Security is not enforced in POC
+# security:
+#   - BearerAuth: []
