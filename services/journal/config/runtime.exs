@@ -37,6 +37,14 @@ if frontend_domain = System.get_env("FRONTEND_DOMAIN") do
     allow_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 end
 
+# Cognito configuration
+if cognito_domain = System.get_env("COGNITO_DOMAIN") do
+  config :journal, :cognito,
+    domain: cognito_domain,
+    client_id: System.get_env("COGNITO_CLIENT_ID"),
+    redirect_uri: System.get_env("COGNITO_REDIRECT_URI")
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

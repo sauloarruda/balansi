@@ -124,6 +124,9 @@ lib/
 | `FRONTEND_DOMAIN` | Allowed CORS origins | Prod |
 | `PHX_HOST` | Host for URL generation | Prod |
 | `PORT` | Server port | No (default: 4000) |
+| `COGNITO_DOMAIN` | Cognito Hosted UI domain (e.g., `https://your-domain.auth.us-east-2.amazoncognito.com`) | Yes |
+| `COGNITO_CLIENT_ID` | Cognito App Client ID | Yes |
+| `COGNITO_REDIRECT_URI` | Redirect URI after Cognito callback (must match Cognito config) | Yes |
 
 ## Testing
 

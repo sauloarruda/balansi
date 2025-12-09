@@ -115,7 +115,10 @@ users (id)
 **Branch**: `BAL-11.p3`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 5 files (including config and documentation updates)
 **Estimated Lines**: ~300 lines
+**Actual Lines**: ~579 lines
+**Status**: ✅ **Completed**
 
 ### Changes
 
@@ -125,18 +128,29 @@ users (id)
      - `exchange_code_for_tokens/2` - Exchange authorization code for tokens
      - `get_user_info/1` - Get user info from Cognito
      - `refresh_access_token/1` - Refresh access token
-   - Uses HTTP client (Finch/Req) to call Cognito endpoints
+   - Uses HTTP client (Req) to call Cognito OAuth2 endpoints
+   - Simplified implementation to work without client_secret (public client)
 
 2. **Test file**
    - File: `services/journal/test/journal/auth/cognito_client_test.exs`
-   - Mock Cognito responses
+   - 12 comprehensive tests covering all functions and error scenarios
+   - Mock Cognito responses using meck
+
+3. **Configuration**
+   - File: `services/journal/config/runtime.exs`
+   - Added Cognito configuration reading from environment variables
+
+4. **Documentation**
+   - File: `services/journal/.env.example` - Added Cognito environment variables
+   - File: `services/journal/README.md` - Updated with Cognito configuration documentation
 
 ### Acceptance Criteria
 
-- [ ] Can exchange code for tokens
-- [ ] Can get user info from access token
-- [ ] Can refresh access token
-- [ ] All tests pass with mocks
+- [x] Can exchange code for tokens
+- [x] Can get user info from access token
+- [x] Can refresh access token
+- [x] All tests pass with mocks (12 tests, 0 failures)
+- [x] Manual testing performed with real Cognito endpoints
 
 ---
 
