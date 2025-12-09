@@ -33,6 +33,9 @@ node_modules/
 
 # Documentation plans
 doc/*
+# Allow specific documentation directories
+!doc/journal/
+!doc/auth/
 
 # Test coverage and binaries
 coverage.out
