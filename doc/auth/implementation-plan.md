@@ -73,30 +73,40 @@ users (id)
 **Branch**: `BAL-11.p2`
 **Target**: `main`
 **Estimated Files**: 3 files
+**Actual Files**: 5 files (including MealEntry update)
 **Estimated Lines**: ~200 lines
+**Actual Lines**: ~583 lines
+**Status**: ✅ **Completed**
 
 ### Changes
 
 1. **User schema**
    - File: `services/journal/lib/journal/auth/user.ex`
    - Schema with `name`, `email`, `cognito_id`
-   - Changeset functions
+   - Changeset functions with comprehensive validation
+   - Comment added explaining basic email validation (Cognito handles primary validation)
 
 2. **Patient schema**
    - File: `services/journal/lib/journal/auth/patient.ex`
    - Schema with `user_id`, `professional_id`
    - Changeset functions
+   - Added `belongs_to :user` association for better Ecto integration
 
-3. **Test files**
-   - File: `services/journal/test/journal/auth/user_test.exs`
-   - File: `services/journal/test/journal/auth/patient_test.exs`
+3. **MealEntry schema update**
+   - File: `services/journal/lib/journal/meals/meal_entry.ex`
+   - Added `belongs_to :patient` association (replacing `field :patient_id`)
+
+4. **Test files**
+   - File: `services/journal/test/journal/auth/user_test.exs` (18 tests)
+   - File: `services/journal/test/journal/auth/patient_test.exs` (10 tests)
+   - Extracted helper function `unique_user_attrs/1` to reduce duplication
 
 ### Acceptance Criteria
 
-- [ ] User schema validates correctly
-- [ ] Patient schema validates correctly
-- [ ] All tests pass
-- [ ] Schemas can be inserted/updated via Repo
+- [x] User schema validates correctly
+- [x] Patient schema validates correctly
+- [x] All tests pass (238 tests, 0 failures)
+- [x] Schemas can be inserted/updated via Repo
 
 ---
 
