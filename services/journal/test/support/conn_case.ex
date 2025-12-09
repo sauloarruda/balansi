@@ -33,6 +33,8 @@ defmodule JournalWeb.ConnCase do
 
   setup tags do
     Journal.DataCase.setup_sandbox(tags)
+    # Ensure default test patients exist (required for foreign key constraints)
+    Journal.DataCase.ensure_test_patients()
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

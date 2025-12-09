@@ -18,6 +18,38 @@ defmodule JournalWeb.MealHelpers do
   @other_patient_id 999
   @non_existent_id 999_999
 
+  # Ensures a patient exists in the database for testing purposes.
+  # Creates the patient (and associated user if needed) if they don't exist.
+  # This is necessary because meal_entries now have a foreign key constraint
+  # on patient_id.
+  defp ensure_patient_exists(patient_id) do
+    # Check if patient exists
+    result = Journal.Repo.query!("SELECT id FROM patients WHERE id = $1", [patient_id])
+    
+    if length(result.rows) == 0 do
+      # Patient doesn't exist, create it along with required user
+      # Use patient_id as user_id for simplicity in tests
+      user_id = patient_id
+      
+      # Ensure user exists (check first to avoid constraint errors)
+      user_result = Journal.Repo.query!("SELECT id FROM users WHERE id = $1", [user_id])
+      if length(user_result.rows) == 0 do
+        # Create user - use a sequence to get next ID if we want auto-increment,
+        # but since we're specifying ID, we'll insert directly
+        Journal.Repo.query!("""
+          INSERT INTO users (id, name, email, cognito_id, inserted_at, updated_at)
+          VALUES ($1, $2, $3, $4, NOW(), NOW())
+        """, [user_id, "Test User #{user_id}", "test#{user_id}@example.com", "cognito-#{user_id}"])
+      end
+      
+      # Create patient with the specific ID
+      Journal.Repo.query!("""
+        INSERT INTO patients (id, user_id, professional_id, inserted_at, updated_at)
+        VALUES ($1, $2, $3, NOW(), NOW())
+      """, [patient_id, user_id, 1])
+    end
+  end
+
   @doc """
   Creates a meal entry in the database with default or overridden attributes.
 
@@ -51,6 +83,10 @@ defmodule JournalWeb.MealHelpers do
     }
 
     attrs = Map.merge(defaults, attrs)
+    patient_id = attrs[:patient_id]
+
+    # Ensure patient exists before creating meal entry
+    ensure_patient_exists(patient_id)
 
     %MealEntry{}
     |> MealEntry.changeset(attrs)
