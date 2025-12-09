@@ -250,27 +250,36 @@ users (id)
 **Branch**: `BAL-11.p6`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 3 files (including test file)
 **Estimated Lines**: ~150 lines
+**Actual Lines**: ~351 lines
+**Status**: ✅ **Completed**
+**PR**: [#17](https://github.com/sauloarruda/balansi/pull/17)
 
 ### Changes
 
 1. **Auth controller - refresh action**
    - File: `services/journal/lib/journal_web/controllers/auth_controller.ex`
    - Action: `refresh/2`
-   - Reads refresh token from cookie
+   - Reads refresh token from encrypted session cookie
    - Calls Cognito to refresh access token
-   - Returns new access token
+   - Returns new access token with expiration time
+   - Comprehensive error handling for all scenarios
 
 2. **Router update**
    - File: `services/journal/lib/journal_web/router.ex`
    - Add route: `post "/auth/refresh", AuthController, :refresh`
 
+3. **Test file**
+   - File: `services/journal/test/journal_web/controllers/auth_controller_test.exs`
+   - 7 comprehensive tests covering all scenarios and error cases
+
 ### Acceptance Criteria
 
-- [ ] Refresh endpoint reads cookie
-- [ ] Returns new access token
-- [ ] Handles invalid refresh token
-- [ ] Returns correct expiration time
+- [x] Refresh endpoint reads cookie
+- [x] Returns new access token
+- [x] Handles invalid refresh token
+- [x] Returns correct expiration time
 
 ---
 
