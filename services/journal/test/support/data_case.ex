@@ -62,7 +62,7 @@ defmodule Journal.DataCase do
           INSERT INTO users (id, name, email, cognito_id, inserted_at, updated_at)
           VALUES ($1, $2, $3, $4, NOW(), NOW())
         """, [user_id, "Test User #{user_id}", "test#{user_id}@example.com", "cognito-#{user_id}"])
-        
+
         # Reset the sequence to ensure next auto-generated ID is higher than the fixed IDs
         # This prevents conflicts when Ecto generates IDs automatically
         max_id = Enum.max([user_id, 999])
@@ -74,7 +74,7 @@ defmodule Journal.DataCase do
         INSERT INTO patients (id, user_id, professional_id, inserted_at, updated_at)
         VALUES ($1, $2, $3, NOW(), NOW())
       """, [patient_id, user_id, 1])
-      
+
       # Reset the sequence to ensure next auto-generated ID is higher than the fixed IDs
       max_id = Enum.max([patient_id, 999])
       Journal.Repo.query!("SELECT setval('patients_id_seq', $1, true)", [max_id])
