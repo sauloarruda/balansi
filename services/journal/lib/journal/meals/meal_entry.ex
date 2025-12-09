@@ -15,7 +15,7 @@ defmodule Journal.Meals.MealEntry do
   @nutritional_fields [:protein_g, :carbs_g, :fat_g, :calories_kcal, :weight_g]
 
   schema "meal_entries" do
-    field :patient_id, :integer
+    belongs_to :patient, Journal.Auth.Patient
     field :date, :date
     field :meal_type, Ecto.Enum, values: @meal_types
     field :original_description, :string
