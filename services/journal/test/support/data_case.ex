@@ -29,7 +29,47 @@ defmodule Journal.DataCase do
 
   setup tags do
     Journal.DataCase.setup_sandbox(tags)
+    # Ensure default test patients exist (required for foreign key constraints)
+    Journal.DataCase.ensure_test_patients()
     :ok
+  end
+
+  @doc """
+  Ensures that default test patients (1 and 999) exist in the database.
+  This is necessary because meal_entries have a foreign key constraint on patient_id.
+  Creates associated users if they don't exist.
+  """
+  def ensure_test_patients do
+    # Ensure patient 1 (POC patient)
+    ensure_patient(1)
+    # Ensure patient 999 (other patient)
+    ensure_patient(999)
+  end
+
+  defp ensure_patient(patient_id) do
+    # Check if patient exists
+    result = Journal.Repo.query!("SELECT id FROM patients WHERE id = $1", [patient_id])
+
+    if length(result.rows) == 0 do
+      # Patient doesn't exist, create it along with required user
+      user_id = patient_id
+
+      # Ensure user exists
+      user_result = Journal.Repo.query!("SELECT id FROM users WHERE id = $1", [user_id])
+      if length(user_result.rows) == 0 do
+        # Create user
+        Journal.Repo.query!("""
+          INSERT INTO users (id, name, email, cognito_id, inserted_at, updated_at)
+          VALUES ($1, $2, $3, $4, NOW(), NOW())
+        """, [user_id, "Test User #{user_id}", "test#{user_id}@example.com", "cognito-#{user_id}"])
+      end
+
+      # Create patient
+      Journal.Repo.query!("""
+        INSERT INTO patients (id, user_id, professional_id, inserted_at, updated_at)
+        VALUES ($1, $2, $3, NOW(), NOW())
+      """, [patient_id, user_id, 1])
+    end
   end
 
   @doc """

@@ -14,27 +14,57 @@ This document outlines the implementation plan for migrating to Cognito Hosted U
 
 **Branch**: `BAL-11.p1`
 **Target**: `main`
-**Estimated Files**: 2 files
-**Estimated Lines**: ~100 lines
+**Estimated Files**: 3 files
+**Estimated Lines**: ~150 lines
+**Status**: ✅ **Completed**
 
 ### Changes
 
-1. **Create users table migration** (if not exists)
-   - File: `services/journal/priv/repo/migrations/YYYYMMDDHHMMSS_create_users_table.exs`
-   - Remove `temporary_password` and `status` fields
-   - Add `cognito_id` as NOT NULL with unique index
+1. **Create users table migration**
+   - File: `services/journal/priv/repo/migrations/20251209114741_create_users_table.exs`
+   - Creates `users` table with:
+     - `id` (SERIAL, PRIMARY KEY)
+     - `name` (VARCHAR(255), NOT NULL)
+     - `email` (VARCHAR(255), NOT NULL, UNIQUE)
+     - `cognito_id` (VARCHAR(255), NOT NULL, UNIQUE)
+     - `inserted_at` and `updated_at` (timestamps)
+   - Unique indexes: `users_email_key` and `users_cognito_id_key`
+   - Comprehensive module documentation
 
 2. **Create patients table migration**
-   - File: `services/journal/priv/repo/migrations/YYYYMMDDHHMMSS_create_patients_table.exs`
-   - Create `patients` table with `user_id` and `professional_id`
-   - Add indexes
+   - File: `services/journal/priv/repo/migrations/20251209114742_create_patients_table.exs`
+   - Creates `patients` table with:
+     - `id` (SERIAL, PRIMARY KEY)
+     - `user_id` (INTEGER, NOT NULL) - Foreign key to `users.id` with CASCADE delete (created inline)
+     - `professional_id` (INTEGER, NOT NULL)
+     - `inserted_at` and `updated_at` (timestamps)
+   - Indexes: `patients_user_id_idx` and `patients_professional_id_idx`
+   - Composite unique index: `patients_user_professional_unique_idx` on `(user_id, professional_id)`
+   - Foreign key constraint: `patients.user_id` → `users.id` with `ON DELETE CASCADE` (created inline)
+   - Comprehensive module documentation
+
+3. **Add foreign key to meal_entries.patient_id**
+   - File: `services/journal/priv/repo/migrations/20251209150327_add_foreign_key_to_meal_entries_patient_id.exs`
+   - Adds FK constraint: `meal_entries.patient_id` → `patients.id` with `ON DELETE CASCADE`
+   - Ensures referential integrity and automatic cleanup when patients are deleted
+
+### Foreign Key Relationships
+
+```
+users (id)
+  └─ patients.user_id → users.id [CASCADE DELETE]
+      └─ meal_entries.patient_id → patients.id [CASCADE DELETE]
+```
 
 ### Acceptance Criteria
 
-- [ ] Users table has correct schema (no temporary_password, no status)
-- [ ] Patients table created with correct schema
-- [ ] Migrations run successfully
-- [ ] Rollback migrations work
+- [x] Users table has correct schema (no temporary_password, no status)
+- [x] Patients table created with correct schema
+- [x] Foreign key constraints added with CASCADE delete
+- [x] Composite unique index on patients(user_id, professional_id)
+- [x] Migrations run successfully
+- [x] Rollback migrations work
+- [x] Documentation updated (ERD reflects FKs and timestamp precision)
 
 ---
 

@@ -34,8 +34,8 @@ The `users` table stores local user records linked to AWS Cognito identities.
 | `name` | VARCHAR(255) | NOT NULL | User's preferred name (from Cognito) |
 | `email` | VARCHAR(255) | NOT NULL, UNIQUE | User's email address (from Cognito) |
 | `cognito_id` | VARCHAR(255) | NOT NULL, UNIQUE | AWS Cognito User Sub (unique identifier from Cognito) |
-| `created_at` | TIMESTAMP(3) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
-| `updated_at` | TIMESTAMP(3) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record last update timestamp |
+| `created_at` | TIMESTAMP(0) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+| `updated_at` | TIMESTAMP(0) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record last update timestamp |
 
 **Indexes:**
 - Primary Key: `users_pkey` on `id`
@@ -54,18 +54,22 @@ The `patients` table links users to professionals (nutritionists). Created durin
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `id` | SERIAL | PRIMARY KEY | Auto-incrementing patient ID |
-| `user_id` | INTEGER | NOT NULL | Reference to users.id (no FK constraint) |
-| `professional_id` | INTEGER | NOT NULL | Reference to professional/nutritionist (no FK constraint) |
-| `created_at` | TIMESTAMP(3) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
-| `updated_at` | TIMESTAMP(3) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record last update timestamp |
+| `user_id` | INTEGER | NOT NULL | Foreign key to users.id (CASCADE delete) |
+| `professional_id` | INTEGER | NOT NULL | Reference to professional/nutritionist (no FK constraint yet) |
+| `created_at` | TIMESTAMP(0) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+| `updated_at` | TIMESTAMP(0) | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Record last update timestamp |
 
 **Indexes:**
 - Primary Key: `patients_pkey` on `id`
 - Index: `patients_user_id_idx` on `user_id` (for user lookup)
 - Index: `patients_professional_id_idx` on `professional_id` (for professional lookup)
+- Unique Index: `patients_user_professional_unique_idx` on `(user_id, professional_id)` (ensures one patient record per user-professional pair)
+
+**Foreign Keys:**
+- `user_id` references `users.id` with CASCADE delete (when user is deleted, all patient records are deleted)
+- `professional_id` references a future professionals table (no FK constraint yet)
 
 **Notes:**
-- No foreign key constraints (as per requirements)
 - `professional_id` comes from `state` parameter in Cognito callback
 - If `professional_id` is missing, use first professional from database (temporary - will add selection screen later)
 - One user can have multiple patient records (one per professional)
@@ -99,7 +103,7 @@ The `patients` table links users to professionals (nutritionists). Created durin
 └──────────────┬──────────────────────┘
                │
                │ Referenced by user_id
-               │ (no FK constraint)
+               │ (FK with CASCADE delete)
                │
 ┌──────────────▼──────────────────────┐
 │          patients                   │
@@ -114,8 +118,8 @@ The `patients` table links users to professionals (nutritionists). Created durin
 
 **Notes:**
 - `cognito_id` links users to Cognito identities
-- `user_id` in patients table references users.id (no FK for flexibility)
-- `professional_id` links patients to nutritionists (no FK for flexibility)
+- `user_id` in patients table references users.id with CASCADE delete (FK constraint)
+- `professional_id` links patients to nutritionists (no FK constraint yet)
 - One user can have multiple patient records (one per professional relationship)
 
 ---
@@ -135,8 +139,8 @@ CREATE TABLE IF NOT EXISTS "users" (
   "name" VARCHAR(255) NOT NULL,
   "email" VARCHAR(255) NOT NULL,
   "cognito_id" VARCHAR(255) NOT NULL,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_at" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
@@ -170,25 +174,28 @@ CREATE TABLE IF NOT EXISTS "patients" (
   "id" SERIAL NOT NULL,
   "user_id" INTEGER NOT NULL,
   "professional_id" INTEGER NOT NULL,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_at" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "patients_pkey" PRIMARY KEY ("id")
 );
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS "patients_user_id_idx" ON "patients"("user_id");
 CREATE INDEX IF NOT EXISTS "patients_professional_id_idx" ON "patients"("professional_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "patients_user_professional_unique_idx" ON "patients"("user_id", "professional_id");
 ```
 
 **Field Descriptions:**
 - **id**: Primary key, auto-incrementing integer
-- **user_id**: Reference to users.id (no FK constraint)
-- **professional_id**: Reference to professional/nutritionist (no FK constraint)
+- **user_id**: Foreign key to users.id with CASCADE delete
+- **professional_id**: Reference to professional/nutritionist (no FK constraint yet)
 - **created_at**: Timestamp when patient record was created
 - **updated_at**: Timestamp when patient record was last modified
 
+**Foreign Keys:**
+- `user_id` references `users.id` with CASCADE delete (when user is deleted, all patient records are deleted)
+
 **Notes:**
-- No foreign key constraints (as per requirements)
 - Created during authentication callback
 - If `professional_id` is missing from state, use first professional from database (temporary solution)
 
