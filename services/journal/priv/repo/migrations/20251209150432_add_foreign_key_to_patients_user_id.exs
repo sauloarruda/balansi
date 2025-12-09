@@ -12,12 +12,23 @@ defmodule Journal.Repo.Migrations.AddForeignKeyToPatientsUserId do
   def up do
     # Add foreign key constraint with CASCADE delete
     # When a user is deleted, all their patient records are also deleted
+    # Note: This migration is idempotent - it checks if the constraint already exists
+    # This handles cases where the FK was already created in create_patients_table.exs
     execute """
-    ALTER TABLE patients
-    ADD CONSTRAINT patients_user_id_fkey
-    FOREIGN KEY (user_id)
-    REFERENCES users(id)
-    ON DELETE CASCADE
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'patients_user_id_fkey'
+        AND conrelid = 'patients'::regclass
+      ) THEN
+        ALTER TABLE patients
+        ADD CONSTRAINT patients_user_id_fkey
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE;
+      END IF;
+    END $$;
     """
   end
 
