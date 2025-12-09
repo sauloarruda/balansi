@@ -35,9 +35,10 @@ help:
 	@echo "    make precommit        - Run all checks before commit"
 	@echo ""
 	@echo "  Utilities:"
-	@echo "    make generate-secret  - Generate SECRET_KEY_BASE"
-	@echo "    make iex              - Start interactive Elixir shell"
-	@echo "    make routes           - List all routes"
+	@echo "    make generate-secret        - Generate SECRET_KEY_BASE"
+	@echo "    make generate-session-secret - Generate SESSION_ENCRYPTION_SECRET"
+	@echo "    make iex                    - Start interactive Elixir shell"
+	@echo "    make routes                 - List all routes"
 	@echo ""
 	@echo "  Help:"
 	@echo "    make help             - Show this help message"
@@ -177,6 +178,14 @@ generate-secret:
 	@mix phx.gen.secret
 	@echo ""
 	@echo "Add this to your .env file as SECRET_KEY_BASE"
+
+# Generate a secure SESSION_ENCRYPTION_SECRET
+generate-session-secret:
+	@echo "Generating SESSION_ENCRYPTION_SECRET..."
+	@mix phx.gen.secret
+	@echo ""
+	@echo "Add this to your .env file as SESSION_ENCRYPTION_SECRET"
+	@echo "Note: If not set, SECRET_KEY_BASE will be used as fallback"
 
 # Install Serverless Framework (if needed)
 install-serverless:

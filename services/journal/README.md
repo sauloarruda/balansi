@@ -30,11 +30,17 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-Generate a secret key:
+Generate secret keys:
 
 ```bash
+# Generate SECRET_KEY_BASE for Phoenix
 make generate-secret
 # Add the output to SECRET_KEY_BASE in .env
+
+# Generate SESSION_ENCRYPTION_SECRET for session encryption (optional)
+make generate-session-secret
+# Add the output to SESSION_ENCRYPTION_SECRET in .env
+# If not set, SECRET_KEY_BASE will be used as fallback
 ```
 
 ### 3. Setup Database
@@ -120,13 +126,29 @@ lib/
 |----------|-------------|----------|
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
 | `SECRET_KEY_BASE` | Phoenix secret key | Yes (prod) |
+| `SESSION_ENCRYPTION_SECRET` | Secret for encrypting session cookies (refresh tokens). If not set, falls back to `SECRET_KEY_BASE` | No (recommended) |
 | `OPENAI_API_KEY` | OpenAI API key | For AI features |
-| `FRONTEND_DOMAIN` | Allowed CORS origins | Prod |
+| `FRONTEND_DOMAIN` | Allowed CORS origins (comma-separated) | Prod |
+| `FRONTEND_URL` | Frontend URL for redirects after authentication | Yes |
 | `PHX_HOST` | Host for URL generation | Prod |
 | `PORT` | Server port | No (default: 4000) |
 | `COGNITO_DOMAIN` | Cognito Hosted UI domain (e.g., `https://your-domain.auth.us-east-2.amazoncognito.com`) | Yes |
 | `COGNITO_CLIENT_ID` | Cognito App Client ID | Yes |
 | `COGNITO_REDIRECT_URI` | Redirect URI after Cognito callback (must match Cognito config) | Yes |
+
+### Security: Session Encryption
+
+The service encrypts refresh tokens before storing them in cookies using `Journal.Auth.Session`. This ensures that:
+
+- **Refresh tokens are never stored in plain text** in cookies
+- Even if someone views the cookie in browser DevTools, they cannot access the refresh token without the server's encryption secret
+- The encryption uses `Plug.Crypto` with AES-256-GCM encryption
+
+**Recommendation:** Use a dedicated `SESSION_ENCRYPTION_SECRET` separate from `SECRET_KEY_BASE` for better security isolation. Generate it with:
+
+```bash
+make generate-session-secret
+```
 
 ## Testing
 
