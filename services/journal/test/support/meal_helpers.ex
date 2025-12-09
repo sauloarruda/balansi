@@ -25,12 +25,12 @@ defmodule JournalWeb.MealHelpers do
   defp ensure_patient_exists(patient_id) do
     # Check if patient exists
     result = Journal.Repo.query!("SELECT id FROM patients WHERE id = $1", [patient_id])
-    
+
     if length(result.rows) == 0 do
       # Patient doesn't exist, create it along with required user
       # Use patient_id as user_id for simplicity in tests
       user_id = patient_id
-      
+
       # Ensure user exists (check first to avoid constraint errors)
       user_result = Journal.Repo.query!("SELECT id FROM users WHERE id = $1", [user_id])
       if length(user_result.rows) == 0 do
@@ -41,7 +41,7 @@ defmodule JournalWeb.MealHelpers do
           VALUES ($1, $2, $3, $4, NOW(), NOW())
         """, [user_id, "Test User #{user_id}", "test#{user_id}@example.com", "cognito-#{user_id}"])
       end
-      
+
       # Create patient with the specific ID
       Journal.Repo.query!("""
         INSERT INTO patients (id, user_id, professional_id, inserted_at, updated_at)
