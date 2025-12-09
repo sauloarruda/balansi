@@ -7,15 +7,12 @@ provider:
   runtime: provided.al2023
   region: us-east-2
   architecture: arm64
-  memorySize: 512
-  timeout: 30
   stage: ${opt:stage, 'dev'}
+  # Variáveis compartilhadas por todas as funções
   environment:
     STAGE: ${self:provider.stage}
     DATABASE_URL: ${env:DATABASE_URL}
     SECRET_KEY_BASE: ${env:SECRET_KEY_BASE}
-    OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
-    FRONTEND_DOMAIN: ${env:FRONTEND_DOMAIN, ''}
     PHX_HOST: ${env:PHX_HOST, 'localhost'}
     PHX_SERVER: true
     PORT: 4000
@@ -24,18 +21,53 @@ provider:
     AWS_LWA_PORT: 4000
 
 functions:
-  api:
+  # Função Lambda separada para endpoints de autenticação
+  auth:
     handler: bootstrap
+    memorySize: 256  # Auth pode usar menos memória (operações rápidas)
+    timeout: 15      # Timeout menor para auth
     layers:
       # Lambda Web Adapter for ARM64
       - arn:aws:lambda:us-east-2:753240598075:layer:LambdaAdapterLayerArm64:22
+    environment:
+      # Variáveis específicas de auth
+      COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+      COGNITO_DOMAIN: ${env:COGNITO_DOMAIN}
+      COGNITO_REDIRECT_URI: ${env:COGNITO_REDIRECT_URI}
+      FRONTEND_DOMAIN: ${env:FRONTEND_DOMAIN, ''}
     events:
       - httpApi:
-          path: /journal/{proxy+}
+          path: /journal/auth/{proxy+}
           method: any
       - httpApi:
-          path: /journal
+          path: /journal/auth
           method: any
+
+  # Função Lambda separada para endpoints do journal (meals, health, etc)
+  journal:
+    handler: bootstrap
+    memorySize: 512  # Journal pode precisar de mais memória (LLM processing)
+    timeout: 30      # Timeout maior para operações de processamento
+    layers:
+      # Lambda Web Adapter for ARM64
+      - arn:aws:lambda:us-east-2:753240598075:layer:LambdaAdapterLayerArm64:22
+    environment:
+      # Variáveis específicas do journal
+      OPENAI_API_KEY: ${env:OPENAI_API_KEY, ''}
+      FRONTEND_DOMAIN: ${env:FRONTEND_DOMAIN, ''}
+    events:
+      - httpApi:
+          path: /journal/meals/{proxy+}
+          method: any
+      - httpApi:
+          path: /journal/meals
+          method: any
+      - httpApi:
+          path: /journal/health
+          method: GET
+      - httpApi:
+          path: /health
+          method: GET
 
 package:
   patterns:

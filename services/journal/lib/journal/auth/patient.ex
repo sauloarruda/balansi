@@ -50,5 +50,6 @@ defmodule Journal.Auth.Patient do
     |> validate_number(:user_id, greater_than: 0)
     |> validate_number(:professional_id, greater_than: 0)
     |> unique_constraint([:user_id, :professional_id], name: :patients_user_professional_unique_idx)
+    |> foreign_key_constraint(:user_id, name: :patients_user_id_fkey)
   end
 end
