@@ -109,10 +109,10 @@ defmodule JournalWeb.AuthControllerTest do
       set_cookie_header = get_resp_header(conn, "set-cookie")
       assert set_cookie_header != []
 
-      # Find session_id cookie
+      # Find bal_session_id cookie
       session_cookie_string =
         set_cookie_header
-        |> Enum.find(&String.contains?(&1, "session_id="))
+        |> Enum.find(&String.contains?(&1, "bal_session_id="))
 
       assert session_cookie_string
       assert String.contains?(String.downcase(session_cookie_string), "httponly")
@@ -123,7 +123,7 @@ defmodule JournalWeb.AuthControllerTest do
         session_cookie_string
         |> String.split(";")
         |> Enum.at(0)
-        |> String.replace("session_id=", "")
+        |> String.replace("bal_session_id=", "")
         |> String.trim()
 
       # Verify cookie can be decrypted (skip if decryption fails due to test setup)
@@ -393,7 +393,7 @@ defmodule JournalWeb.AuthControllerTest do
       refresh_conn = build_conn()
       refresh_conn =
         refresh_conn
-        |> Plug.Conn.put_req_header("cookie", "session_id=#{encrypted_session}")
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
         |> post("/journal/auth/refresh", %{})
 
       assert response(refresh_conn, 200)
@@ -425,7 +425,7 @@ defmodule JournalWeb.AuthControllerTest do
 
       conn =
         conn
-        |> Plug.Conn.put_req_header("cookie", "session_id=#{invalid_session}")
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{invalid_session}")
         |> post("/journal/auth/refresh", %{})
 
       assert response(conn, 401)
@@ -455,7 +455,7 @@ defmodule JournalWeb.AuthControllerTest do
       refresh_conn = build_conn()
       refresh_conn =
         refresh_conn
-        |> Plug.Conn.put_req_header("cookie", "session_id=#{encrypted_session}")
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
         |> post("/journal/auth/refresh", %{})
 
       assert response(refresh_conn, 401)
@@ -485,7 +485,7 @@ defmodule JournalWeb.AuthControllerTest do
       refresh_conn = build_conn()
       refresh_conn =
         refresh_conn
-        |> Plug.Conn.put_req_header("cookie", "session_id=#{encrypted_session}")
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
         |> post("/journal/auth/refresh", %{})
 
       # Non-400 errors should return 500 via ErrorHandler
@@ -510,7 +510,7 @@ defmodule JournalWeb.AuthControllerTest do
         refresh_conn = build_conn()
         refresh_conn =
           refresh_conn
-          |> Plug.Conn.put_req_header("cookie", "session_id=#{encrypted_session}")
+          |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
           |> post("/journal/auth/refresh", %{})
 
         assert response(refresh_conn, 500)
@@ -549,7 +549,7 @@ defmodule JournalWeb.AuthControllerTest do
       refresh_conn = build_conn()
       refresh_conn =
         refresh_conn
-        |> Plug.Conn.put_req_header("cookie", "session_id=#{encrypted_session}")
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
         |> post("/journal/auth/refresh", %{})
 
       assert response(refresh_conn, 200)
@@ -560,7 +560,7 @@ defmodule JournalWeb.AuthControllerTest do
 
   # Helper function to create a valid encrypted session cookie via callback
   # (Currently unused, kept for potential future use)
-  defp create_session_cookie_via_callback(_conn, _code, _refresh_token) do
+  defp create_session_cookie_via_callback(conn, code, refresh_token) do
     # Clean up any existing mocks first
     cleanup_mock_safely(CognitoClient)
 
@@ -579,9 +579,9 @@ defmodule JournalWeb.AuthControllerTest do
     }
 
     :meck.new(CognitoClient, [:passthrough])
-      :meck.expect(CognitoClient, :exchange_code_for_tokens, fn _code_param, _ ->
-        {:ok, tokens}
-      end)
+    :meck.expect(CognitoClient, :exchange_code_for_tokens, fn _code_param, _ ->
+      {:ok, tokens}
+    end)
     :meck.expect(CognitoClient, :get_user_info, fn _ ->
       {:ok, user_info}
     end)
@@ -591,14 +591,14 @@ defmodule JournalWeb.AuthControllerTest do
 
     # Extract cookie value from Set-Cookie header
     set_cookie_header = get_resp_header(callback_conn, "set-cookie")
-    session_cookie_string = Enum.find(set_cookie_header, &String.contains?(&1, "session_id="))
+    session_cookie_string = Enum.find(set_cookie_header, &String.contains?(&1, "bal_session_id="))
     assert session_cookie_string
 
     cookie_value =
       session_cookie_string
       |> String.split(";")
       |> Enum.at(0)
-      |> String.replace("session_id=", "")
+      |> String.replace("bal_session_id=", "")
       |> String.trim()
 
     {:ok, cookie_value}

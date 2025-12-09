@@ -158,8 +158,8 @@ defmodule JournalWeb.AuthController do
     # Add secure flag in production (HTTPS)
     cookie_opts = if is_production?(), do: Keyword.put(cookie_opts, :secure, true), else: cookie_opts
 
-    # Use "session_id" name to match the Go auth service pattern
-    put_resp_cookie(conn, "session_id", encrypted_session, cookie_opts)
+    # Use "bal_session_id" name to avoid conflicts with other cookies (especially on localhost)
+    put_resp_cookie(conn, "bal_session_id", encrypted_session, cookie_opts)
   end
 
   defp get_cognito_config do
@@ -263,8 +263,8 @@ defmodule JournalWeb.AuthController do
   end
 
   defp get_session_cookie(conn) do
-    # Get the session_id cookie value
+    # Get the bal_session_id cookie value
     conn = Plug.Conn.fetch_cookies(conn)
-    conn.req_cookies["session_id"]
+    conn.req_cookies["bal_session_id"]
   end
 end
