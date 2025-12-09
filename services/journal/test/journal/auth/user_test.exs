@@ -5,12 +5,14 @@ defmodule Journal.Auth.UserTest do
   alias Journal.Auth.User
 
   # Helper function to create unique user attributes for testing
+  # Uses timestamp + unique integer to ensure uniqueness across test runs
   defp unique_user_attrs(overrides \\ %{}) do
+    timestamp = System.system_time(:second)
     unique_id = System.unique_integer([:positive])
     Map.merge(%{
       name: "Test User",
-      email: "test-#{unique_id}@example.com",
-      cognito_id: "cognito-#{unique_id}"
+      email: "test-#{timestamp}-#{unique_id}@example.com",
+      cognito_id: "cognito-#{timestamp}-#{unique_id}"
     }, overrides)
   end
 
