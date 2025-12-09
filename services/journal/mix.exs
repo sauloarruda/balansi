@@ -53,6 +53,9 @@ defmodule Journal.MixProject do
       {:req, "~> 0.5"},
       # CORS support
       {:corsica, "~> 2.0"},
+      # JWT token validation
+      {:joken, "~> 2.6"},
+      {:joken_jwks, "~> 1.0"},
       # Test factories
       {:ex_machina, "~> 2.8", only: :test},
       # Mocking library

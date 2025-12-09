@@ -42,7 +42,8 @@ if cognito_domain = System.get_env("COGNITO_DOMAIN") do
   config :journal, :cognito,
     domain: cognito_domain,
     client_id: System.get_env("COGNITO_CLIENT_ID"),
-    redirect_uri: System.get_env("COGNITO_REDIRECT_URI")
+    redirect_uri: System.get_env("COGNITO_REDIRECT_URI"),
+    user_pool_id: System.get_env("COGNITO_USER_POOL_ID")
 end
 
 if config_env() == :prod do
