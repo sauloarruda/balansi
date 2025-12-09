@@ -14,7 +14,7 @@ This document outlines the implementation plan for migrating to Cognito Hosted U
 
 **Branch**: `BAL-11.p1`
 **Target**: `main`
-**Estimated Files**: 4 files
+**Estimated Files**: 3 files
 **Estimated Lines**: ~150 lines
 **Status**: ✅ **Completed**
 
@@ -35,19 +35,15 @@ This document outlines the implementation plan for migrating to Cognito Hosted U
    - File: `services/journal/priv/repo/migrations/20251209114742_create_patients_table.exs`
    - Creates `patients` table with:
      - `id` (SERIAL, PRIMARY KEY)
-     - `user_id` (INTEGER, NOT NULL) - Foreign key to `users.id` with CASCADE delete
+     - `user_id` (INTEGER, NOT NULL) - Foreign key to `users.id` with CASCADE delete (created inline)
      - `professional_id` (INTEGER, NOT NULL)
      - `inserted_at` and `updated_at` (timestamps)
    - Indexes: `patients_user_id_idx` and `patients_professional_id_idx`
    - Composite unique index: `patients_user_professional_unique_idx` on `(user_id, professional_id)`
+   - Foreign key constraint: `patients.user_id` → `users.id` with `ON DELETE CASCADE` (created inline)
    - Comprehensive module documentation
 
-3. **Add foreign key to patients.user_id**
-   - File: `services/journal/priv/repo/migrations/20251209150432_add_foreign_key_to_patients_user_id.exs`
-   - Adds FK constraint: `patients.user_id` → `users.id` with `ON DELETE CASCADE`
-   - Ensures referential integrity and automatic cleanup when users are deleted
-
-4. **Add foreign key to meal_entries.patient_id**
+3. **Add foreign key to meal_entries.patient_id**
    - File: `services/journal/priv/repo/migrations/20251209150327_add_foreign_key_to_meal_entries_patient_id.exs`
    - Adds FK constraint: `meal_entries.patient_id` → `patients.id` with `ON DELETE CASCADE`
    - Ensures referential integrity and automatic cleanup when patients are deleted
