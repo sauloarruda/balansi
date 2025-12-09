@@ -159,7 +159,10 @@ users (id)
 **Branch**: `BAL-11.p4`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 5 files (including patient schema update, router comment, serverless.yml separation)
 **Estimated Lines**: ~250 lines
+**Actual Lines**: ~413 lines
+**Status**: ✅ **Completed**
 
 ### Changes
 
@@ -173,13 +176,22 @@ users (id)
 
 2. **Test file**
    - File: `services/journal/test/journal/auth_test.exs`
+   - 14 comprehensive tests covering all functions and edge cases
+
+3. **Patient schema improvement**
+   - File: `services/journal/lib/journal/auth/patient.ex`
+   - Added `foreign_key_constraint` for better error handling
+
+4. **Infrastructure updates**
+   - File: `services/journal/serverless.yml` - Separated Lambda functions (auth and journal)
+   - File: `services/journal/lib/journal_web/router.ex` - Added comment for future auth routes
 
 ### Acceptance Criteria
 
-- [ ] Can create or find user
-- [ ] Can create patient record
-- [ ] Handles duplicate user creation gracefully
-- [ ] All tests pass
+- [x] Can create or find user
+- [x] Can create patient record
+- [x] Handles duplicate user creation gracefully
+- [x] All tests pass (14 new tests, 264 total tests, 0 failures)
 
 ---
 
