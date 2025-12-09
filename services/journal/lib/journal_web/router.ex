@@ -20,7 +20,7 @@ defmodule JournalWeb.Router do
 
     # Auth endpoints
     get "/auth/callback", AuthController, :callback
-    # post "/auth/refresh", AuthController, :refresh  # To be implemented in Phase 6
+    post "/auth/refresh", AuthController, :refresh
 
     # Meal endpoints (patient_id will come from Bearer token, using constant for POC)
     get "/meals", MealController, :index

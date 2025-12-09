@@ -109,10 +109,10 @@ defmodule JournalWeb.AuthControllerTest do
       set_cookie_header = get_resp_header(conn, "set-cookie")
       assert set_cookie_header != []
 
-      # Find session_id cookie
+      # Find bal_session_id cookie
       session_cookie_string =
         set_cookie_header
-        |> Enum.find(&String.contains?(&1, "session_id="))
+        |> Enum.find(&String.contains?(&1, "bal_session_id="))
 
       assert session_cookie_string
       assert String.contains?(String.downcase(session_cookie_string), "httponly")
@@ -123,7 +123,7 @@ defmodule JournalWeb.AuthControllerTest do
         session_cookie_string
         |> String.split(";")
         |> Enum.at(0)
-        |> String.replace("session_id=", "")
+        |> String.replace("bal_session_id=", "")
         |> String.trim()
 
       # Verify cookie can be decrypted (skip if decryption fails due to test setup)
@@ -359,6 +359,249 @@ defmodule JournalWeb.AuthControllerTest do
       assert length(users_with_cognito_id) == 1
       assert hd(users_with_cognito_id).id == existing_user.id
     end
+  end
+
+  describe "POST /journal/auth/refresh" do
+    test "successfully refreshes access token with valid session cookie", %{conn: _conn} do
+      refresh_token = "valid-refresh-token-123"
+      user_id = 1
+      encrypted_session = "mock-encrypted-session-data"
+
+      # Mock Session.decrypt_session to return session data
+      cleanup_mock_safely(Session)
+      :meck.new(Session, [:passthrough])
+      :meck.expect(Session, :decrypt_session, fn "mock-encrypted-session-data" ->
+        {:ok, %{refresh_token: refresh_token, user_id: user_id}}
+      end)
+
+      # Mock CognitoClient refresh response
+      new_tokens = %{
+        access_token: "new-access-token-456",
+        id_token: "new-id-token-789",
+        expires_in: 3600,
+        token_type: "Bearer"
+      }
+
+      cleanup_mock_safely(CognitoClient)
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :refresh_access_token, fn token ->
+        assert token == refresh_token
+        {:ok, new_tokens}
+      end)
+
+      # Set the session cookie in the request
+      refresh_conn = build_conn()
+      refresh_conn =
+        refresh_conn
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
+        |> post("/journal/auth/refresh", %{})
+
+      assert response(refresh_conn, 200)
+      data = json_response(refresh_conn, 200)
+
+      assert data["access_token"] == "new-access-token-456"
+      assert data["expires_in"] == 3600
+      assert data["token_type"] == "Bearer"
+    end
+
+    test "returns 401 when session cookie is missing", %{conn: conn} do
+      conn = post(conn, "/journal/auth/refresh", %{})
+
+      assert response(conn, 401)
+      data = json_response(conn, 401)
+      assert data["error"] == "Missing session cookie"
+    end
+
+    test "returns 401 when session cookie cannot be decrypted", %{conn: conn} do
+      # Use an invalid encrypted session (wrong format)
+      invalid_session = "invalid-encrypted-session-data"
+
+      # Mock Session.decrypt_session to return error
+      cleanup_mock_safely(Session)
+      :meck.new(Session, [:passthrough])
+      :meck.expect(Session, :decrypt_session, fn "invalid-encrypted-session-data" ->
+        {:error, :decryption_failed}
+      end)
+
+      conn =
+        conn
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{invalid_session}")
+        |> post("/journal/auth/refresh", %{})
+
+      assert response(conn, 401)
+      data = json_response(conn, 401)
+      assert data["error"] == "Invalid session"
+    end
+
+    test "returns 401 when refresh token is invalid", %{conn: _conn} do
+      refresh_token = "invalid-refresh-token"
+      encrypted_session = "mock-encrypted-session"
+
+      # Mock Session.decrypt_session
+      cleanup_mock_safely(Session)
+      :meck.new(Session, [:passthrough])
+      :meck.expect(Session, :decrypt_session, fn "mock-encrypted-session" ->
+        {:ok, %{refresh_token: refresh_token, user_id: 1}}
+      end)
+
+      # Mock CognitoClient to return 400 (invalid/expired token)
+      cleanup_mock_safely(CognitoClient)
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :refresh_access_token, fn token ->
+        assert token == refresh_token
+        {:error, {:api_error, 400, %{"error" => "invalid_grant", "error_description" => "Refresh Token has expired"}}}
+      end)
+
+      refresh_conn = build_conn()
+      refresh_conn =
+        refresh_conn
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
+        |> post("/journal/auth/refresh", %{})
+
+      assert response(refresh_conn, 401)
+      data = json_response(refresh_conn, 401)
+      assert data["error"] == "Invalid or expired refresh token"
+    end
+
+    test "handles Cognito API errors (non-400 status)", %{conn: _conn} do
+      refresh_token = "valid-refresh-token"
+      encrypted_session = "mock-encrypted-session"
+
+      # Mock Session.decrypt_session
+      cleanup_mock_safely(Session)
+      :meck.new(Session, [:passthrough])
+      :meck.expect(Session, :decrypt_session, fn "mock-encrypted-session" ->
+        {:ok, %{refresh_token: refresh_token, user_id: 1}}
+      end)
+
+      # Mock CognitoClient to return 500 (server error)
+      cleanup_mock_safely(CognitoClient)
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :refresh_access_token, fn token ->
+        assert token == refresh_token
+        {:error, {:api_error, 500, %{"error" => "internal_server_error"}}}
+      end)
+
+      refresh_conn = build_conn()
+      refresh_conn =
+        refresh_conn
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
+        |> post("/journal/auth/refresh", %{})
+
+      # Non-400 errors should return 500 via ErrorHandler
+      assert response(refresh_conn, 500)
+    end
+
+    test "handles missing Cognito configuration", %{conn: conn} do
+      encrypted_session = "mock-encrypted-session"
+
+      # Mock Session.decrypt_session
+      cleanup_mock_safely(Session)
+      :meck.new(Session, [:passthrough])
+      :meck.expect(Session, :decrypt_session, fn "mock-encrypted-session" ->
+        {:ok, %{refresh_token: "refresh-token", user_id: 1}}
+      end)
+
+      # Temporarily remove Cognito config
+      original_config = Application.get_env(:journal, :cognito)
+      Application.put_env(:journal, :cognito, nil)
+
+      try do
+        refresh_conn = build_conn()
+        refresh_conn =
+          refresh_conn
+          |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
+          |> post("/journal/auth/refresh", %{})
+
+        assert response(refresh_conn, 500)
+        data = json_response(refresh_conn, 500)
+        assert data["error"] == "Authentication service not configured"
+      after
+        Application.put_env(:journal, :cognito, original_config)
+      end
+    end
+
+    test "returns correct expiration time", %{conn: _conn} do
+      refresh_token = "valid-refresh-token"
+      encrypted_session = "mock-encrypted-session"
+
+      # Mock Session.decrypt_session
+      cleanup_mock_safely(Session)
+      :meck.new(Session, [:passthrough])
+      :meck.expect(Session, :decrypt_session, fn "mock-encrypted-session" ->
+        {:ok, %{refresh_token: refresh_token, user_id: 1}}
+      end)
+
+      # Mock with custom expiration time
+      new_tokens = %{
+        access_token: "new-access-token",
+        id_token: "new-id-token",
+        expires_in: 7200, # 2 hours
+        token_type: "Bearer"
+      }
+
+      cleanup_mock_safely(CognitoClient)
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :refresh_access_token, fn _token ->
+        {:ok, new_tokens}
+      end)
+
+      refresh_conn = build_conn()
+      refresh_conn =
+        refresh_conn
+        |> Plug.Conn.put_req_header("cookie", "bal_session_id=#{encrypted_session}")
+        |> post("/journal/auth/refresh", %{})
+
+      assert response(refresh_conn, 200)
+      data = json_response(refresh_conn, 200)
+      assert data["expires_in"] == 7200
+    end
+  end
+
+  # Helper function to create a valid encrypted session cookie via callback
+  # (Currently unused, kept for potential future use)
+  defp create_session_cookie_via_callback(conn, code, refresh_token) do
+    # Clean up any existing mocks first
+    cleanup_mock_safely(CognitoClient)
+
+    tokens = %{
+      access_token: "access-token-#{code}",
+      refresh_token: refresh_token,
+      id_token: "id-token-#{code}",
+      expires_in: 3600,
+      token_type: "Bearer"
+    }
+
+    user_info = %{
+      "sub" => "cognito-user-#{code}",
+      "email" => "test-#{code}@example.com",
+      "name" => "Test User #{code}"
+    }
+
+    :meck.new(CognitoClient, [:passthrough])
+    :meck.expect(CognitoClient, :exchange_code_for_tokens, fn _code_param, _ ->
+      {:ok, tokens}
+    end)
+    :meck.expect(CognitoClient, :get_user_info, fn _ ->
+      {:ok, user_info}
+    end)
+
+    callback_conn = get(conn, "/journal/auth/callback", %{"code" => code})
+    assert redirected_to(callback_conn)
+
+    # Extract cookie value from Set-Cookie header
+    set_cookie_header = get_resp_header(callback_conn, "set-cookie")
+    session_cookie_string = Enum.find(set_cookie_header, &String.contains?(&1, "bal_session_id="))
+    assert session_cookie_string
+
+    cookie_value =
+      session_cookie_string
+      |> String.split(";")
+      |> Enum.at(0)
+      |> String.replace("bal_session_id=", "")
+      |> String.trim()
+
+    {:ok, cookie_value}
   end
 
   # Helper function to safely clean up mocks
