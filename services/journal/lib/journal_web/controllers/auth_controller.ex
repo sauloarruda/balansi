@@ -4,7 +4,7 @@ defmodule JournalWeb.AuthController do
 
   Provides endpoints for:
   - `/auth/callback` - Handles OAuth2 callback from Cognito
-  - `/auth/refresh` - Refreshes access token (to be implemented in Phase 6)
+  - `/auth/refresh` - Refreshes access token using refresh token from cookie
 
   The callback endpoint:
   1. Receives authorization code from Cognito redirect
@@ -14,6 +14,11 @@ defmodule JournalWeb.AuthController do
   5. Creates patient record
   6. Encrypts session data (refresh token + user ID) and sets in httpOnly cookie
   7. Redirects to frontend
+
+  The refresh endpoint:
+  1. Reads encrypted refresh token from session cookie
+  2. Calls Cognito to refresh the access token
+  3. Returns new access token with expiration time
   """
 
   use JournalWeb, :controller
@@ -52,6 +57,42 @@ defmodule JournalWeb.AuthController do
 
       code ->
         handle_callback(conn, code, params["state"])
+    end
+  end
+
+  @doc """
+  Refreshes an access token using the refresh token from the session cookie.
+
+  POST /auth/refresh
+
+  Flow:
+  1. Reads encrypted session data from httpOnly cookie
+  2. Extracts refresh token from session
+  3. Calls Cognito to refresh the access token
+  4. Returns new access token with expiration time
+
+  Returns 200 OK with JSON containing:
+  - `access_token`: New JWT access token
+  - `expires_in`: Token expiration time in seconds
+  - `token_type`: Token type (typically "Bearer")
+
+  Returns 401 Unauthorized if:
+  - Session cookie is missing
+  - Session data cannot be decrypted
+  - Refresh token is invalid or expired
+
+  Returns 500 Internal Server Error if Cognito API call fails.
+  """
+  def refresh(conn, _params) do
+    case get_session_cookie(conn) do
+      nil ->
+        Logger.warning("Refresh endpoint called without session cookie")
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Missing session cookie"})
+
+      encrypted_session ->
+        handle_refresh(conn, encrypted_session)
     end
   end
 
@@ -160,5 +201,70 @@ defmodule JournalWeb.AuthController do
 
   defp is_production? do
     Mix.env() == :prod
+  end
+
+  defp handle_refresh(conn, encrypted_session) do
+    config = get_cognito_config()
+
+    if config do
+      with {:ok, session_data} <- Session.decrypt_session(encrypted_session),
+           refresh_token <- session_data[:refresh_token],
+           {:ok, tokens} <- CognitoClient.refresh_access_token(refresh_token) do
+        conn
+        |> put_status(:ok)
+        |> json(%{
+          access_token: tokens.access_token,
+          expires_in: tokens.expires_in,
+          token_type: tokens.token_type
+        })
+      else
+        {:error, :decryption_failed} ->
+          Logger.warning("Failed to decrypt session data during refresh")
+          conn
+          |> put_status(:unauthorized)
+          |> json(%{error: "Invalid session"})
+
+        {:error, :invalid_encoding} ->
+          Logger.warning("Invalid session cookie encoding during refresh")
+          conn
+          |> put_status(:unauthorized)
+          |> json(%{error: "Invalid session"})
+
+        {:error, :configuration_not_found} ->
+          Logger.error("Cognito configuration not found during refresh")
+          conn
+          |> put_status(:internal_server_error)
+          |> json(%{error: "Authentication service not configured"})
+
+        {:error, {:api_error, status, body}} ->
+          # Cognito returns 400 for invalid/expired refresh tokens
+          if status == 400 do
+            Logger.warning("Invalid or expired refresh token: #{inspect(body)}")
+            conn
+            |> put_status(:unauthorized)
+            |> json(%{error: "Invalid or expired refresh token"})
+          else
+            Logger.error("Cognito refresh failed with status #{status}: #{inspect(body)}")
+            ErrorHandler.handle_service_error(conn, {:error, {:api_error, status, body}})
+          end
+
+        error ->
+          Logger.error("Unexpected error during token refresh: #{inspect(error)}")
+          # Ensure error is in the correct format
+          formatted_error = if match?({:error, _}, error), do: error, else: {:error, error}
+          ErrorHandler.handle_service_error(conn, formatted_error)
+      end
+    else
+      Logger.error("Cognito configuration not found")
+      conn
+      |> put_status(:internal_server_error)
+      |> json(%{error: "Authentication service not configured"})
+    end
+  end
+
+  defp get_session_cookie(conn) do
+    # Get the session_id cookie value
+    conn = Plug.Conn.fetch_cookies(conn)
+    conn.req_cookies["session_id"]
   end
 end
