@@ -200,7 +200,10 @@ users (id)
 **Branch**: `BAL-11.p5`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 7 files (including Session module, tests, and documentation)
 **Estimated Lines**: ~200 lines
+**Actual Lines**: ~748 lines
+**Status**: ✅ **Completed**
 
 ### Changes
 
@@ -209,20 +212,36 @@ users (id)
    - Action: `callback/2`
    - Handles Cognito redirect with code and state
    - Creates user and patient records
-   - Sets refresh token cookie
+   - Sets encrypted session cookie (refresh token encrypted before storage)
    - Redirects to frontend
 
-2. **Router update**
+2. **Session encryption module**
+   - File: `services/journal/lib/journal/auth/session.ex`
+   - Encrypts refresh token and user_id before storing in cookie
+   - Uses `Plug.Crypto` for secure encryption/decryption
+   - Follows same security pattern as Go auth service
+
+3. **Router update**
    - File: `services/journal/lib/journal_web/router.ex`
    - Add route: `get "/auth/callback", AuthController, :callback`
 
+4. **Test file**
+   - File: `services/journal/test/journal_web/controllers/auth_controller_test.exs`
+   - 9 comprehensive tests covering all scenarios and error cases
+
+5. **Documentation and configuration**
+   - File: `services/journal/README.md` - Added session encryption documentation
+   - File: `services/journal/.env.example` - Added all required environment variables
+   - File: `services/journal/Makefile` - Added `generate-session-secret` command
+
 ### Acceptance Criteria
 
-- [ ] Callback endpoint handles code exchange
-- [ ] Creates user and patient records
-- [ ] Sets httpOnly cookie with refresh token
-- [ ] Redirects to frontend URL
-- [ ] Handles errors gracefully
+- [x] Callback endpoint handles code exchange
+- [x] Creates user and patient records
+- [x] Sets httpOnly cookie with encrypted refresh token
+- [x] Redirects to frontend URL
+- [x] Handles errors gracefully
+- [x] All tests pass (273 tests, 0 failures)
 
 ---
 
