@@ -67,4 +67,3 @@ export function getPasswordRequirements(password: string): PasswordRequirements 
 		hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
 	};
 }
-
