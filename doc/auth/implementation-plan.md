@@ -288,7 +288,11 @@ users (id)
 **Branch**: `BAL-11.p7`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 6 files (including tests and fixes)
 **Estimated Lines**: ~400 lines
+**Actual Lines**: ~600+ lines
+**Status**: ✅ **Completed**
+**PR**: [#18](https://github.com/sauloarruda/balansi/pull/18)
 
 ### Changes
 
@@ -305,14 +309,37 @@ users (id)
    - Fetches and caches JWKS from Cognito
    - Validates token signature
 
+3. **User name extraction fixes**
+   - File: `services/journal/lib/journal_web/controllers/auth_controller.ex`
+   - Extract name from `preferred_username`, then `name`, fallback to `email`
+   - Merge ID token claims with user_info for complete user profile
+   - Decode ID token to access additional user attributes
+
+4. **Patient creation fix**
+   - File: `services/journal/lib/journal/auth.ex`
+   - Add `create_or_find_patient/2` to prevent duplicate patient creation
+   - Handle existing patients gracefully during callback
+
+5. **Tests**
+   - File: `services/journal/test/journal_web/plugs/verify_token_test.exs`
+   - File: `services/journal/test/journal/auth/jwks_test.exs`
+   - File: `services/journal/test/journal_web/controllers/auth_controller_test.exs`
+   - Comprehensive test coverage for all scenarios
+
+6. **Documentation**
+   - File: `doc/auth/erd.md`
+   - Updated Cognito auth URL to include `profile` scope
+
 ### Acceptance Criteria
 
-- [ ] Validates JWT token signature
-- [ ] Extracts cognito_id correctly
-- [ ] Looks up user in database
-- [ ] Gets patient_id correctly
-- [ ] Handles invalid/expired tokens
-- [ ] Caches JWKS keys
+- [x] Validates JWT token signature
+- [x] Extracts cognito_id correctly
+- [x] Looks up user in database
+- [x] Gets patient_id correctly
+- [x] Handles invalid/expired tokens
+- [x] Caches JWKS keys
+- [x] Extracts user name correctly from Cognito tokens
+- [x] Handles duplicate patient creation
 
 ---
 

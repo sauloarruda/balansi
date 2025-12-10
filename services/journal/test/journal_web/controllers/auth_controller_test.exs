@@ -69,15 +69,16 @@ defmodule JournalWeb.AuthControllerTest do
       tokens = %{
         access_token: "access-token-123",
         refresh_token: "refresh-token-456",
-        id_token: "id-token-789",
+        id_token: "id-token-123",  # Still returned by Cognito but not used
         expires_in: 3600,
         token_type: "Bearer"
       }
 
+      # user_info from /oauth2/userInfo endpoint (with profile scope)
       user_info = %{
         "sub" => "cognito-user-123",
         "email" => "test@example.com",
-        "name" => "Test User"
+        "preferred_username" => "Test User"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -140,10 +141,19 @@ defmodule JournalWeb.AuthControllerTest do
     test "successfully processes callback without state parameter", %{conn: conn} do
       code = "test-auth-code-789"
 
+      id_token_claims = %{
+        "sub" => "cognito-user-789",
+        "email" => "test2@example.com",
+        "preferred_username" => "Test User 2",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
       tokens = %{
         access_token: "access-token-789",
         refresh_token: "refresh-token-789",
-        id_token: "id-token-789",
+        id_token: id_token,
         expires_in: 3600,
         token_type: "Bearer"
       }
@@ -151,7 +161,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-user-789",
         "email" => "test2@example.com",
-        "name" => "Test User 2"
+        "preferred_username" => "Test User 2"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -200,10 +210,19 @@ defmodule JournalWeb.AuthControllerTest do
     test "handles Cognito userinfo errors", %{conn: conn} do
       code = "test-code"
 
+      id_token_claims = %{
+        "sub" => "cognito-user-info-error",
+        "email" => "error@example.com",
+        "preferred_username" => "Error User",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
       tokens = %{
         access_token: "invalid-token",
         refresh_token: "refresh-token",
-        id_token: "id-token",
+        id_token: id_token,
         expires_in: 3600,
         token_type: "Bearer"
       }
@@ -226,10 +245,18 @@ defmodule JournalWeb.AuthControllerTest do
     test "handles user creation failures", %{conn: conn} do
       code = "test-code"
 
+      id_token_claims = %{
+        "sub" => "cognito-user-invalid",
+        "preferred_username" => "Test User",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
       tokens = %{
         access_token: "access-token",
         refresh_token: "refresh-token",
-        id_token: "id-token",
+        id_token: id_token,
         expires_in: 3600,
         token_type: "Bearer"
       }
@@ -237,7 +264,7 @@ defmodule JournalWeb.AuthControllerTest do
       # Missing email in user_info will cause validation error
       user_info = %{
         "sub" => "cognito-user-invalid",
-        "name" => "Test User"
+        "preferred_username" => "Test User"
         # Missing email
       }
 
@@ -259,13 +286,14 @@ defmodule JournalWeb.AuthControllerTest do
       assert data["errors"]["email"]
     end
 
-    test "handles missing Cognito configuration", %{conn: conn} do
+    test "handles missing Cognito configuration", %{conn: _conn} do
       # Temporarily remove Cognito config
       original_config = Application.get_env(:journal, :cognito)
       Application.put_env(:journal, :cognito, nil)
 
       try do
-        conn = get(conn, "/journal/auth/callback", %{"code" => "test-code"})
+        test_conn = build_conn()
+        conn = get(test_conn, "/journal/auth/callback", %{"code" => "test-code"})
 
         assert response(conn, 500)
         data = json_response(conn, 500)
@@ -282,10 +310,19 @@ defmodule JournalWeb.AuthControllerTest do
       # Set FRONTEND_URL
       System.put_env("FRONTEND_URL", custom_frontend_url)
 
+      id_token_claims = %{
+        "sub" => "cognito-user-frontend-test",
+        "email" => "frontend-test@example.com",
+        "preferred_username" => "Frontend Test",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
       tokens = %{
         access_token: "access-token",
         refresh_token: "refresh-token",
-        id_token: "id-token",
+        id_token: id_token,
         expires_in: 3600,
         token_type: "Bearer"
       }
@@ -293,7 +330,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-user-frontend-test",
         "email" => "frontend-test@example.com",
-        "name" => "Frontend Test"
+        "preferred_username" => "Frontend Test"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -315,6 +352,56 @@ defmodule JournalWeb.AuthControllerTest do
       end
     end
 
+    test "uses preferred_username for name, falls back to name field", %{conn: conn} do
+      code = "test-code-name-fallback"
+
+      id_token_claims = %{
+        "sub" => "cognito-user-name-fallback",
+        "email" => "name-fallback@example.com",
+        "name" => "Fallback Name",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
+      tokens = %{
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+        id_token: id_token,
+        expires_in: 3600,
+        token_type: "Bearer"
+      }
+
+      # Test fallback to "name" when preferred_username is not available
+      user_info = %{
+        "sub" => "cognito-user-name-fallback",
+        "email" => "name-fallback@example.com",
+        "name" => "Fallback Name"
+        # No preferred_username
+      }
+
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :exchange_code_for_tokens, fn code_param, redirect_uri_param ->
+        assert code_param == code
+        assert redirect_uri_param == @redirect_uri
+        {:ok, tokens}
+      end)
+      :meck.expect(CognitoClient, :get_user_info, fn "access-token" ->
+        {:ok, user_info}
+      end)
+
+      conn = get(conn, "/journal/auth/callback", %{"code" => code})
+
+      # Should redirect successfully
+      assert redirected_to(conn)
+
+      # Verify user was created with name from "name" field
+      user = Repo.get_by(Journal.Auth.User, cognito_id: "cognito-user-name-fallback")
+      assert user
+      assert user.name == "Fallback Name"
+      assert user.email == "name-fallback@example.com"
+    end
+
     test "finds existing user instead of creating duplicate", %{conn: conn} do
       code = "test-code-existing-user"
 
@@ -325,10 +412,19 @@ defmodule JournalWeb.AuthControllerTest do
           email: "existing@example.com"
         })
 
+      id_token_claims = %{
+        "sub" => "cognito-existing-123",
+        "email" => "existing@example.com",
+        "preferred_username" => "Existing User",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
       tokens = %{
         access_token: "access-token",
         refresh_token: "refresh-token",
-        id_token: "id-token",
+        id_token: id_token,
         expires_in: 3600,
         token_type: "Bearer"
       }
@@ -336,7 +432,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-existing-123",
         "email" => "existing@example.com",
-        "name" => "Existing User"
+        "preferred_username" => "Existing User"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -358,6 +454,63 @@ defmodule JournalWeb.AuthControllerTest do
       users_with_cognito_id = Enum.filter(users, &(&1.cognito_id == "cognito-existing-123"))
       assert length(users_with_cognito_id) == 1
       assert hd(users_with_cognito_id).id == existing_user.id
+    end
+
+    test "finds existing patient instead of creating duplicate", %{conn: conn} do
+      code = "test-code-existing-patient"
+
+      # Create user and patient first
+      {:ok, existing_user} =
+        Auth.create_or_find_user("cognito-existing-patient-123", %{
+          name: "Existing Patient User",
+          email: "existing-patient@example.com"
+        })
+
+      {:ok, existing_patient} = Auth.create_patient(existing_user.id, 1)
+
+      id_token_claims = %{
+        "sub" => "cognito-existing-patient-123",
+        "email" => "existing-patient@example.com",
+        "preferred_username" => "Existing Patient User",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
+      tokens = %{
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+        id_token: id_token,
+        expires_in: 3600,
+        token_type: "Bearer"
+      }
+
+      user_info = %{
+        "sub" => "cognito-existing-patient-123",
+        "email" => "existing-patient@example.com",
+        "preferred_username" => "Existing Patient User"
+      }
+
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :exchange_code_for_tokens, fn code_param, redirect_uri_param ->
+        assert code_param == code
+        assert redirect_uri_param == @redirect_uri
+        {:ok, tokens}
+      end)
+      :meck.expect(CognitoClient, :get_user_info, fn "access-token" ->
+        {:ok, user_info}
+      end)
+
+      conn = get(conn, "/journal/auth/callback", %{"code" => code})
+
+      # Should redirect successfully
+      assert redirected_to(conn)
+
+      # Verify same patient was found (not a new one created)
+      patients = Repo.all(Journal.Auth.Patient)
+      patients_with_user_id = Enum.filter(patients, &(&1.user_id == existing_user.id))
+      assert length(patients_with_user_id) == 1
+      assert hd(patients_with_user_id).id == existing_patient.id
     end
   end
 
@@ -492,7 +645,7 @@ defmodule JournalWeb.AuthControllerTest do
       assert response(refresh_conn, 500)
     end
 
-    test "handles missing Cognito configuration", %{conn: conn} do
+    test "handles missing Cognito configuration", %{conn: _conn} do
       encrypted_session = "mock-encrypted-session"
 
       # Mock Session.decrypt_session
@@ -558,50 +711,19 @@ defmodule JournalWeb.AuthControllerTest do
     end
   end
 
-  # Helper function to create a valid encrypted session cookie via callback
-  # (Currently unused, kept for potential future use)
-  defp create_session_cookie_via_callback(conn, code, refresh_token) do
-    # Clean up any existing mocks first
-    cleanup_mock_safely(CognitoClient)
+  # Helper function to generate a test ID token (JWT format)
+  defp generate_test_id_token(claims) do
+    # Create a simple JWT token for testing
+    # We don't need to sign it properly since it's just used as a string in tests
+    header = %{"alg" => "RS256", "typ" => "JWT"}
+    header_json = Jason.encode!(header)
+    payload_json = Jason.encode!(claims)
 
-    tokens = %{
-      access_token: "access-token-#{code}",
-      refresh_token: refresh_token,
-      id_token: "id-token-#{code}",
-      expires_in: 3600,
-      token_type: "Bearer"
-    }
+    header_b64 = Base.url_encode64(header_json, padding: false)
+    payload_b64 = Base.url_encode64(payload_json, padding: false)
+    signature_b64 = "test-signature"
 
-    user_info = %{
-      "sub" => "cognito-user-#{code}",
-      "email" => "test-#{code}@example.com",
-      "name" => "Test User #{code}"
-    }
-
-    :meck.new(CognitoClient, [:passthrough])
-    :meck.expect(CognitoClient, :exchange_code_for_tokens, fn _code_param, _ ->
-      {:ok, tokens}
-    end)
-    :meck.expect(CognitoClient, :get_user_info, fn _ ->
-      {:ok, user_info}
-    end)
-
-    callback_conn = get(conn, "/journal/auth/callback", %{"code" => code})
-    assert redirected_to(callback_conn)
-
-    # Extract cookie value from Set-Cookie header
-    set_cookie_header = get_resp_header(callback_conn, "set-cookie")
-    session_cookie_string = Enum.find(set_cookie_header, &String.contains?(&1, "bal_session_id="))
-    assert session_cookie_string
-
-    cookie_value =
-      session_cookie_string
-      |> String.split(";")
-      |> Enum.at(0)
-      |> String.replace("bal_session_id=", "")
-      |> String.trim()
-
-    {:ok, cookie_value}
+    "#{header_b64}.#{payload_b64}.#{signature_b64}"
   end
 
   # Helper function to safely clean up mocks

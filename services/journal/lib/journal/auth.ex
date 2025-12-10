@@ -100,6 +100,43 @@ defmodule Journal.Auth do
   end
 
   @doc """
+  Creates a patient record or finds an existing one for a user-professional pair.
+
+  This function implements an "upsert" pattern: if a patient with the given
+  user_id and professional_id already exists, it returns that patient.
+  Otherwise, it creates a new patient record.
+
+  ## Parameters
+    - `user_id`: The ID of the user (required)
+    - `professional_id`: The ID of the professional (required)
+
+  ## Returns
+    - `{:ok, patient}` where patient is the created or found Patient struct
+    - `{:error, changeset}` on validation failure
+
+  ## Examples
+
+      iex> Journal.Auth.create_or_find_patient(1, 1)
+      {:ok, %Journal.Auth.Patient{}}
+
+      iex> # If patient already exists
+      iex> Journal.Auth.create_or_find_patient(1, 1)
+      {:ok, %Journal.Auth.Patient{user_id: 1, professional_id: 1}}  # Returns existing patient
+  """
+  def create_or_find_patient(user_id, professional_id) do
+    # First, try to find existing patient
+    case Repo.get_by(Patient, user_id: user_id, professional_id: professional_id) do
+      nil ->
+        # Patient doesn't exist, create new one
+        create_patient(user_id, professional_id)
+
+      patient ->
+        # Patient exists, return it
+        {:ok, patient}
+    end
+  end
+
+  @doc """
   Gets the first professional ID (temporary function).
 
   This is a temporary function that returns a hardcoded professional ID.

@@ -23,7 +23,6 @@ defmodule Journal.Auth.CognitoClient do
     - `{:ok, tokens}` where tokens is a map with:
       - `access_token`: JWT access token
       - `refresh_token`: Refresh token for obtaining new access tokens
-      - `id_token`: ID token (JWT)
       - `expires_in`: Token expiration time in seconds
       - `token_type`: Token type (typically "Bearer")
     - `{:error, reason}` on failure
@@ -34,7 +33,6 @@ defmodule Journal.Auth.CognitoClient do
       {:ok, %{
         access_token: "eyJhbGc...",
         refresh_token: "refresh-token-123",
-        id_token: "eyJhbGc...",
         expires_in: 3600,
         token_type: "Bearer"
       }}
@@ -62,7 +60,6 @@ defmodule Journal.Auth.CognitoClient do
           tokens = %{
             access_token: response_body["access_token"],
             refresh_token: response_body["refresh_token"],
-            id_token: response_body["id_token"],
             expires_in: response_body["expires_in"],
             token_type: response_body["token_type"] || "Bearer"
           }
@@ -121,7 +118,7 @@ defmodule Journal.Auth.CognitoClient do
 
       case Req.get(userinfo_url, headers: headers, receive_timeout: 30_000) do
         {:ok, %Req.Response{status: 200, body: response_body}} ->
-          Logger.info("Successfully fetched user info")
+          Logger.debug("Successfully fetched user info: #{inspect(response_body)}")
           {:ok, response_body}
 
         {:ok, %Req.Response{status: status, body: response_body}} ->
@@ -147,7 +144,6 @@ defmodule Journal.Auth.CognitoClient do
   ## Returns
     - `{:ok, tokens}` where tokens is a map with:
       - `access_token`: New JWT access token
-      - `id_token`: New ID token (JWT, if returned)
       - `expires_in`: Token expiration time in seconds
       - `token_type`: Token type (typically "Bearer")
     - `{:error, reason}` on failure
@@ -157,7 +153,6 @@ defmodule Journal.Auth.CognitoClient do
       iex> CognitoClient.refresh_access_token("refresh-token-123")
       {:ok, %{
         access_token: "eyJhbGc...",
-        id_token: "eyJhbGc...",
         expires_in: 3600,
         token_type: "Bearer"
       }}
@@ -183,7 +178,6 @@ defmodule Journal.Auth.CognitoClient do
         {:ok, %Req.Response{status: 200, body: response_body}} ->
           tokens = %{
             access_token: response_body["access_token"],
-            id_token: response_body["id_token"],
             expires_in: response_body["expires_in"],
             token_type: response_body["token_type"] || "Bearer"
           }

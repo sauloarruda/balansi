@@ -227,6 +227,55 @@ defmodule Journal.AuthTest do
     end
   end
 
+  describe "create_or_find_patient/2" do
+    setup do
+      # Create a user for testing
+      user_attrs = unique_user_attrs()
+      {:ok, user} = Journal.Repo.insert(User.changeset(%User{}, user_attrs))
+
+      %{user: user}
+    end
+
+    test "creates a patient record when it doesn't exist", %{user: user} do
+      professional_id = 1
+
+      assert {:ok, patient} = Auth.create_or_find_patient(user.id, professional_id)
+
+      assert patient.id
+      assert patient.user_id == user.id
+      assert patient.professional_id == professional_id
+    end
+
+    test "finds existing patient when it already exists", %{user: user} do
+      professional_id = 1
+
+      # Create first patient
+      assert {:ok, patient1} = Auth.create_or_find_patient(user.id, professional_id)
+
+      # Call again - should return existing patient
+      assert {:ok, patient2} = Auth.create_or_find_patient(user.id, professional_id)
+
+      assert patient1.id == patient2.id
+      assert patient1.user_id == patient2.user_id
+      assert patient1.professional_id == patient2.professional_id
+    end
+
+    test "allows same user with different professional_id", %{user: user} do
+      professional_id1 = 1
+      professional_id2 = 2
+
+      # Create first patient
+      assert {:ok, patient1} = Auth.create_or_find_patient(user.id, professional_id1)
+
+      # Create second patient with different professional_id
+      assert {:ok, patient2} = Auth.create_or_find_patient(user.id, professional_id2)
+
+      assert patient1.user_id == patient2.user_id
+      assert patient1.professional_id == professional_id1
+      assert patient2.professional_id == professional_id2
+    end
+  end
+
   describe "get_first_professional_id/0" do
     test "returns hardcoded professional ID" do
       assert Auth.get_first_professional_id() == 1

@@ -69,7 +69,6 @@ defmodule Journal.Auth.CognitoClientTest do
 
       assert tokens.access_token == expected_response["access_token"]
       assert tokens.refresh_token == expected_response["refresh_token"]
-      assert tokens.id_token == expected_response["id_token"]
       assert tokens.expires_in == expected_response["expires_in"]
       assert tokens.token_type == expected_response["token_type"]
     end
@@ -233,7 +232,6 @@ defmodule Journal.Auth.CognitoClientTest do
       assert {:ok, tokens} = CognitoClient.refresh_access_token(refresh_token)
 
       assert tokens.access_token == expected_response["access_token"]
-      assert tokens.id_token == expected_response["id_token"]
       assert tokens.expires_in == expected_response["expires_in"]
       assert tokens.token_type == expected_response["token_type"]
     end
