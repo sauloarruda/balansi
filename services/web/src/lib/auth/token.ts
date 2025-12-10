@@ -1,8 +1,10 @@
 /**
  * Access token management
  *
- * Manages access_token in memory with automatic refresh using session_id cookie.
- * The session_id cookie is set by the server (httpOnly) and used to refresh tokens.
+ * Manages access_token in memory with automatic refresh using httpOnly cookie.
+ * The bal_session_id cookie is set by the server (httpOnly) and used to refresh tokens.
+ * The cookie contains encrypted session data (refresh token + user ID) that the backend
+ * uses to refresh the access token.
  */
 
 import { browser } from "$app/environment";
@@ -49,7 +51,7 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 /**
- * Refresh access token using session_id cookie
+ * Refresh access token using httpOnly cookie (bal_session_id)
  * Returns the new access token or null if refresh fails
  */
 export async function refreshAccessToken(): Promise<string | null> {
@@ -61,21 +63,25 @@ export async function refreshAccessToken(): Promise<string | null> {
 		const apiUrl = getApiBaseUrl();
 		const response = await fetch(`${apiUrl}/auth/refresh`, {
 			method: "POST",
-			credentials: "include", // Include session_id cookie
+			credentials: "include", // Include bal_session_id cookie (httpOnly)
 		});
 
 		if (response.ok) {
 			const data = await response.json();
 
-			// Expect response: { accessToken: string, expiresIn: number }
+			// Backend returns snake_case: { access_token, expires_in, token_type }
+			// Support both snake_case (from backend) and camelCase (for backward compatibility)
+			const token = data.access_token || data.accessToken;
+			const expiresIn = data.expires_in !== undefined ? data.expires_in : data.expiresIn;
+
 			// Note: expiresIn can be 0 (cognito-local returns 0), so we check for !== undefined
-			if (data.accessToken && typeof data.expiresIn === "number") {
+			if (token && typeof expiresIn === "number") {
 				// Clear logout flag when we successfully refresh (user is logging in again)
 				logoutFlag = false;
-				setAccessToken(data.accessToken, data.expiresIn);
-				return data.accessToken;
+				setAccessToken(token, expiresIn);
+				return token;
 			} else {
-				console.error("refreshAccessToken: Missing accessToken or invalid expiresIn in response", data);
+				console.error("refreshAccessToken: Missing access_token or invalid expires_in in response", data);
 			}
 		} else {
 			const errorText = await response.text();
