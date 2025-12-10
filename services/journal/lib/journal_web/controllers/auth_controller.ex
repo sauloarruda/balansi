@@ -105,9 +105,8 @@ defmodule JournalWeb.AuthController do
       redirect_uri = config[:redirect_uri]
 
       with {:ok, tokens} <- CognitoClient.exchange_code_for_tokens(code, redirect_uri),
-           {:ok, id_token_claims} <- CognitoClient.decode_id_token(tokens.id_token),
            {:ok, user_info} <- CognitoClient.get_user_info(tokens.access_token),
-           {:ok, user} <- create_or_find_user(merge_user_info(user_info, id_token_claims)),
+           {:ok, user} <- create_or_find_user(user_info),
            {:ok, _patient} <- create_or_find_patient(user.id),
            {:ok, encrypted_session} <- Session.encrypt_session(tokens.refresh_token, user.id),
            frontend_url <- get_frontend_url() do
@@ -157,28 +156,6 @@ defmodule JournalWeb.AuthController do
     Auth.create_or_find_patient(user_id, professional_id)
   end
 
-  @doc """
-  Merges user_info from /oauth2/userInfo endpoint with ID token claims.
-
-  The ID token typically contains more user attributes (like name and preferred_username)
-  that may not be present in the userInfo response. This function merges both sources,
-  prioritizing ID token values when both are present.
-
-  ## Parameters
-    - `user_info`: Map from Cognito /oauth2/userInfo endpoint
-    - `id_token_claims`: Map from decoded ID token
-
-  ## Returns
-    - Merged map with all user attributes, ID token values taking precedence
-  """
-  defp merge_user_info(user_info, id_token_claims) do
-    # Merge ID token claims into user_info, prioritizing ID token claims
-    # ID token typically has more user attributes like name and preferred_username
-    Map.merge(user_info, id_token_claims, fn _key, userinfo_val, idtoken_val ->
-      # Prefer ID token value if it exists and is not empty
-      if idtoken_val != nil && idtoken_val != "", do: idtoken_val, else: userinfo_val
-    end)
-  end
 
   defp set_session_cookie(conn, encrypted_session) do
     # Cookie expires in 30 days (same as Cognito refresh token default)

@@ -65,25 +65,16 @@ defmodule JournalWeb.AuthControllerTest do
       code = "test-auth-code-123"
       state = "test-state-456"
 
-      # Create a valid ID token with user claims
-      id_token_claims = %{
-        "sub" => "cognito-user-123",
-        "email" => "test@example.com",
-        "preferred_username" => "Test User",
-        "exp" => System.system_time(:second) + 3600,
-        "iat" => System.system_time(:second)
-      }
-      id_token = generate_test_id_token(id_token_claims)
-
       # Mock CognitoClient responses
       tokens = %{
         access_token: "access-token-123",
         refresh_token: "refresh-token-456",
-        id_token: id_token,
+        id_token: "id-token-123",  # Still returned by Cognito but not used
         expires_in: 3600,
         token_type: "Bearer"
       }
 
+      # user_info from /oauth2/userInfo endpoint (with profile scope)
       user_info = %{
         "sub" => "cognito-user-123",
         "email" => "test@example.com",

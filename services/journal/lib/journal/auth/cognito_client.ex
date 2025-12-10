@@ -23,7 +23,6 @@ defmodule Journal.Auth.CognitoClient do
     - `{:ok, tokens}` where tokens is a map with:
       - `access_token`: JWT access token
       - `refresh_token`: Refresh token for obtaining new access tokens
-      - `id_token`: ID token (JWT)
       - `expires_in`: Token expiration time in seconds
       - `token_type`: Token type (typically "Bearer")
     - `{:error, reason}` on failure
@@ -34,7 +33,6 @@ defmodule Journal.Auth.CognitoClient do
       {:ok, %{
         access_token: "eyJhbGc...",
         refresh_token: "refresh-token-123",
-        id_token: "eyJhbGc...",
         expires_in: 3600,
         token_type: "Bearer"
       }}
@@ -59,13 +57,9 @@ defmodule Journal.Auth.CognitoClient do
 
       case Req.post(token_url, opts) do
         {:ok, %Req.Response{status: 200, body: response_body}} ->
-          id_token = response_body["id_token"]
-          Logger.debug("ID token type from response: #{inspect(id_token) |> String.slice(0, 100)}")
-          
           tokens = %{
             access_token: response_body["access_token"],
             refresh_token: response_body["refresh_token"],
-            id_token: id_token,
             expires_in: response_body["expires_in"],
             token_type: response_body["token_type"] || "Bearer"
           }
@@ -85,69 +79,6 @@ defmodule Journal.Auth.CognitoClient do
       Logger.error("Cognito configuration not found")
       {:error, :configuration_not_found}
     end
-  end
-
-  @doc """
-  Decodes an ID token to extract user claims.
-
-  ## Parameters
-    - `id_token`: JWT ID token from Cognito
-
-  ## Returns
-    - `{:ok, claims}` where claims is a map with user attributes from the ID token
-    - `{:error, reason}` on failure
-
-  ## Examples
-
-      iex> CognitoClient.decode_id_token("eyJhbGc...")
-      {:ok, %{
-        "sub" => "cognito-user-123",
-        "email" => "user@example.com",
-        "name" => "John Doe",
-        "preferred_username" => "johndoe"
-      }}
-  """
-  def decode_id_token(id_token) when is_binary(id_token) do
-    # Decode JWT payload without validating signature
-    # JWT format: header.payload.signature
-    case String.split(id_token, ".") do
-      [_header_b64, payload_b64, _signature_b64] ->
-        case Base.url_decode64(payload_b64, padding: false) do
-          {:ok, payload_json} ->
-            case Jason.decode(payload_json) do
-              {:ok, claims} ->
-                Logger.debug("Decoded ID token claims: #{inspect(claims)}")
-                {:ok, claims}
-
-              {:error, reason} ->
-                Logger.error("Failed to decode ID token payload JSON: #{inspect(reason)}")
-                {:error, :invalid_token_format}
-            end
-
-          :error ->
-            Logger.error("Failed to decode ID token payload base64")
-            {:error, :invalid_token_encoding}
-        end
-
-      _ ->
-        Logger.error("Invalid ID token format (expected 3 parts separated by dots)")
-        {:error, :invalid_token_format}
-    end
-  end
-
-  def decode_id_token(%JOSE.JWT{fields: claims}) do
-    # Handle case where ID token is already decoded as JOSE.JWT struct
-    # This can happen if the token was processed by JOSE elsewhere
-    Logger.debug("ID token already decoded as JOSE.JWT, extracting claims")
-    # Convert JOSE.JWT fields to a regular map
-    claims_map = Map.new(claims, fn {k, v} -> {to_string(k), v} end)
-    Logger.debug("Extracted ID token claims: #{inspect(claims_map)}")
-    {:ok, claims_map}
-  end
-
-  def decode_id_token(other) do
-    Logger.error("Invalid ID token type: #{inspect(other)}")
-    {:error, :invalid_token_type}
   end
 
   @doc """
@@ -213,7 +144,6 @@ defmodule Journal.Auth.CognitoClient do
   ## Returns
     - `{:ok, tokens}` where tokens is a map with:
       - `access_token`: New JWT access token
-      - `id_token`: New ID token (JWT, if returned)
       - `expires_in`: Token expiration time in seconds
       - `token_type`: Token type (typically "Bearer")
     - `{:error, reason}` on failure
@@ -223,7 +153,6 @@ defmodule Journal.Auth.CognitoClient do
       iex> CognitoClient.refresh_access_token("refresh-token-123")
       {:ok, %{
         access_token: "eyJhbGc...",
-        id_token: "eyJhbGc...",
         expires_in: 3600,
         token_type: "Bearer"
       }}
@@ -249,7 +178,6 @@ defmodule Journal.Auth.CognitoClient do
         {:ok, %Req.Response{status: 200, body: response_body}} ->
           tokens = %{
             access_token: response_body["access_token"],
-            id_token: response_body["id_token"],
             expires_in: response_body["expires_in"],
             token_type: response_body["token_type"] || "Bearer"
           }
