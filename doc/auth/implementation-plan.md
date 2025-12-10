@@ -504,12 +504,16 @@ users (id)
 
 ---
 
-## Phase 12: Update OpenAPI Specification with Auth Endpoints (BAL-11.p12)
+## Phase 12: Update OpenAPI Specification with Auth Endpoints (BAL-11.p12) ✅
 
 **Branch**: `BAL-11.p12`
 **Target**: `main`
 **Estimated Files**: 1 file
+**Actual Files**: 1 file
 **Estimated Lines**: ~200 lines
+**Actual Lines**: ~349 insertions, 84 deletions (net: +265 lines)
+**Status**: ✅ **Completed**
+**PR**: [#23](https://github.com/sauloarruda/balansi/pull/23)
 
 ### Changes
 
@@ -518,19 +522,27 @@ users (id)
    - Add `/auth/callback` endpoint (GET)
      - Query parameters: `code` (required), `state` (optional)
      - Responses: 302 (redirect), 400 (missing code), 500 (server error)
+     - Comprehensive flow documentation with 7-step process
+     - Header documentation (Location, Set-Cookie)
    - Add `/auth/refresh` endpoint (POST)
      - Uses httpOnly cookie (`bal_session_id`) for refresh token
      - Responses: 200 (success with access_token, expires_in, token_type), 401 (invalid session), 500 (server error)
-   - Add security scheme documentation for Bearer JWT tokens
-   - Update security requirements for protected endpoints
+     - Uses `CookieAuth` security scheme
+   - Add `RefreshTokenResponse` schema
+     - Defines response format matching backend (snake_case)
+   - Update security schemes
+     - Enhanced `BearerAuth` description with JWT validation details
+     - Added `CookieAuth` scheme for cookie-based authentication
+   - Apply security requirements to protected endpoints
+     - All meal endpoints now specify `BearerAuth` requirement
 
 ### Acceptance Criteria
 
-- [ ] `/auth/callback` endpoint documented with all parameters and responses
-- [ ] `/auth/refresh` endpoint documented with cookie-based authentication
-- [ ] Security schemes properly documented
-- [ ] All existing endpoints remain documented
-- [ ] OpenAPI spec validates successfully
+- [x] `/auth/callback` endpoint documented with all parameters and responses
+- [x] `/auth/refresh` endpoint documented with cookie-based authentication
+- [x] Security schemes properly documented
+- [x] All existing endpoints remain documented
+- [x] OpenAPI spec validates successfully
 
 ---
 
@@ -719,7 +731,7 @@ p14 (Migrate to Elixir API) → p15 (Remove Go Service)
 **Document Version**: 2.0
 **Created**: 2025
 **Last Updated**: 2025-01-27
-**Status**: In Progress (Phases 1-11 completed, Phases 12-15 pending)
+**Status**: In Progress (Phases 1-12 completed, Phases 13-15 pending)
 
 ### Recent Updates (v2.0)
 
