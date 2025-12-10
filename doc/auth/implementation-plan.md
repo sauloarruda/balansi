@@ -433,32 +433,44 @@ users (id)
 
 ---
 
-## Phase 10: Cognito Redirect Utilities (BAL-11.p10)
+## Phase 10: Cognito Redirect Utilities (BAL-11.p10) ✅
 
 **Branch**: `BAL-11.p10`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 5 files (including .env.example, Makefile, README updates)
 **Estimated Lines**: ~150 lines
+**Actual Lines**: ~179 lines
+**Status**: ✅ **Completed**
+**PR**: [#21](https://github.com/sauloarruda/balansi/pull/21)
 
 ### Changes
 
 1. **Cognito redirect module**
    - File: `services/web/src/lib/auth/cognito.ts`
    - Functions:
-     - `redirectToSignup(professionalId?)`
-     - `redirectToLogin(professionalId?)`
-     - `getCognitoAuthUrl(action, state)`
+     - `redirectToSignup(professionalId?)` - Redirects to Cognito signup
+     - `redirectToLogin(professionalId?)` - Redirects to Cognito login
+     - `getCognitoAuthUrl(action, state)` - Builds Cognito URLs with proper encoding
+   - Includes environment variable validation
+   - Proper state parameter encoding using URLSearchParams
 
-2. **Update existing auth hooks** (if needed)
-   - File: `services/web/src/lib/auth/hooks.ts`
-   - Use Cognito redirect instead of custom forms
+2. **Update main page**
+   - File: `services/web/src/routes/+page.svelte`
+   - Replaced TODO comments with actual Cognito redirects
+   - Uses `redirectToLogin()` for unauthenticated users and after logout
+
+3. **Environment configuration**
+   - File: `services/web/.env.example` - Added Cognito environment variables template
+   - File: `services/web/Makefile` - Updated `dev` target to automatically load `.env` file
+   - File: `services/web/README.md` - Added comprehensive Cognito configuration instructions
 
 ### Acceptance Criteria
 
-- [ ] Can redirect to Cognito signup
-- [ ] Can redirect to Cognito login
-- [ ] State parameter correctly encoded
-- [ ] Uses environment variables for config
+- [x] Can redirect to Cognito signup
+- [x] Can redirect to Cognito login
+- [x] State parameter correctly encoded
+- [x] Uses environment variables for config
 
 ---
 
