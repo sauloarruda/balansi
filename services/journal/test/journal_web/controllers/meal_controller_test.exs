@@ -10,7 +10,7 @@ defmodule JournalWeb.MealControllerTest do
   - Error handling and validation
   - Patient isolation
 
-  All tests use the POC patient_id (1) as authentication is deferred.
+  All tests use authenticated connections with JWT token validation.
   """
   use JournalWeb.ConnCase, async: true
 
@@ -24,6 +24,12 @@ defmodule JournalWeb.MealControllerTest do
   alias JournalWeb.MealHelpers
 
   require JournalWeb.MealHelpers
+
+  setup %{conn: conn} do
+    # Authenticate connection for all tests
+    {conn, patient_id} = authenticate_conn(conn)
+    {:ok, conn: conn, patient_id: patient_id}
+  end
 
   describe "POST /journal/meals" do
     test "creates and processes meal successfully", %{conn: conn} do
@@ -108,11 +114,12 @@ defmodule JournalWeb.MealControllerTest do
   end
 
   describe "GET /journal/meals" do
-    setup do
+    setup %{patient_id: patient_id} do
       date = ~D[2025-01-27]
 
       # Create meals for the test date
       {:ok, meal1} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         date: date,
         meal_type: :breakfast,
         original_description: "Breakfast meal",
@@ -120,6 +127,7 @@ defmodule JournalWeb.MealControllerTest do
       })
 
       {:ok, meal2} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         date: date,
         meal_type: :lunch,
         original_description: "Lunch meal",
@@ -128,6 +136,7 @@ defmodule JournalWeb.MealControllerTest do
 
       # Create meal for different date
       {:ok, _meal3} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         date: ~D[2025-01-28],
         meal_type: :dinner,
         original_description: "Dinner meal",
@@ -137,12 +146,12 @@ defmodule JournalWeb.MealControllerTest do
       %{date: date, meal1: meal1, meal2: meal2}
     end
 
-    test "lists meals for date successfully", %{conn: conn, date: date, meal1: meal1, meal2: meal2} do
+    test "lists meals for date successfully", %{conn: conn, patient_id: patient_id, date: date, meal1: meal1, meal2: meal2} do
       conn = get(conn, ~p"/journal/meals?date=#{Date.to_iso8601(date)}")
 
       assert %{"data" => data, "meta" => meta} = json_response(conn, 200)
       assert length(data) == 2
-      assert meta["patient_id"] == MealHelpers.poc_patient_id()
+      assert meta["patient_id"] == patient_id
       assert meta["date"] == Date.to_iso8601(date)
       assert meta["count"] == 2
 
@@ -153,7 +162,7 @@ defmodule JournalWeb.MealControllerTest do
 
       # Verify meal structure
       meal = Enum.at(data, 0)
-      MealHelpers.assert_meal_structure(meal)
+      MealHelpers.assert_meal_structure(meal, patient_id: patient_id)
       assert meal["date"] == Date.to_iso8601(date)
       assert meal["meal_type"] in ["breakfast", "lunch"]
     end
@@ -189,7 +198,7 @@ defmodule JournalWeb.MealControllerTest do
       assert error == "Invalid date format. Expected ISO8601 format (YYYY-MM-DD)"
     end
 
-    test "does not return meals from other patients", %{conn: conn} do
+    test "does not return meals from other patients", %{conn: conn, patient_id: patient_id} do
       # Create meal for different patient
       {:ok, _other_meal} = MealHelpers.create_meal(%{
         patient_id: MealHelpers.other_patient_id(),
@@ -202,14 +211,15 @@ defmodule JournalWeb.MealControllerTest do
       conn = get(conn, ~p"/journal/meals?date=2025-01-27")
 
       assert %{"data" => data} = json_response(conn, 200)
-      # Should only return meals for POC patient_id (1), not other patient
-      assert Enum.all?(data, fn meal -> meal["patient_id"] == MealHelpers.poc_patient_id() end)
+      # Should only return meals for authenticated patient, not other patient
+      assert Enum.all?(data, fn meal -> meal["patient_id"] == patient_id end)
     end
   end
 
   describe "GET /journal/meals/:id" do
-    setup do
+    setup %{patient_id: patient_id} do
       {:ok, meal} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         meal_type: :breakfast,
         original_description: "Test meal",
         status: :in_review,
@@ -272,8 +282,9 @@ defmodule JournalWeb.MealControllerTest do
       assert error == "Resource not found"
     end
 
-    test "serializes meal with nil nutritional values", %{conn: conn} do
+    test "serializes meal with nil nutritional values", %{conn: conn, patient_id: patient_id} do
       {:ok, meal} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         status: :pending,
         protein_g: nil,
         carbs_g: nil,
@@ -294,14 +305,16 @@ defmodule JournalWeb.MealControllerTest do
   end
 
   describe "POST /journal/meals/:id/confirm" do
-    setup do
+    setup %{patient_id: patient_id} do
       {:ok, meal_in_review} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         meal_type: :breakfast,
         original_description: "Meal in review",
         status: :in_review
       })
 
       {:ok, meal_pending} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         meal_type: :lunch,
         original_description: "Pending meal",
         status: :pending
@@ -361,8 +374,9 @@ defmodule JournalWeb.MealControllerTest do
       assert error =~ "Expected: in_review"
     end
 
-    test "returns 422 for already confirmed meal", %{conn: conn} do
+    test "returns 422 for already confirmed meal", %{conn: conn, patient_id: patient_id} do
       {:ok, confirmed_meal} = MealHelpers.create_meal(%{
+        patient_id: patient_id,
         meal_type: :dinner,
         original_description: "Already confirmed",
         status: :confirmed

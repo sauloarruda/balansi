@@ -180,56 +180,59 @@ defmodule JournalWeb.MealHelpersTest do
   end
 
   describe "assert_meal_response/2" do
-    test "asserts meal response using default status (200)" do
-      {:ok, meal} = MealHelpers.create_meal()
+    test "asserts meal response using default status (200)", %{conn: conn} do
+      {conn, patient_id} = authenticate_conn(conn)
+      {:ok, meal} = MealHelpers.create_meal(%{patient_id: patient_id})
 
-      conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+      conn = get(conn, ~p"/journal/meals/#{meal.id}")
 
       # Test without passing expected_status (uses default 200)
-      data = MealHelpers.assert_meal_response(conn)
+      data = MealHelpers.assert_meal_response(conn, 200, patient_id: patient_id)
       assert data["id"] == meal.id
     end
 
-    test "asserts meal response with explicit status 200" do
-      {:ok, meal} = MealHelpers.create_meal()
+    test "asserts meal response with explicit status 200", %{conn: conn} do
+      {conn, patient_id} = authenticate_conn(conn)
+      {:ok, meal} = MealHelpers.create_meal(%{patient_id: patient_id})
 
-      conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+      conn = get(conn, ~p"/journal/meals/#{meal.id}")
 
-      data = MealHelpers.assert_meal_response(conn, 200)
+      data = MealHelpers.assert_meal_response(conn, 200, patient_id: patient_id)
       assert data["id"] == meal.id
     end
 
-    test "asserts meal response with custom status 201" do
+    test "asserts meal response with custom status 201", %{conn: conn} do
       attrs = MealHelpers.create_meal_attrs()
 
       LLMHelpers.with_openai_mock(fn ->
-        conn =
-          build_conn()
-          |> post(~p"/journal/meals", attrs)
+        conn = authenticate_conn(conn) |> elem(0)
+        conn = post(conn, ~p"/journal/meals", attrs)
 
         data = MealHelpers.assert_meal_response(conn, 201)
         assert data["meal_type"] == "breakfast"
       end)
     end
 
-    test "asserts meal response validates all meal types" do
+    test "asserts meal response validates all meal types", %{conn: conn} do
+      {conn, patient_id} = authenticate_conn(conn)
       for meal_type <- [:breakfast, :lunch, :snack, :dinner] do
-        {:ok, meal} = MealHelpers.create_meal(%{meal_type: meal_type})
+        {:ok, meal} = MealHelpers.create_meal(%{meal_type: meal_type, patient_id: patient_id})
 
-        conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+        conn = get(conn, ~p"/journal/meals/#{meal.id}")
 
-        data = MealHelpers.assert_meal_response(conn)
+        data = MealHelpers.assert_meal_response(conn, 200, patient_id: patient_id)
         assert data["meal_type"] == to_string(meal_type)
       end
     end
 
-    test "asserts meal response validates all statuses" do
+    test "asserts meal response validates all statuses", %{conn: conn} do
+      {conn, patient_id} = authenticate_conn(conn)
       for status <- [:pending, :processing, :in_review, :confirmed] do
-        {:ok, meal} = MealHelpers.create_meal(%{status: status})
+        {:ok, meal} = MealHelpers.create_meal(%{status: status, patient_id: patient_id})
 
-        conn = get(build_conn(), ~p"/journal/meals/#{meal.id}")
+        conn = get(conn, ~p"/journal/meals/#{meal.id}")
 
-        data = MealHelpers.assert_meal_response(conn)
+        data = MealHelpers.assert_meal_response(conn, 200, patient_id: patient_id)
         assert data["status"] == to_string(status)
       end
     end

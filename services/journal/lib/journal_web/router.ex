@@ -5,6 +5,10 @@ defmodule JournalWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :protected do
+    plug JournalWeb.Plugs.VerifyToken
+  end
+
   # Health check at root (for Lambda Web Adapter readiness check)
   scope "/", JournalWeb do
     pipe_through :api
@@ -21,8 +25,13 @@ defmodule JournalWeb.Router do
     # Auth endpoints
     get "/auth/callback", AuthController, :callback
     post "/auth/refresh", AuthController, :refresh
+  end
 
-    # Meal endpoints (patient_id will come from Bearer token, using constant for POC)
+  # Protected routes (require JWT authentication)
+  scope "/journal", JournalWeb do
+    pipe_through [:api, :protected]
+
+    # Meal endpoints (patient_id comes from Bearer token)
     get "/meals", MealController, :index
     post "/meals", MealController, :create
     get "/meals/:id", MealController, :show
