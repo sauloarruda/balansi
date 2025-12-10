@@ -389,27 +389,47 @@ users (id)
 
 ---
 
-## Phase 9: Remove Frontend Auth Pages (BAL-11.p9)
+## Phase 9: Remove Frontend Auth Pages (BAL-11.p9) ✅
 
 **Branch**: `BAL-11.p9`
 **Target**: `main`
 **Estimated Files**: 5 files
+**Actual Files**: 12 files (including i18n cleanup)
 **Estimated Lines**: ~50 lines (deletions)
+**Actual Lines**: ~1,495 deletions, 17 insertions
+**Status**: ✅ **Completed**
+**PR**: [#20](https://github.com/sauloarruda/balansi/pull/20)
 
 ### Changes
 
 1. **Delete auth pages**
-   - File: `services/web/src/routes/auth/sign-up/+page.svelte` ❌
-   - File: `services/web/src/routes/auth/sign-in/+page.svelte` ❌
-   - File: `services/web/src/routes/auth/forgot-password/+page.svelte` ❌
-   - File: `services/web/src/routes/auth/reset-password/+page.svelte` ❌
-   - File: `services/web/src/routes/auth/confirmation/+page.svelte` ❌
+   - File: `services/web/src/routes/auth/+page.svelte` ✅
+   - File: `services/web/src/routes/auth/confirmation/+page.svelte` ✅
+   - File: `services/web/src/routes/auth/forgot-password/+page.svelte` ✅
+   - File: `services/web/src/routes/auth/reset-password/+page.svelte` ✅
+   - File: `services/web/tests/signup.spec.ts` ✅
+
+2. **Remove unused i18n entries**
+   - Removed `auth.signup.*` entries from en.json and pt.json
+   - Removed `auth.confirmation.*` entries
+   - Removed `auth.forgotPassword.*` entries
+   - Removed `auth.resetPassword.*` entries (including requirements)
+   - Kept `auth.logout` as it's still used
+
+3. **Update error handling**
+   - Updated `errorCodes.ts` to remove auth-related error codes
+   - Updated `wrapper.ts` and `journal.ts` to use generic error messages
+   - Removed unused `getPasswordErrors` function from `validation.ts`
+
+4. **Update main page**
+   - Added TODO comments for phase 10 (Cognito redirect)
 
 ### Acceptance Criteria
 
-- [ ] All auth pages removed
-- [ ] No broken imports/references
-- [ ] Build succeeds
+- [x] All auth pages removed
+- [x] No broken imports/references
+- [x] Build succeeds
+- [x] Unused i18n entries removed
 
 ---
 
