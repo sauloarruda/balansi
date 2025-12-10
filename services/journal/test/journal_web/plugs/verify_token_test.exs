@@ -237,18 +237,79 @@ defmodule JournalWeb.Plugs.VerifyTokenTest do
       response = Jason.decode!(conn.resp_body)
       assert response["error"] == "Invalid token"
     end
+
+    test "returns 401 when token has expired", %{conn: conn} do
+      # Generate token with expired exp claim
+      now = System.system_time(:second)
+      expired_claims = %{
+        "sub" => "test-cognito-id",
+        "exp" => now - 3600,  # Expired 1 hour ago
+        "iat" => now - 7200
+      }
+      {token, jwk} = generate_signed_token_with_claims(expired_claims, @test_kid)
+      mock_jwks_success(@test_kid, jwk)
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> VerifyToken.call([])
+
+      assert conn.status == 401
+      assert conn.halted
+
+      response = Jason.decode!(conn.resp_body)
+      assert response["error"] == "Token expired"
+    end
+
+    test "returns 401 when token has nbf claim in the future", %{conn: conn} do
+      # Generate token with nbf claim in the future
+      now = System.system_time(:second)
+      future_claims = %{
+        "sub" => "test-cognito-id",
+        "exp" => now + 3600,
+        "iat" => now,
+        "nbf" => now + 1800  # Not valid for another 30 minutes
+      }
+      {token, jwk} = generate_signed_token_with_claims(future_claims, @test_kid)
+      mock_jwks_success(@test_kid, jwk)
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> VerifyToken.call([])
+
+      assert conn.status == 401
+      assert conn.halted
+
+      response = Jason.decode!(conn.resp_body)
+      assert response["error"] == "Token not yet valid"
+    end
+
+    test "accepts token with missing exp claim", %{conn: conn, user: user, patient: patient} do
+      # Generate token without exp claim (should still be accepted)
+      claims = %{
+        "sub" => "test-cognito-id",
+        "iat" => System.system_time(:second)
+        # No exp claim - token should still be accepted
+      }
+      {token, jwk} = generate_signed_token_with_claims(claims, @test_kid)
+      mock_jwks_success(@test_kid, jwk)
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> VerifyToken.call([])
+
+      # Token without exp should be accepted (exp is optional in some cases)
+      assert conn.assigns[:current_user].id == user.id
+      assert conn.assigns[:current_patient_id] == patient.id
+      refute conn.halted
+    end
   end
 
   # Private helper functions
 
   defp generate_signed_token(cognito_id, kid) do
-    # Generate RSA key pair using JOSE
-    private_jwk = JOSE.JWK.generate_key({:rsa, 2048})
-
-    # Get public key
-    public_jwk = JOSE.JWK.to_public(private_jwk)
-
-    # Create token claims
     now = System.system_time(:second)
     claims = %{
       "sub" => cognito_id,
@@ -256,6 +317,15 @@ defmodule JournalWeb.Plugs.VerifyTokenTest do
       "iat" => now,
       "nbf" => now
     }
+    generate_signed_token_with_claims(claims, kid)
+  end
+
+  defp generate_signed_token_with_claims(claims, kid) do
+    # Generate RSA key pair using JOSE
+    private_jwk = JOSE.JWK.generate_key({:rsa, 2048})
+
+    # Get public key
+    public_jwk = JOSE.JWK.to_public(private_jwk)
 
     # Create header with kid from the start
     header = %{

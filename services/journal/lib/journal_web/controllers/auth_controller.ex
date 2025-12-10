@@ -151,10 +151,26 @@ defmodule JournalWeb.AuthController do
   end
 
   defp create_or_find_patient(user_id) do
+    # get_first_professional_id always returns an integer (defaults to 1)
+    # This is a temporary function until proper professional management is implemented
     professional_id = Auth.get_first_professional_id()
     Auth.create_or_find_patient(user_id, professional_id)
   end
 
+  @doc """
+  Merges user_info from /oauth2/userInfo endpoint with ID token claims.
+
+  The ID token typically contains more user attributes (like name and preferred_username)
+  that may not be present in the userInfo response. This function merges both sources,
+  prioritizing ID token values when both are present.
+
+  ## Parameters
+    - `user_info`: Map from Cognito /oauth2/userInfo endpoint
+    - `id_token_claims`: Map from decoded ID token
+
+  ## Returns
+    - Merged map with all user attributes, ID token values taking precedence
+  """
   defp merge_user_info(user_info, id_token_claims) do
     # Merge ID token claims into user_info, prioritizing ID token claims
     # ID token typically has more user attributes like name and preferred_username

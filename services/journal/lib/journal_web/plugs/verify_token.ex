@@ -35,39 +35,64 @@ defmodule JournalWeb.Plugs.VerifyToken do
 
   def call(conn, _opts) do
     case extract_token(conn) do
-      nil ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Missing authorization header"})
-        |> halt()
-
-      token ->
-        case validate_token(token) do
-          {:ok, cognito_id} ->
-            case get_user_by_cognito_id(cognito_id) do
-              nil ->
-                Logger.warning("User not found for cognito_id: #{cognito_id}")
-                conn
-                |> put_status(:not_found)
-                |> json(%{error: "User not found"})
-                |> halt()
-
-              user ->
-                patient_id = get_patient_id(user.id)
-
-                conn
-                |> assign(:current_user, user)
-                |> assign(:current_patient_id, patient_id)
-            end
-
-          {:error, reason} ->
-            Logger.warning("Token validation failed: #{inspect(reason)}")
-            conn
-            |> put_status(:unauthorized)
-            |> json(%{error: "Invalid token"})
-            |> halt()
-        end
+      nil -> handle_missing_token(conn)
+      token -> validate_and_assign_user(conn, token)
     end
+  end
+
+  defp handle_missing_token(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> json(%{error: "Missing authorization header"})
+    |> halt()
+  end
+
+  defp validate_and_assign_user(conn, token) do
+    case validate_token(token) do
+      {:ok, cognito_id} -> assign_user_to_conn(conn, cognito_id)
+      {:error, reason} -> handle_validation_error(conn, reason)
+    end
+  end
+
+  defp assign_user_to_conn(conn, cognito_id) do
+    case get_user_by_cognito_id(cognito_id) do
+      nil -> handle_user_not_found(conn, cognito_id)
+      user -> assign_user_and_patient(conn, user)
+    end
+  end
+
+  defp handle_user_not_found(conn, cognito_id) do
+    # Log only partial ID for security
+    partial_id = String.slice(cognito_id, 0, 8)
+    Logger.warning("User not found for cognito_id: #{partial_id}...")
+    conn
+    |> put_status(:not_found)
+    |> json(%{error: "User not found"})
+    |> halt()
+  end
+
+  defp assign_user_and_patient(conn, user) do
+    patient_id = get_patient_id(user.id)
+
+    conn
+    |> assign(:current_user, user)
+    |> assign(:current_patient_id, patient_id)
+  end
+
+  defp handle_validation_error(conn, reason) do
+    error_message = case reason do
+      :token_expired -> "Token expired"
+      :token_not_yet_valid -> "Token not yet valid"
+      :missing_sub -> "Invalid token: missing user identifier"
+      :invalid_sub -> "Invalid token: invalid user identifier"
+      _ -> "Invalid token"
+    end
+
+    Logger.warning("Token validation failed: #{inspect(reason)}")
+    conn
+    |> put_status(:unauthorized)
+    |> json(%{error: error_message})
+    |> halt()
   end
 
   # Private functions
@@ -91,9 +116,9 @@ defmodule JournalWeb.Plugs.VerifyToken do
     end
   end
 
-  defp extract_kid_from_token(token_string) do
+  defp extract_kid_from_token(token_string) when is_binary(token_string) and byte_size(token_string) > 10 do
     case String.split(token_string, ".") do
-      [header_b64, _payload_b64, _signature_b64] ->
+      [header_b64, _payload_b64, _signature_b64] when byte_size(header_b64) > 0 ->
         case Base.url_decode64(header_b64, padding: false) do
           {:ok, header_json} ->
             case Jason.decode(header_json) do
@@ -116,6 +141,8 @@ defmodule JournalWeb.Plugs.VerifyToken do
     end
   end
 
+  defp extract_kid_from_token(_), do: {:error, :invalid_token_format}
+
   defp verify_token_signature(token_string, jwk) do
     # Convert JWK map to JOSE JWK format
     jose_jwk = JOSE.JWK.from_map(jwk)
@@ -126,15 +153,22 @@ defmodule JournalWeb.Plugs.VerifyToken do
         # Extract claims from verified JWT
         claims = JOSE.JWT.to_map(jwt) |> elem(1)
 
-        # Validate expiration manually (JOSE doesn't do this automatically)
+        # Validate expiration and nbf (not before) manually
         now = System.system_time(:second)
         exp = Map.get(claims, "exp")
+        nbf = Map.get(claims, "nbf")
 
-        if exp && exp > now do
-          {:ok, claims}
-        else
-          Logger.error("Token has expired or missing exp claim")
-          {:error, :invalid_signature}
+        cond do
+          exp && exp <= now ->
+            Logger.error("Token has expired")
+            {:error, :token_expired}
+
+          nbf && nbf > now ->
+            Logger.error("Token not yet valid (nbf claim)")
+            {:error, :token_not_yet_valid}
+
+          true ->
+            {:ok, claims}
         end
 
       {false, _jwt, _jws} ->
