@@ -474,7 +474,7 @@ users (id)
 
 ---
 
-## Phase 11: Token Management in Frontend (BAL-11.p11)
+## Phase 11: Token Management in Frontend (BAL-11.p11) ✅
 
 **Branch**: `BAL-11.p11`
 **Target**: `main`
@@ -546,52 +546,68 @@ users (id)
 
 ---
 
-## Phase 13: Remove Go API Access from Frontend (BAL-11.p13)
+## Phase 13: Remove Go API Access from Frontend (BAL-11.p13) ✅
 
 **Branch**: `BAL-11.p13`
 **Target**: `main`
 **Estimated Files**: 5-8 files
+**Actual Files**: 8 files
 **Estimated Lines**: ~300 lines (deletions)
+**Actual Lines**: ~298 deletions, 22 insertions (net: -276 lines)
+**Status**: ✅ **Completed**
+**PR**: [#24](https://github.com/sauloarruda/balansi/pull/24)
 
 ### Changes
 
 1. **Remove Go API wrapper**
    - File: `services/web/src/lib/api/wrapper.ts`
-   - Remove `AuthenticationApi` import and usage
-   - Remove `authApiInstance` and `api.auth` export
-   - Keep only the generic fetch wrapper for Journal API
-   - Remove references to Go auth service
+   - Removed `AuthenticationApi`, `Configuration`, `FetchError`, `ResponseError` imports
+   - Removed `createApiConfig()`, `handleApiError()`, `createApiProxy()` functions
+   - Removed `authApiInstance` and `api.auth` export
+   - Kept only `ApiError`, `NetworkError`, and `getApiBaseUrl()` (used by Journal API)
 
 2. **Remove Go API client usage**
    - File: `services/web/src/lib/auth/clientAuth.ts`
-   - Remove `api.auth.logout()` call
-   - Update logout to only clear local token and redirect
+   - Removed `api.auth.logout()` call
+   - Simplified logout to only clear local token (session cookie handled by browser/server)
 
 3. **Update package.json**
    - File: `services/web/package.json`
-   - Remove `generate:api` script that generates from Go OpenAPI
-   - Remove dependency on Go auth service OpenAPI spec
+   - Removed `generate:api` script
+   - Removed `predev` and `prebuild` hooks
+   - Removed `@openapitools/openapi-generator-cli` dependency
 
 4. **Remove generated API client**
-   - File: `services/web/src/lib/api/generated/` (entire directory)
-   - Delete all generated TypeScript files from Go OpenAPI spec
+   - File: `services/web/src/lib/api/generated/` (entire directory) ✅
+   - Deleted all generated TypeScript files from Go OpenAPI spec
+   - File: `services/web/openapitools.json` ✅
+   - Deleted OpenAPI generator configuration
 
 5. **Update playwright config**
    - File: `services/web/playwright.config.ts`
-   - Remove Go auth service startup from test setup
+   - Removed Go auth service startup from test setup
+   - Removed related environment variables
 
 6. **Update README**
    - File: `services/web/README.md`
-   - Remove all references to Go auth service
-   - Remove instructions for deploying/configuring Go auth service
+   - Removed all references to Go auth service
+   - Removed Go 1.23+ from prerequisites
+   - Removed `services/auth/.env` configuration section
+   - Updated deployment examples to remove auth service references
+   - Updated CI/CD section
+
+7. **Update API exports**
+   - File: `services/web/src/lib/api/index.ts`
+   - Removed all generated API type exports
+   - Removed `api` and `createApiConfig` exports
 
 ### Acceptance Criteria
 
-- [ ] No imports or references to `AuthenticationApi` or Go auth service
-- [ ] No generated API client files from Go OpenAPI
-- [ ] Frontend no longer calls Go auth endpoints
-- [ ] Build succeeds without Go auth service dependencies
-- [ ] All references to Go auth service removed from documentation
+- [x] No imports or references to `AuthenticationApi` or Go auth service
+- [x] No generated API client files from Go OpenAPI
+- [x] Frontend no longer calls Go auth endpoints
+- [x] Build succeeds without Go auth service dependencies
+- [x] All references to Go auth service removed from documentation
 
 ---
 
@@ -731,7 +747,7 @@ p14 (Migrate to Elixir API) → p15 (Remove Go Service)
 **Document Version**: 2.0
 **Created**: 2025
 **Last Updated**: 2025-01-27
-**Status**: In Progress (Phases 1-12 completed, Phases 13-15 pending)
+**Status**: In Progress (Phases 1-13 completed, Phases 14-15 pending)
 
 ### Recent Updates (v2.0)
 

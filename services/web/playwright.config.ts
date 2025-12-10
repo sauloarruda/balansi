@@ -35,31 +35,8 @@ export default defineConfig({
 	],
 
 	// Run local dev server before starting tests
-	// Using different ports (3001 for API, 8081 for web) to avoid conflicts with dev servers
+	// Using different port (8081 for web) to avoid conflicts with dev servers
 	webServer: [
-		{
-			command: process.env.SKIP_BUILD
-				? 'cd ../../services/auth && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api 2>&1'
-				: 'cd ../../services/auth && echo "Building auth service..." && go build -o bin/api cmd/api/main.go 2>&1 && echo "Build completed, starting server..." && [ -f .env ] && export $(cat .env | grep -v "^#" | xargs) && PORT=3001 ./bin/api 2>&1',
-			port: 3001, // Test API port (dev uses 3000)
-			reuseExistingServer: false, // Always create new server for tests
-			timeout: 30000, // 30 seconds for build and startup
-			stdout: "inherit",
-			stderr: "inherit",
-			shell: true,
-			env: {
-				PORT: "3001",
-				DATABASE_URL: process.env.DATABASE_URL || "postgres://test:test@localhost:5432/balansi_test?sslmode=disable",
-				ENCRYPTION_SECRET: process.env.ENCRYPTION_SECRET || "test-secret-key-for-ci-testing-only-32-chars",
-				AWS_REGION: process.env.AWS_REGION || "us-east-1",
-				COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "local_test_pool",
-				COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "test_client_id",
-				COGNITO_ENDPOINT: process.env.COGNITO_ENDPOINT || "http://127.0.0.1:9229",
-				FRONTEND_DOMAIN: process.env.FRONTEND_DOMAIN || "localhost:8081",
-				API_DOMAIN: process.env.API_DOMAIN || "localhost:3001",
-				COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || "localhost",
-			},
-		},
 		{
 			command: process.env.SKIP_BUILD
 				? "npm run preview -- --port 8081"
@@ -72,7 +49,6 @@ export default defineConfig({
 			env: {
 				PORT: "8081",
 				VITE_API_URL: "", // Use relative path to leverage Vite proxy
-				VITE_API_PROXY_TARGET: "http://localhost:3001", // Point proxy to test API
 			},
 		},
 	],

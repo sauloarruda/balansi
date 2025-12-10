@@ -5,7 +5,6 @@
  * The session_id cookie (httpOnly) is used to refresh the access_token when needed.
  */
 
-import { api } from "$lib/api";
 import { hasSessionSync } from "./session";
 import { clearAccessToken } from "./token";
 
@@ -18,18 +17,10 @@ export function checkAuth(): boolean {
 }
 
 /**
- * Logout by clearing access token and session cookie
- * Calls the backend to invalidate the session_id cookie
+ * Logout by clearing access token
+ * The session cookie will be cleared by the browser when it expires or is cleared server-side
  */
 export async function logout(): Promise<void> {
-	// Clear access token from memory first
+	// Clear access token from memory
 	clearAccessToken(true); // Pass true to indicate this is a logout
-
-	// Call backend to clear session_id cookie using generated API client
-	try {
-		await api.auth.logout();
-	} catch (error) {
-		// Ignore errors - we already cleared the token locally
-		console.error("Logout error (ignored):", error);
-	}
 }
