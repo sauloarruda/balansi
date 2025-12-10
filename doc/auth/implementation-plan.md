@@ -474,12 +474,15 @@ users (id)
 
 ---
 
-## Phase 11: Token Management in Frontend (BAL-11.p11)
+## Phase 11: Token Management in Frontend (BAL-11.p11) ✅
 
 **Branch**: `BAL-11.p11`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 1 file (token.ts already existed)
 **Estimated Lines**: ~200 lines
+**Actual Lines**: ~131 lines (updated existing file)
+**Status**: ✅ **Completed**
 
 ### Changes
 
@@ -487,20 +490,21 @@ users (id)
    - File: `services/web/src/lib/auth/token.ts`
    - Functions:
      - `getAccessToken()` - Get token, refresh if needed
-     - `refreshAccessToken()` - Refresh using cookie
+     - `refreshAccessToken()` - Refresh using httpOnly cookie (bal_session_id)
      - `clearAccessToken()` - Clear token
+     - `setAccessToken()` - Set token with expiration
+     - `hasAccessToken()` - Check if valid token exists
    - In-memory storage for access token
-   - Automatic refresh 5 minutes before expiration
-
-2. **Update existing token file** (if exists)
-   - Merge with existing implementation
+   - Automatic refresh 5 minutes before expiration (configurable via VITE_TOKEN_EXPIRY_BUFFER_MINUTES)
+   - Fixed response parsing to handle backend snake_case format (access_token, expires_in)
+   - Updated documentation to reflect actual cookie name (bal_session_id)
 
 ### Acceptance Criteria
 
-- [ ] Access token stored in memory
-- [ ] Automatic refresh before expiration
-- [ ] Handles refresh failures
-- [ ] Works with httpOnly cookie
+- [x] Access token stored in memory
+- [x] Automatic refresh before expiration
+- [x] Handles refresh failures
+- [x] Works with httpOnly cookie
 
 ---
 
