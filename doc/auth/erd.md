@@ -767,6 +767,7 @@ function getCognitoAuthUrl(action: "signup" | "login", state: string): string {
     client_id: clientId,
     response_type: "code",
     redirect_uri: redirectUri,
+    scope: "openid email profile", // IMPORTANT: Include 'profile' scope to get 'name' and 'preferred_username'
     ...(state && { state })
   });
 

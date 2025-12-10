@@ -105,9 +105,10 @@ defmodule JournalWeb.AuthController do
       redirect_uri = config[:redirect_uri]
 
       with {:ok, tokens} <- CognitoClient.exchange_code_for_tokens(code, redirect_uri),
+           {:ok, id_token_claims} <- CognitoClient.decode_id_token(tokens.id_token),
            {:ok, user_info} <- CognitoClient.get_user_info(tokens.access_token),
-           {:ok, user} <- create_or_find_user(user_info),
-           {:ok, _patient} <- create_patient(user.id),
+           {:ok, user} <- create_or_find_user(merge_user_info(user_info, id_token_claims)),
+           {:ok, _patient} <- create_or_find_patient(user.id),
            {:ok, encrypted_session} <- Session.encrypt_session(tokens.refresh_token, user.id),
            frontend_url <- get_frontend_url() do
         conn
@@ -128,17 +129,39 @@ defmodule JournalWeb.AuthController do
 
   defp create_or_find_user(user_info) do
     cognito_id = user_info["sub"]
+
+    # Extract name from user_info - use preferred_username first, then name as fallback
+    name = cond do
+      user_info["preferred_username"] && user_info["preferred_username"] != "" ->
+        user_info["preferred_username"]
+
+      user_info["name"] && user_info["name"] != "" ->
+        user_info["name"]
+
+      true ->
+        user_info["email"] || "User"
+    end
+
     attrs = %{
-      name: user_info["name"] || user_info["email"] || "User",
+      name: name,
       email: user_info["email"]
     }
 
     Auth.create_or_find_user(cognito_id, attrs)
   end
 
-  defp create_patient(user_id) do
+  defp create_or_find_patient(user_id) do
     professional_id = Auth.get_first_professional_id()
-    Auth.create_patient(user_id, professional_id)
+    Auth.create_or_find_patient(user_id, professional_id)
+  end
+
+  defp merge_user_info(user_info, id_token_claims) do
+    # Merge ID token claims into user_info, prioritizing ID token claims
+    # ID token typically has more user attributes like name and preferred_username
+    Map.merge(user_info, id_token_claims, fn _key, userinfo_val, idtoken_val ->
+      # Prefer ID token value if it exists and is not empty
+      if idtoken_val != nil && idtoken_val != "", do: idtoken_val, else: userinfo_val
+    end)
   end
 
   defp set_session_cookie(conn, encrypted_session) do

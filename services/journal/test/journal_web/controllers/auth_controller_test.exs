@@ -65,11 +65,21 @@ defmodule JournalWeb.AuthControllerTest do
       code = "test-auth-code-123"
       state = "test-state-456"
 
+      # Create a valid ID token with user claims
+      id_token_claims = %{
+        "sub" => "cognito-user-123",
+        "email" => "test@example.com",
+        "preferred_username" => "Test User",
+        "exp" => System.system_time(:second) + 3600,
+        "iat" => System.system_time(:second)
+      }
+      id_token = generate_test_id_token(id_token_claims)
+
       # Mock CognitoClient responses
       tokens = %{
         access_token: "access-token-123",
         refresh_token: "refresh-token-456",
-        id_token: "id-token-789",
+        id_token: id_token,
         expires_in: 3600,
         token_type: "Bearer"
       }
@@ -77,7 +87,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-user-123",
         "email" => "test@example.com",
-        "name" => "Test User"
+        "preferred_username" => "Test User"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -151,7 +161,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-user-789",
         "email" => "test2@example.com",
-        "name" => "Test User 2"
+        "preferred_username" => "Test User 2"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -237,7 +247,7 @@ defmodule JournalWeb.AuthControllerTest do
       # Missing email in user_info will cause validation error
       user_info = %{
         "sub" => "cognito-user-invalid",
-        "name" => "Test User"
+        "preferred_username" => "Test User"
         # Missing email
       }
 
@@ -293,7 +303,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-user-frontend-test",
         "email" => "frontend-test@example.com",
-        "name" => "Frontend Test"
+        "preferred_username" => "Frontend Test"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -313,6 +323,47 @@ defmodule JournalWeb.AuthControllerTest do
       after
         System.delete_env("FRONTEND_URL")
       end
+    end
+
+    test "uses preferred_username for name, falls back to name field", %{conn: conn} do
+      code = "test-code-name-fallback"
+
+      tokens = %{
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+        id_token: "id-token",
+        expires_in: 3600,
+        token_type: "Bearer"
+      }
+
+      # Test fallback to "name" when preferred_username is not available
+      user_info = %{
+        "sub" => "cognito-user-name-fallback",
+        "email" => "name-fallback@example.com",
+        "name" => "Fallback Name"
+        # No preferred_username
+      }
+
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :exchange_code_for_tokens, fn code_param, redirect_uri_param ->
+        assert code_param == code
+        assert redirect_uri_param == @redirect_uri
+        {:ok, tokens}
+      end)
+      :meck.expect(CognitoClient, :get_user_info, fn "access-token" ->
+        {:ok, user_info}
+      end)
+
+      conn = get(conn, "/journal/auth/callback", %{"code" => code})
+
+      # Should redirect successfully
+      assert redirected_to(conn)
+
+      # Verify user was created with name from "name" field
+      user = Repo.get_by(Journal.Auth.User, cognito_id: "cognito-user-name-fallback")
+      assert user
+      assert user.name == "Fallback Name"
+      assert user.email == "name-fallback@example.com"
     end
 
     test "finds existing user instead of creating duplicate", %{conn: conn} do
@@ -336,7 +387,7 @@ defmodule JournalWeb.AuthControllerTest do
       user_info = %{
         "sub" => "cognito-existing-123",
         "email" => "existing@example.com",
-        "name" => "Existing User"
+        "preferred_username" => "Existing User"
       }
 
       :meck.new(CognitoClient, [:passthrough])
@@ -358,6 +409,54 @@ defmodule JournalWeb.AuthControllerTest do
       users_with_cognito_id = Enum.filter(users, &(&1.cognito_id == "cognito-existing-123"))
       assert length(users_with_cognito_id) == 1
       assert hd(users_with_cognito_id).id == existing_user.id
+    end
+
+    test "finds existing patient instead of creating duplicate", %{conn: conn} do
+      code = "test-code-existing-patient"
+
+      # Create user and patient first
+      {:ok, existing_user} =
+        Auth.create_or_find_user("cognito-existing-patient-123", %{
+          name: "Existing Patient User",
+          email: "existing-patient@example.com"
+        })
+
+      {:ok, existing_patient} = Auth.create_patient(existing_user.id, 1)
+
+      tokens = %{
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+        id_token: "id-token",
+        expires_in: 3600,
+        token_type: "Bearer"
+      }
+
+      user_info = %{
+        "sub" => "cognito-existing-patient-123",
+        "email" => "existing-patient@example.com",
+        "preferred_username" => "Existing Patient User"
+      }
+
+      :meck.new(CognitoClient, [:passthrough])
+      :meck.expect(CognitoClient, :exchange_code_for_tokens, fn code_param, redirect_uri_param ->
+        assert code_param == code
+        assert redirect_uri_param == @redirect_uri
+        {:ok, tokens}
+      end)
+      :meck.expect(CognitoClient, :get_user_info, fn "access-token" ->
+        {:ok, user_info}
+      end)
+
+      conn = get(conn, "/journal/auth/callback", %{"code" => code})
+
+      # Should redirect successfully
+      assert redirected_to(conn)
+
+      # Verify same patient was found (not a new one created)
+      patients = Repo.all(Journal.Auth.Patient)
+      patients_with_user_id = Enum.filter(patients, &(&1.user_id == existing_user.id))
+      assert length(patients_with_user_id) == 1
+      assert hd(patients_with_user_id).id == existing_patient.id
     end
   end
 
@@ -575,7 +674,7 @@ defmodule JournalWeb.AuthControllerTest do
     user_info = %{
       "sub" => "cognito-user-#{code}",
       "email" => "test-#{code}@example.com",
-      "name" => "Test User #{code}"
+      "preferred_username" => "Test User #{code}"
     }
 
     :meck.new(CognitoClient, [:passthrough])
