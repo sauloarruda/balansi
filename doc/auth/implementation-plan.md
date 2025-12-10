@@ -474,15 +474,12 @@ users (id)
 
 ---
 
-## Phase 11: Token Management in Frontend (BAL-11.p11) ✅
+## Phase 11: Token Management in Frontend (BAL-11.p11)
 
 **Branch**: `BAL-11.p11`
 **Target**: `main`
 **Estimated Files**: 2 files
-**Actual Files**: 1 file (token.ts already existed)
 **Estimated Lines**: ~200 lines
-**Actual Lines**: ~131 lines (updated existing file)
-**Status**: ✅ **Completed**
 
 ### Changes
 
@@ -490,136 +487,199 @@ users (id)
    - File: `services/web/src/lib/auth/token.ts`
    - Functions:
      - `getAccessToken()` - Get token, refresh if needed
-     - `refreshAccessToken()` - Refresh using httpOnly cookie (bal_session_id)
+     - `refreshAccessToken()` - Refresh using cookie
      - `clearAccessToken()` - Clear token
-     - `setAccessToken()` - Set token with expiration
-     - `hasAccessToken()` - Check if valid token exists
    - In-memory storage for access token
-   - Automatic refresh 5 minutes before expiration (configurable via VITE_TOKEN_EXPIRY_BUFFER_MINUTES)
-   - Fixed response parsing to handle backend snake_case format (access_token, expires_in)
-   - Updated documentation to reflect actual cookie name (bal_session_id)
+   - Automatic refresh 5 minutes before expiration
+
+2. **Update existing token file** (if exists)
+   - Merge with existing implementation
 
 ### Acceptance Criteria
 
-- [x] Access token stored in memory
-- [x] Automatic refresh before expiration
-- [x] Handles refresh failures
-- [x] Works with httpOnly cookie
+- [ ] Access token stored in memory
+- [ ] Automatic refresh before expiration
+- [ ] Handles refresh failures
+- [ ] Works with httpOnly cookie
 
 ---
 
-## Phase 12: Update API Wrapper for Token Auth (BAL-11.p12)
+## Phase 12: Update OpenAPI Specification with Auth Endpoints (BAL-11.p12)
 
 **Branch**: `BAL-11.p12`
 **Target**: `main`
-**Estimated Files**: 2 files
-**Estimated Lines**: ~150 lines
+**Estimated Files**: 1 file
+**Estimated Lines**: ~200 lines
 
 ### Changes
 
-1. **API wrapper update**
-   - File: `services/web/src/lib/api/wrapper.ts`
-   - Add Authorization header with Bearer token
-   - Handle 401 responses with token refresh
-   - Redirect to Cognito login on auth failure
-
-2. **Journal API client update**
-   - File: `services/web/src/lib/api/journal.ts`
-   - Ensure uses authenticated fetch
+1. **OpenAPI specification update**
+   - File: `services/journal/openapi.yaml`
+   - Add `/auth/callback` endpoint (GET)
+     - Query parameters: `code` (required), `state` (optional)
+     - Responses: 302 (redirect), 400 (missing code), 500 (server error)
+   - Add `/auth/refresh` endpoint (POST)
+     - Uses httpOnly cookie (`bal_session_id`) for refresh token
+     - Responses: 200 (success with access_token, expires_in, token_type), 401 (invalid session), 500 (server error)
+   - Add security scheme documentation for Bearer JWT tokens
+   - Update security requirements for protected endpoints
 
 ### Acceptance Criteria
 
-- [ ] API calls include Authorization header
-- [ ] Automatically refreshes token on 401
-- [ ] Redirects to login on auth failure
-- [ ] All existing API calls work
+- [ ] `/auth/callback` endpoint documented with all parameters and responses
+- [ ] `/auth/refresh` endpoint documented with cookie-based authentication
+- [ ] Security schemes properly documented
+- [ ] All existing endpoints remain documented
+- [ ] OpenAPI spec validates successfully
 
 ---
 
-## Phase 13: Route Protection (BAL-11.p13)
+## Phase 13: Remove Go API Access from Frontend (BAL-11.p13)
 
 **Branch**: `BAL-11.p13`
 **Target**: `main`
-**Estimated Files**: 2 files
-**Estimated Lines**: ~100 lines
+**Estimated Files**: 5-8 files
+**Estimated Lines**: ~300 lines (deletions)
 
 ### Changes
 
-1. **Layout or hooks update**
-   - File: `services/web/src/routes/+layout.svelte` or `src/hooks.ts`
-   - Check for valid token on protected routes
-   - Redirect to Cognito login if no token
+1. **Remove Go API wrapper**
+   - File: `services/web/src/lib/api/wrapper.ts`
+   - Remove `AuthenticationApi` import and usage
+   - Remove `authApiInstance` and `api.auth` export
+   - Keep only the generic fetch wrapper for Journal API
+   - Remove references to Go auth service
 
-2. **Auth check utility**
-   - File: `services/web/src/lib/auth/hooks.ts` (update)
-   - `checkAuthAndRedirect()` function
+2. **Remove Go API client usage**
+   - File: `services/web/src/lib/auth/clientAuth.ts`
+   - Remove `api.auth.logout()` call
+   - Update logout to only clear local token and redirect
+
+3. **Update package.json**
+   - File: `services/web/package.json`
+   - Remove `generate:api` script that generates from Go OpenAPI
+   - Remove dependency on Go auth service OpenAPI spec
+
+4. **Remove generated API client**
+   - File: `services/web/src/lib/api/generated/` (entire directory)
+   - Delete all generated TypeScript files from Go OpenAPI spec
+
+5. **Update playwright config**
+   - File: `services/web/playwright.config.ts`
+   - Remove Go auth service startup from test setup
+
+6. **Update README**
+   - File: `services/web/README.md`
+   - Remove all references to Go auth service
+   - Remove instructions for deploying/configuring Go auth service
 
 ### Acceptance Criteria
 
-- [ ] Protected routes require authentication
-- [ ] Redirects to Cognito login if not authenticated
-- [ ] Public routes (like /auth/callback) work without auth
-- [ ] No infinite redirect loops
+- [ ] No imports or references to `AuthenticationApi` or Go auth service
+- [ ] No generated API client files from Go OpenAPI
+- [ ] Frontend no longer calls Go auth endpoints
+- [ ] Build succeeds without Go auth service dependencies
+- [ ] All references to Go auth service removed from documentation
 
 ---
 
-## Phase 14: Callback Page (Optional) (BAL-11.p14)
+## Phase 14: Migrate Frontend to Use Elixir Journal API (BAL-11.p14)
 
 **Branch**: `BAL-11.p14`
 **Target**: `main`
-**Estimated Files**: 1 file
-**Estimated Lines**: ~50 lines
+**Estimated Files**: 3-5 files
+**Estimated Lines**: ~200 lines
 
 ### Changes
 
-1. **Callback page** (if backend redirects to frontend)
-   - File: `services/web/src/routes/auth/callback/+page.svelte`
-   - Extract token from URL (if passed)
-   - Store token in memory
-   - Redirect to home or onboarding
+1. **Update API base URL configuration**
+   - File: `services/web/src/lib/api/wrapper.ts`
+   - Update `getApiBaseUrl()` to point to Journal API (Elixir) instead of Go auth service
+   - Ensure all API calls use Journal API base URL
+
+2. **Update Journal API client**
+   - File: `services/web/src/lib/api/journal.ts`
+   - Ensure `getJournalApiUrl()` uses correct Elixir API URL
+   - Verify all endpoints match Elixir routes (`/journal/meals`, etc.)
+   - Update to use unified API base URL if applicable
+
+3. **Update token refresh**
+   - File: `services/web/src/lib/auth/token.ts`
+   - Ensure `refreshAccessToken()` calls Elixir `/journal/auth/refresh` endpoint
+   - Verify response format matches Elixir API (snake_case: `access_token`, `expires_in`)
+
+4. **Update environment variables**
+   - File: `services/web/.env.example`
+   - Update `VITE_API_URL` to point to Journal API (Elixir)
+   - Remove `VITE_JOURNAL_API_URL` if no longer needed (or keep if separate)
+   - Update documentation for new API URL
+
+5. **Update README**
+   - File: `services/web/README.md`
+   - Update API configuration instructions to reference Elixir Journal API
+   - Remove any remaining Go auth service references
 
 ### Acceptance Criteria
 
-- [ ] Handles callback redirect from backend
-- [ ] Stores token correctly
-- [ ] Redirects to appropriate page
+- [ ] All API calls go to Elixir Journal API
+- [ ] Token refresh uses Elixir `/journal/auth/refresh` endpoint
+- [ ] All meal endpoints work with Elixir API
+- [ ] Environment variables point to correct services
+- [ ] Documentation updated
 
 ---
 
-## Phase 15: Environment Variables & Configuration (BAL-11.p15)
+## Phase 15: Remove Go Auth Service from Codebase (BAL-11.p15)
 
 **Branch**: `BAL-11.p15`
 **Target**: `main`
-**Estimated Files**: 3 files
-**Estimated Lines**: ~100 lines
+**Estimated Files**: Entire `services/auth` directory
+**Estimated Lines**: ~10,000+ lines (deletions)
 
 ### Changes
 
-1. **Backend config**
-   - File: `services/journal/config/runtime.exs`
-   - Add Cognito configuration variables
+1. **Delete Go auth service directory**
+   - Directory: `services/auth/`
+   - Remove entire service including:
+     - All Go source files
+     - OpenAPI specification
+     - Serverless configuration
+     - Migrations
+     - Tests
+     - Documentation
 
-2. **Frontend env example**
-   - File: `services/web/.env.example`
-   - Add Cognito environment variables
+2. **Update root documentation**
+   - Check for references in:
+     - `README.md` (root)
+     - `doc/` directory
+     - Any architecture diagrams
+     - Deployment documentation
 
-3. **Documentation**
-   - File: `services/journal/README.md`
-   - Update with Cognito configuration instructions
+3. **Update CI/CD configurations**
+   - Remove Go auth service from:
+     - GitHub Actions workflows
+     - Deployment scripts
+     - Infrastructure as Code (if applicable)
+
+4. **Update dependencies**
+   - Remove Go-related dependencies if no other Go services exist
+   - Update Dockerfiles if they reference auth service
 
 ### Acceptance Criteria
 
-- [ ] All environment variables documented
-- [ ] Config files updated
-- [ ] README updated with setup instructions
+- [ ] `services/auth/` directory completely removed
+- [ ] No references to Go auth service in documentation
+- [ ] No references in CI/CD configurations
+- [ ] No broken links or imports
+- [ ] All documentation updated to reflect Elixir-only architecture
 
 ---
 
 ## Summary
 
 **Total Phases**: 15
-**Total Estimated Files**: ~35 files
-**Total Estimated Lines**: ~2,500 lines
+**Total Estimated Files**: ~45 files
+**Total Estimated Lines**: ~3,000 lines (including deletions)
 
 ### Phase Dependencies
 
@@ -633,8 +693,12 @@ p3 (Cognito Client) → p6 (Refresh)
 p7 (JWT Plug) → p8 (Router Integration)
 p9 (Remove Pages) → p10 (Redirect Utils)
 p10 (Redirect Utils) → p11 (Token Management)
-p11 (Token Management) → p12 (API Wrapper)
-p12 (API Wrapper) → p13 (Route Protection)
+p11 (Token Management) → p12 (OpenAPI Update)
+p5 (Callback) → p12 (OpenAPI Update)
+p6 (Refresh) → p12 (OpenAPI Update)
+p12 (OpenAPI Update) → p13 (Remove Go API)
+p13 (Remove Go API) → p14 (Migrate to Elixir API)
+p14 (Migrate to Elixir API) → p15 (Remove Go Service)
 ```
 
 ### Merge Strategy
@@ -652,6 +716,15 @@ p12 (API Wrapper) → p13 (Route Protection)
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 2.0
 **Created**: 2025
-**Status**: Ready for Implementation
+**Last Updated**: 2025-01-27
+**Status**: In Progress (Phases 1-11 completed, Phases 12-15 pending)
+
+### Recent Updates (v2.0)
+
+- **Phase 12**: Changed from "Update API Wrapper" to "Update OpenAPI Specification with Auth Endpoints"
+- **Phase 13**: Changed from "Route Protection" to "Remove Go API Access from Frontend"
+- **Phase 14**: Changed from "Callback Page" to "Migrate Frontend to Use Elixir Journal API"
+- **Phase 15**: Changed from "Environment Variables" to "Remove Go Auth Service from Codebase"
+- Added migration path to remove Go auth service and consolidate on Elixir Journal API

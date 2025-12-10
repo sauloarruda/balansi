@@ -16,6 +16,154 @@ servers:
     description: Staging server
 
 paths:
+  /auth/callback:
+    get:
+      summary: OAuth2 callback endpoint
+      description: |
+        Handles the OAuth2 callback from Cognito Hosted UI after user authentication.
+
+        Flow:
+        1. Receives authorization code from Cognito redirect
+        2. Exchanges code for access and refresh tokens
+        3. Gets user information from Cognito
+        4. Creates or finds user in database
+        5. Creates patient record for user
+        6. Encrypts session data (refresh token + user ID) and sets in httpOnly cookie
+        7. Redirects to frontend URL
+
+        The state parameter (if provided) is passed through to the frontend redirect URL.
+      operationId: authCallback
+      tags:
+        - Authentication
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: Authorization code from Cognito OAuth2 callback
+          schema:
+            type: string
+            example: "abc123def456..."
+        - name: state
+          in: query
+          required: false
+          description: |
+            Optional state parameter passed through from Cognito.
+            If provided, it will be appended to the frontend redirect URL.
+          schema:
+            type: string
+            example: "some-state-value"
+      responses:
+        "302":
+          description: Successful authentication - redirects to frontend URL
+          headers:
+            Location:
+              description: Frontend URL with optional state parameter
+              schema:
+                type: string
+                example: "https://app.balansi.me?state=some-state-value"
+            Set-Cookie:
+              description: |
+                Encrypted session cookie containing refresh token and user ID.
+                Cookie name: `bal_session_id`
+                Cookie attributes: httpOnly, Secure (in production), SameSite=Lax
+              schema:
+                type: string
+                example: "bal_session_id=encrypted-session-data; HttpOnly; Path=/; Max-Age=2592000; SameSite=Lax"
+        "400":
+          description: Missing required authorization code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingCode:
+                  summary: Missing authorization code
+                  value:
+                    error: "Missing authorization code"
+        "500":
+          description: Server error during authentication flow
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                cognitoError:
+                  summary: Cognito API error
+                  value:
+                    error: "Failed to exchange code for tokens"
+                configError:
+                  summary: Configuration error
+                  value:
+                    error: "Authentication service not configured"
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      description: |
+        Refreshes an expired access token using the refresh token stored in an httpOnly cookie.
+
+        Flow:
+        1. Reads encrypted session data from httpOnly cookie (`bal_session_id`)
+        2. Extracts refresh token from decrypted session
+        3. Calls Cognito to refresh the access token
+        4. Returns new access token with expiration time
+
+        The refresh token is stored securely in an encrypted httpOnly cookie,
+        preventing JavaScript access while maintaining security.
+      operationId: refreshAccessToken
+      tags:
+        - Authentication
+      security:
+        - CookieAuth: []
+      responses:
+        "200":
+          description: Access token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+              examples:
+                success:
+                  summary: Successful token refresh
+                  value:
+                    access_token: "eyJraWQiOiJcL1wvY29nbml0by11c..."
+                    expires_in: 3600
+                    token_type: "Bearer"
+        "401":
+          description: Unauthorized - invalid or missing session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missingCookie:
+                  summary: Missing session cookie
+                  value:
+                    error: "Missing session cookie"
+                invalidSession:
+                  summary: Invalid session data
+                  value:
+                    error: "Invalid session"
+                expiredToken:
+                  summary: Expired refresh token
+                  value:
+                    error: "Invalid or expired refresh token"
+        "500":
+          description: Server error during token refresh
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                configError:
+                  summary: Configuration error
+                  value:
+                    error: "Authentication service not configured"
+                cognitoError:
+                  summary: Cognito API error
+                  value:
+                    error: "Failed to refresh access token"
+
   /meals:
     post:
       summary: Create a new meal entry
@@ -24,9 +172,13 @@ paths:
 
         The meal starts in `pending` status, is processed synchronously (POC),
         and returns with `in_review` status and estimated nutritional values.
+
+        Requires valid JWT access token in Authorization header.
       operationId: createMeal
       tags:
         - Meals
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -82,9 +234,13 @@ paths:
         Lists all meals for the authenticated patient on a specific date.
 
         The date parameter is required and must be in ISO8601 format (YYYY-MM-DD).
+
+        Requires valid JWT access token in Authorization header.
       operationId: listMeals
       tags:
         - Meals
+      security:
+        - BearerAuth: []
       parameters:
         - name: date
           in: query
@@ -122,9 +278,13 @@ paths:
       summary: Get a specific meal
       description: |
         Retrieves a single meal entry by ID for the authenticated patient.
+
+        Requires valid JWT access token in Authorization header.
       operationId: getMeal
       tags:
         - Meals
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -159,9 +319,13 @@ paths:
         Confirms a meal entry after user review.
 
         Transitions the meal from `in_review` to `confirmed` status.
+
+        Requires valid JWT access token in Authorization header.
       operationId: confirmMeal
       tags:
         - Meals
+      security:
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -414,15 +578,43 @@ components:
             meal_type: ["can't be blank"]
             original_description: ["can't be blank"]
 
+    RefreshTokenResponse:
+      type: object
+      required:
+        - access_token
+        - expires_in
+        - token_type
+      properties:
+        access_token:
+          type: string
+          description: JWT access token for API authentication
+          example: "eyJraWQiOiJcL1wvY29nbml0by11c..."
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+        token_type:
+          type: string
+          description: Token type (typically "Bearer")
+          example: "Bearer"
+
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
       description: |
-        JWT token in Authorization header.
-        For POC, patient_id is hardcoded. In production, extract from token.
+        JWT access token from Cognito in Authorization header.
+        Format: `Authorization: Bearer <token>`
+        The token contains user claims (cognito_id) and is validated using Cognito JWKS.
+        The patient_id is extracted from the user's patient record in the database.
 
-# Note: Security is not enforced in POC
-# security:
-#   - BearerAuth: []
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: bal_session_id
+      description: |
+        Encrypted session cookie containing refresh token and user ID.
+        Used for token refresh endpoint (`/auth/refresh`).
+        Cookie attributes: httpOnly, Secure (in production), SameSite=Lax
+        Cookie expires in 30 days (same as Cognito refresh token default).
