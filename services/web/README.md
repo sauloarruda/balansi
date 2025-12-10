@@ -73,8 +73,6 @@ E2E tests using Playwright to validate the complete signup flow.
 ### Prerequisites
 
 - Node.js 20+
-- Go 1.23+
-- PostgreSQL (for running the API locally)
 
 ### Running Tests Locally
 
@@ -89,17 +87,7 @@ npm install
 npx playwright install --with-deps chromium
 ```
 
-#### 2. Configure Environment Variables
-
-Make sure the API is properly configured in `services/auth/.env`:
-
-```env
-DATABASE_URL=postgres://user:password@localhost:5432/balansi?sslmode=disable
-PORT=3000
-ENCRYPTION_SECRET=your-secret-key
-```
-
-#### 3. Run Tests
+#### 2. Run Tests
 
 ```bash
 # Run all tests (headless - default)
@@ -145,12 +133,11 @@ This skips the build and starts tests immediately, saving time.
 
 Playwright automatically:
 
-1. Starts the API at `http://localhost:3001` (test port)
-2. Builds and starts the web server at `http://localhost:8081` (test port)
-3. Runs tests in headless browser
-4. Cleans up processes when finished
+1. Builds and starts the web server at `http://localhost:8081` (test port)
+2. Runs tests in headless browser
+3. Cleans up processes when finished
 
-**Note:** Test servers use different ports (3001 for API, 8081 for web) to avoid conflicts with local development servers.
+**Note:** Test server uses a different port (8081) to avoid conflicts with local development server (8080).
 
 ### Debugging
 
@@ -172,7 +159,6 @@ npx playwright show-report
 Tests run automatically on GitHub Actions when there are changes in:
 
 - `services/web/**`
-- `services/auth/**`
 
 The workflow is in `.github/workflows/web-e2e.yml`.
 
@@ -227,25 +213,6 @@ export VITE_COGNITO_CLIENT_ID=your-client-id
 export VITE_COGNITO_REDIRECT_URI=http://localhost:5173/auth/callback
 make dev
 ```
-
-### Getting API Gateway URL
-
-To get the API Gateway URL from the deployed auth service:
-
-```bash
-cd services/auth
-serverless info --stage dev
-```
-
-Look for the `endpoint` line in the output. The base URL (without the `/auth/sign-up` path) should be used for `VITE_API_URL`.
-
-Example output:
-
-```
-endpoint: POST - https://yrltx77a47.execute-api.us-east-2.amazonaws.com/auth/sign-up
-```
-
-In this case, set `VITE_API_URL=https://yrltx77a47.execute-api.us-east-2.amazonaws.com`
 
 ## AWS Amplify Configuration
 
@@ -323,21 +290,12 @@ rm deploy.zip
 
 #### Option 2: AWS Console (Manual with Git)
 
-1. **Get API Gateway URL**:
-
-   ```bash
-   cd services/auth
-   serverless info --stage dev
-   ```
-
-   Copy the base URL from the `endpoint` output (without the `/auth/sign-up` path).
-
-2. **Connect Repository**: Connect your GitHub repository to AWS Amplify
-3. **Configure Build Settings**:
+1. **Connect Repository**: Connect your GitHub repository to AWS Amplify
+2. **Configure Build Settings**:
    - Root directory: `services/web`
    - Build image: Use default Node.js 20+ image
-4. **Set Environment Variables**: Add `VITE_API_URL` in the Amplify console with the URL obtained in step 1
-5. **Deploy**: Amplify will automatically:
+3. **Set Environment Variables**: Add `VITE_API_URL` in the Amplify console with your Journal API URL
+4. **Deploy**: Amplify will automatically:
    - Run `npm install`
    - Run `npm run build` (builds SvelteKit app)
    - Serve content from `build/` directory
@@ -347,10 +305,6 @@ rm deploy.zip
 You can configure Amplify programmatically using AWS CLI:
 
 ```bash
-# First, get the API Gateway URL from the auth service
-cd services/auth
-VITE_API_URL=$(serverless info --stage dev | grep endpoint | sed 's/.*https:\/\/\([^/]*\).*/https:\/\/\1/')
-
 # Create Amplify app
 aws amplify create-app \
   --name balansi-web \
@@ -368,12 +322,10 @@ aws amplify create-branch \
   --branch-name main \
   --framework WEB
 
-# Set environment variables (get VITE_API_URL from auth service first)
-cd services/auth
-VITE_API_URL=$(serverless info --stage dev | grep endpoint | sed 's/.*https:\/\/\([^/]*\).*/https:\/\/\1/')
+# Set environment variables
 aws amplify update-app \
   --app-id <app-id> \
-  --environment-variables VITE_API_URL=$VITE_API_URL \
+  --environment-variables VITE_API_URL=<your-journal-api-url> \
   --region us-east-2
 
 # Start deployment from Git (requires repository connection)
@@ -442,17 +394,15 @@ func createAmplifyApp() error {
     sess := session.Must(session.NewSession())
     svc := amplify.New(sess)
 
-    // Get API Gateway URL from auth service deployment
-    // Run: cd services/auth && serverless info --stage dev
-    // Extract base URL from endpoint output
-    apiGatewayURL := "https://yrltx77a47.execute-api.us-east-2.amazonaws.com" // Replace with actual URL
+    // Set your Journal API URL
+    journalAPIURL := "https://your-journal-api.example.com" // Replace with actual Journal API URL
 
     input := &amplify.CreateAppInput{
         Name: aws.String("balansi-web"),
         Repository: aws.String("https://github.com/sauloarruda/balansi.git"),
         Platform: aws.String("WEB"),
         EnvironmentVariables: map[string]*string{
-            "VITE_API_URL": aws.String(apiGatewayURL),
+            "VITE_API_URL": aws.String(journalAPIURL),
         },
         BuildSpec: aws.String(`
 version: 1
@@ -499,17 +449,13 @@ For Infrastructure as Code, you can use Terraform or AWS CDK:
 **Terraform example:**
 
 ```hcl
-# Get API Gateway URL first:
-# cd services/auth && serverless info --stage dev
-# Extract base URL from endpoint output
-
 resource "aws_amplify_app" "web" {
   name       = "balansi-web"
   repository = "https://github.com/sauloarruda/balansi.git"
   platform   = "WEB"
 
   environment_variables = {
-    VITE_API_URL = "https://yrltx77a47.execute-api.us-east-2.amazonaws.com" # Replace with actual URL
+    VITE_API_URL = "https://your-journal-api.example.com" # Replace with actual Journal API URL
   }
 
   build_spec = file("${path.module}/amplify.yml")
