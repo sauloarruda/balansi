@@ -32,8 +32,16 @@ build:
 	@echo "Build completed!"
 
 # Development mode: start SvelteKit dev server
+# Automatically loads environment variables from .env file if it exists
 dev:
-	npm run dev
+	@if [ -f .env ]; then \
+		echo "✅ Loading environment variables from .env file"; \
+		export $$(cat .env | grep -v "^#" | xargs) && npm run dev; \
+	else \
+		echo "⚠️  No .env file found. Using system environment variables."; \
+		echo "   Create .env file from .env.example if needed."; \
+		npm run dev; \
+	fi
 
 # Clean generated files
 clean:
