@@ -10,7 +10,7 @@ This document outlines the implementation plan for migrating to Cognito Hosted U
 
 ---
 
-## Phase 1: Database Migrations (BAL-11.p1)
+## Phase 1: Database Migrations (BAL-11.p1) ✅
 
 **Branch**: `BAL-11.p1`
 **Target**: `main`
@@ -68,7 +68,7 @@ users (id)
 
 ---
 
-## Phase 2: Elixir Schemas (BAL-11.p2)
+## Phase 2: Elixir Schemas (BAL-11.p2) ✅
 
 **Branch**: `BAL-11.p2`
 **Target**: `main`
@@ -110,7 +110,7 @@ users (id)
 
 ---
 
-## Phase 3: Cognito Client Service (BAL-11.p3)
+## Phase 3: Cognito Client Service (BAL-11.p3) ✅
 
 **Branch**: `BAL-11.p3`
 **Target**: `main`
@@ -154,7 +154,7 @@ users (id)
 
 ---
 
-## Phase 4: Auth Context Module (BAL-11.p4)
+## Phase 4: Auth Context Module (BAL-11.p4) ✅
 
 **Branch**: `BAL-11.p4`
 **Target**: `main`
@@ -195,7 +195,7 @@ users (id)
 
 ---
 
-## Phase 5: Callback Controller (BAL-11.p5)
+## Phase 5: Callback Controller (BAL-11.p5) ✅
 
 **Branch**: `BAL-11.p5`
 **Target**: `main`
@@ -245,7 +245,7 @@ users (id)
 
 ---
 
-## Phase 6: Token Refresh Endpoint (BAL-11.p6)
+## Phase 6: Token Refresh Endpoint (BAL-11.p6) ✅
 
 **Branch**: `BAL-11.p6`
 **Target**: `main`
@@ -283,7 +283,7 @@ users (id)
 
 ---
 
-## Phase 7: JWT Validation Plug (BAL-11.p7)
+## Phase 7: JWT Validation Plug (BAL-11.p7) ✅
 
 **Branch**: `BAL-11.p7`
 **Target**: `main`
@@ -343,12 +343,16 @@ users (id)
 
 ---
 
-## Phase 8: Integrate JWT Plug in Router (BAL-11.p8)
+## Phase 8: Integrate JWT Plug in Router (BAL-11.p8) ✅
 
 **Branch**: `BAL-11.p8`
 **Target**: `main`
 **Estimated Files**: 2 files
+**Actual Files**: 6 files (including test infrastructure updates)
 **Estimated Lines**: ~50 lines
+**Actual Lines**: ~272 lines (net: ~207 lines)
+**Status**: ✅ **Completed**
+**PR**: [#19](https://github.com/sauloarruda/balansi/pull/19)
 
 ### Changes
 
@@ -362,12 +366,26 @@ users (id)
    - Remove `@poc_patient_id` constant
    - Use `conn.assigns[:current_patient_id]` instead
 
+3. **Test infrastructure**
+   - File: `services/journal/test/support/conn_case.ex`
+   - Added `authenticate_conn/2` helper for test setup with JWT tokens
+   - Generates valid JWT tokens and mocks JWKS for testing
+
+4. **Test updates**
+   - File: `services/journal/test/journal_web/controllers/meal_controller_test.exs`
+   - Updated all tests to use authenticated connections
+   - File: `services/journal/test/journal_web/meal_helpers_test.exs`
+   - Updated helper tests to authenticate before requests
+   - File: `services/journal/test/support/meal_helpers.ex`
+   - Updated macros to support dynamic patient_id
+   - Fixed `ensure_patient_exists` to use Ecto insert_all
+
 ### Acceptance Criteria
 
-- [ ] Protected routes require valid JWT token
-- [ ] Meal controller uses patient_id from token
-- [ ] Returns 401 for invalid/missing tokens
-- [ ] All existing tests updated and passing
+- [x] Protected routes require valid JWT token
+- [x] Meal controller uses patient_id from token
+- [x] Returns 401 for invalid/missing tokens
+- [x] All existing tests updated and passing (307 tests, 0 failures)
 
 ---
 

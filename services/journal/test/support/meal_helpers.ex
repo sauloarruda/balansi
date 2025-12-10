@@ -23,30 +23,47 @@ defmodule JournalWeb.MealHelpers do
   # This is necessary because meal_entries now have a foreign key constraint
   # on patient_id.
   defp ensure_patient_exists(patient_id) do
+    alias Journal.Auth.User
+    alias Journal.Auth.Patient
+
     # Check if patient exists
-    result = Journal.Repo.query!("SELECT id FROM patients WHERE id = $1", [patient_id])
+    case Repo.get(Patient, patient_id) do
+      nil ->
+        # Patient doesn't exist, create it along with required user
+        # Use patient_id as user_id for simplicity in tests
+        user_id = patient_id
 
-    if length(result.rows) == 0 do
-      # Patient doesn't exist, create it along with required user
-      # Use patient_id as user_id for simplicity in tests
-      user_id = patient_id
+        # Ensure user exists (check first to avoid constraint errors)
+        user = case Repo.get(User, user_id) do
+          nil ->
+            # Create user using insert_all to set explicit ID
+            now = DateTime.utc_now() |> DateTime.truncate(:second)
+            Repo.insert_all(User, [%{
+              id: user_id,
+              name: "Test User #{user_id}",
+              email: "test#{user_id}@example.com",
+              cognito_id: "cognito-#{user_id}",
+              inserted_at: now,
+              updated_at: now
+            }])
+            Repo.get!(User, user_id)
+          existing_user ->
+            existing_user
+        end
 
-      # Ensure user exists (check first to avoid constraint errors)
-      user_result = Journal.Repo.query!("SELECT id FROM users WHERE id = $1", [user_id])
-      if length(user_result.rows) == 0 do
-        # Create user - use a sequence to get next ID if we want auto-increment,
-        # but since we're specifying ID, we'll insert directly
-        Journal.Repo.query!("""
-          INSERT INTO users (id, name, email, cognito_id, inserted_at, updated_at)
-          VALUES ($1, $2, $3, $4, NOW(), NOW())
-        """, [user_id, "Test User #{user_id}", "test#{user_id}@example.com", "cognito-#{user_id}"])
-      end
+        # Create patient using insert_all to set explicit ID
+        now = DateTime.utc_now() |> DateTime.truncate(:second)
+        Repo.insert_all(Patient, [%{
+          id: patient_id,
+          user_id: user.id,
+          professional_id: 1,
+          inserted_at: now,
+          updated_at: now
+        }])
 
-      # Create patient with the specific ID
-      Journal.Repo.query!("""
-        INSERT INTO patients (id, user_id, professional_id, inserted_at, updated_at)
-        VALUES ($1, $2, $3, NOW(), NOW())
-      """, [patient_id, user_id, 1])
+      _existing_patient ->
+        # Patient already exists, nothing to do
+        :ok
     end
   end
 
@@ -86,7 +103,10 @@ defmodule JournalWeb.MealHelpers do
     patient_id = attrs[:patient_id]
 
     # Ensure patient exists before creating meal entry
-    ensure_patient_exists(patient_id)
+    # Always ensure patient exists - the function checks if it already exists
+    if is_integer(patient_id) do
+      ensure_patient_exists(patient_id)
+    end
 
     %MealEntry{}
     |> MealEntry.changeset(attrs)
@@ -118,10 +138,17 @@ defmodule JournalWeb.MealHelpers do
 
   # Controller-specific helpers (macros that require ConnCase with ExUnit and Phoenix.ConnTest)
 
-  defmacro assert_meal_structure(data) do
+  defmacro assert_meal_structure(data, opts \\ []) do
     quote do
       assert unquote(data)["id"] != nil
-      assert unquote(data)["patient_id"] == unquote(@poc_patient_id)
+
+      # Check patient_id if provided, otherwise just verify it exists
+      if patient_id = Keyword.get(unquote(opts), :patient_id) do
+        assert unquote(data)["patient_id"] == patient_id
+      else
+        assert unquote(data)["patient_id"] != nil
+      end
+
       assert unquote(data)["meal_type"] in ["breakfast", "lunch", "snack", "dinner"]
       assert unquote(data)["original_description"] != nil
       assert unquote(data)["status"] in ["pending", "processing", "in_review", "confirmed"]
@@ -130,11 +157,18 @@ defmodule JournalWeb.MealHelpers do
     end
   end
 
-  defmacro assert_meal_response(conn, expected_status \\ 200) do
+  defmacro assert_meal_response(conn, expected_status \\ 200, opts \\ []) do
     quote do
       assert %{"data" => data} = json_response(unquote(conn), unquote(expected_status))
       assert data["id"] != nil
-      assert data["patient_id"] == unquote(@poc_patient_id)
+
+      # Check patient_id if provided, otherwise just verify it exists
+      if patient_id = Keyword.get(unquote(opts), :patient_id) do
+        assert data["patient_id"] == patient_id
+      else
+        assert data["patient_id"] != nil
+      end
+
       assert data["meal_type"] in ["breakfast", "lunch", "snack", "dinner"]
       assert data["original_description"] != nil
       assert data["status"] in ["pending", "processing", "in_review", "confirmed"]

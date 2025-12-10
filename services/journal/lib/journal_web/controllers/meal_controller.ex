@@ -5,9 +5,6 @@ defmodule JournalWeb.MealController do
   alias Journal.Helpers.DateHelper
   alias JournalWeb.ErrorHandler
 
-  # POC: Using constant patient_id. In production, extract from Bearer token.
-  @poc_patient_id 1
-
   @doc """
   Creates a new meal entry and processes with LLM.
 
@@ -108,7 +105,9 @@ defmodule JournalWeb.MealController do
 
   # Private functions
 
-  defp get_patient_id(_conn), do: @poc_patient_id
+  defp get_patient_id(conn) do
+    conn.assigns[:current_patient_id]
+  end
 
   defp serialize_meal(meal) do
     %{
