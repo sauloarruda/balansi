@@ -292,6 +292,7 @@ users (id)
 **Estimated Lines**: ~400 lines
 **Actual Lines**: ~600+ lines
 **Status**: ✅ **Completed**
+**PR**: [#18](https://github.com/sauloarruda/balansi/pull/18)
 
 ### Changes
 
