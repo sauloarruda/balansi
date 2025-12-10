@@ -17,7 +17,12 @@
 
 		hasSession().then((isAuth) => {
 			if (!isAuth) {
-				goto("/auth");
+				// TODO: Phase 10 - Redirect to Cognito login
+				// For now, redirect to home to prevent broken link
+				console.warn(
+					"Auth pages removed - redirect to Cognito login will be implemented in phase 10"
+				);
+				goto("/");
 			} else {
 				authenticated = true;
 				loading = false;
@@ -29,7 +34,12 @@
 		loggingOut = true;
 		try {
 			await clientLogout();
-			goto("/auth");
+			// TODO: Phase 10 - Redirect to Cognito login
+			// For now, redirect to home to prevent broken link
+			console.warn(
+				"Auth pages removed - redirect to Cognito login will be implemented in phase 10"
+			);
+			goto("/");
 		} catch (error) {
 			console.error("Logout error:", error);
 		} finally {

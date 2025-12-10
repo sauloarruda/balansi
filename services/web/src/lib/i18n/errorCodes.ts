@@ -9,22 +9,6 @@ export const API_ERROR_CODES = {
 	invalid_request: "errors.invalidRequest",
 	missing_fields: "errors.missingFields",
 
-	// Erros de conflito (409)
-	user_exists: "auth.signup.errors.userExists",
-	user_already_confirmed: "auth.confirmation.errors.userAlreadyConfirmed",
-
-	// Erros de confirmação (404, 422)
-	user_not_found: "auth.confirmation.errors.userNotFound",
-	invalid_code: "auth.confirmation.errors.invalidCode",
-	expired_code: "auth.confirmation.errors.expiredCode",
-
-	// Erros de recuperação de senha (404, 422, 429)
-	recovery_code_invalid: "auth.resetPassword.errors.invalidCode",
-	recovery_code_expired: "auth.resetPassword.errors.expiredCode",
-	password_policy_violation: "auth.resetPassword.errors.passwordPolicy",
-	too_many_attempts: "auth.forgotPassword.errors.tooManyAttempts",
-	limit_exceeded: "auth.forgotPassword.errors.tooManyAttempts",
-
 	// Erros de servidor (500)
 	internal_error: "errors.serverError",
 } as const;
