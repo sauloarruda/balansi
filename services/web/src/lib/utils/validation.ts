@@ -68,20 +68,3 @@ export function getPasswordRequirements(password: string): PasswordRequirements 
 	};
 }
 
-/**
- * Gets array of unmet password requirements as error message keys
- * @param password The password string to check
- * @returns Array of i18n keys for unmet requirements
- */
-export function getPasswordErrors(password: string): string[] {
-	const requirements = getPasswordRequirements(password);
-	const errors: string[] = [];
-
-	if (!requirements.minLength) errors.push("auth.resetPassword.requirements.minLength");
-	if (!requirements.hasUppercase) errors.push("auth.resetPassword.requirements.uppercase");
-	if (!requirements.hasLowercase) errors.push("auth.resetPassword.requirements.lowercase");
-	if (!requirements.hasNumber) errors.push("auth.resetPassword.requirements.number");
-	if (!requirements.hasSpecial) errors.push("auth.resetPassword.requirements.special");
-
-	return errors;
-}

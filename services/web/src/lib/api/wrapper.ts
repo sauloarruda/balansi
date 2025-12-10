@@ -121,7 +121,7 @@ async function handleApiError(error: unknown): Promise<never> {
 			if (status >= 500) {
 				throw new ApiError(get(_)("errors.serverError"), status);
 			} else {
-				throw new ApiError(get(_)("auth.signup.errors.serverError"), status);
+				throw new ApiError(get(_)("errors.invalidRequest"), status);
 			}
 		} catch (e) {
 			// If error is already ApiError, re-throw it
@@ -132,18 +132,18 @@ async function handleApiError(error: unknown): Promise<never> {
 			if (status >= 500) {
 				throw new ApiError(get(_)("errors.serverError"), status);
 			} else {
-				throw new ApiError(get(_)("auth.signup.errors.serverError"), status);
+				throw new ApiError(get(_)("errors.invalidRequest"), status);
 			}
 		}
 	}
 
 	// Check if it's a FetchError (network error)
 	if (error instanceof FetchError) {
-		throw new NetworkError(get(_)("auth.signup.errors.connectionError"));
+		throw new NetworkError(get(_)("errors.serverError"));
 	}
 
 	// Unknown error - treat as network error
-	throw new NetworkError(get(_)("auth.signup.errors.connectionError"));
+	throw new NetworkError(get(_)("errors.serverError"));
 }
 
 /**

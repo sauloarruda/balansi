@@ -89,7 +89,7 @@ async function journalFetch<T>(
 		return await response.json();
 	} catch (error) {
 		if (error instanceof ApiError) throw error;
-		throw new NetworkError(get(_)("auth.signup.errors.connectionError"));
+		throw new NetworkError(get(_)("errors.serverError"));
 	}
 }
 
