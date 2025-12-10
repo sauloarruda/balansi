@@ -178,9 +178,55 @@ The workflow is in `.github/workflows/web-e2e.yml`.
 
 ## Environment Variables
 
+### Required Variables
+
+- `VITE_COGNITO_DOMAIN`: Cognito Hosted UI domain (e.g., `https://your-domain.auth.us-east-2.amazoncognito.com`)
+- `VITE_COGNITO_CLIENT_ID`: Cognito App Client ID
+- `VITE_COGNITO_REDIRECT_URI`: Redirect URI after Cognito callback (must match Cognito config, e.g., `http://localhost:5173/auth/callback`)
+
+### Optional Variables
+
 - `VITE_API_URL`: API Gateway URL (default: `http://localhost:3000`)
+- `VITE_JOURNAL_API_URL`: Journal API URL (default: derived from `VITE_API_URL`)
+- `VITE_TOKEN_EXPIRY_BUFFER_MINUTES`: Token expiry buffer in minutes (default: `5`)
 
 **Note:** `VITE_` prefix is required for SvelteKit to expose the variable to the client.
+
+### Configuration
+
+#### Option 1: Using .env file (Recommended for Development)
+
+1. Copy the example file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` and fill in your Cognito values:
+   ```env
+   VITE_COGNITO_DOMAIN=https://your-domain.auth.us-east-2.amazoncognito.com
+   VITE_COGNITO_CLIENT_ID=your-cognito-client-id
+   VITE_COGNITO_REDIRECT_URI=http://localhost:5173/auth/callback
+   ```
+
+3. Run `make dev` - it will automatically load variables from `.env`
+
+#### Option 2: Using Environment Variables Directly
+
+```bash
+VITE_COGNITO_DOMAIN=https://your-domain.auth.us-east-2.amazoncognito.com \
+VITE_COGNITO_CLIENT_ID=your-client-id \
+VITE_COGNITO_REDIRECT_URI=http://localhost:5173/auth/callback \
+make dev
+```
+
+#### Option 3: Export in Shell
+
+```bash
+export VITE_COGNITO_DOMAIN=https://your-domain.auth.us-east-2.amazoncognito.com
+export VITE_COGNITO_CLIENT_ID=your-client-id
+export VITE_COGNITO_REDIRECT_URI=http://localhost:5173/auth/callback
+make dev
+```
 
 ### Getting API Gateway URL
 

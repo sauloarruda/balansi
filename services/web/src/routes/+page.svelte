@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
-	import { goto } from "$app/navigation";
 	import { logout as clientLogout } from "$lib/auth/clientAuth";
+	import { redirectToLogin } from "$lib/auth/cognito";
 	import { hasSession } from "$lib/auth/session";
 	import Button from "$lib/components/ds/Button.svelte";
 	import Container from "$lib/components/ds/Container.svelte";
@@ -17,12 +17,8 @@
 
 		hasSession().then((isAuth) => {
 			if (!isAuth) {
-				// TODO: Phase 10 - Redirect to Cognito login
-				// For now, redirect to home to prevent broken link
-				console.warn(
-					"Auth pages removed - redirect to Cognito login will be implemented in phase 10"
-				);
-				goto("/");
+				// Redirect to Cognito login
+				redirectToLogin();
 			} else {
 				authenticated = true;
 				loading = false;
@@ -34,12 +30,8 @@
 		loggingOut = true;
 		try {
 			await clientLogout();
-			// TODO: Phase 10 - Redirect to Cognito login
-			// For now, redirect to home to prevent broken link
-			console.warn(
-				"Auth pages removed - redirect to Cognito login will be implemented in phase 10"
-			);
-			goto("/");
+			// Redirect to Cognito login after logout
+			redirectToLogin();
 		} catch (error) {
 			console.error("Logout error:", error);
 		} finally {
