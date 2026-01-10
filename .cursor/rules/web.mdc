@@ -1,0 +1,51 @@
+---
+globs: services/web/**/*
+alwaysApply: false
+---
+# Web Service (SvelteKit)
+
+SvelteKit frontend with TailwindCSS and Preline UI.
+
+## Code Style
+- TypeScript strict mode
+- Svelte 5 runes: `$state()`, `$derived()`, `$effect()`, `$props()`
+- Use ESLint and Prettier
+- Type-safe API client (generated from OpenAPI)
+
+## Svelte 5
+- Use runes for reactivity
+- Avoid `let` for reactive state
+
+## TypeScript
+- Explicit types
+- Avoid `any` (use `unknown` if needed)
+- Use interfaces for props
+
+## Styling
+- TailwindCSS utility classes
+- Preline UI components
+- Scoped component styles
+
+## API Integration
+- Always use generated API client
+- Handle errors with i18n
+- Show loading states
+- Validate inputs
+
+## i18n
+- All user text translatable
+- Use `$_()` for translations
+- Support pt-BR and en-US
+
+## Testing
+- E2E tests with Playwright
+- Test error scenarios
+- Test form validation
+
+## Performance
+- Code splitting
+- Lazy loading routes
+- Optimize images
+
+## Configuration
+- Always use config in place of os.Getenv

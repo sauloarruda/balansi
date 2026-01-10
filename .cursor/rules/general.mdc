@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+# General Rules
+
+**All code, commits, PRs, comments in English.**
+- Exception: i18n strings are exempt from the English-only rule and may be in any language
