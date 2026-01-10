@@ -1,0 +1,23 @@
+{
+  "categories": {
+    "form": {
+      "displayGraphics": true,
+      "instructions": {
+        "enabled": true
+      },
+      "languageSelector": {
+        "enabled": true
+      },
+      "location": {
+        "horizontal": "CENTER",
+        "vertical": "CENTER"
+      },
+      "sessionTimerDisplay": "NONE"
+    }
+  },
+  "componentClasses": {
+    "buttons": {
+      "borderRadius": 4.0
+    }
+  }
+}
