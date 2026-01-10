@@ -86,10 +86,11 @@ The `patients` table links users to professionals (nutritionists). Created autom
 - `professional_id` references a future professionals table (no FK constraint yet)
 
 **Notes:**
-- `professional_id` comes from `state` parameter in Cognito callback
-- If `professional_id` is missing, use first professional from database (temporary - onboarding screen to be implemented later)
+- `professional_id` comes from validated `state` parameter in Cognito callback (after CSRF validation)
+- **REQUIRED**: `professional_id` must be present in state parameter, otherwise patient record creation fails and authentication is aborted (no fallback to Professional.first)
 - Both User and Patient records are created automatically during callback (onboarding flow to be implemented in the future)
 - One user can have multiple patient records (one per professional)
+- Patient record creation uses `find_or_create_by!` to ensure uniqueness and handle race conditions
 
 ### 2.2 Entity Relationship Diagram
 
@@ -215,7 +216,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "patients_user_professional_unique_idx" ON "pa
 
 **Notes:**
 - Created during authentication callback
-- If `professional_id` is missing from state, use first professional from database (temporary solution)
+- **REQUIRED**: `professional_id` must be present in state parameter, otherwise patient record creation fails and authentication is aborted (no fallback)
 - **Unique constraint**: The unique index `patients_user_professional_unique_idx` ensures one patient record per user-professional pair at the database level (defense in depth - also validated in Rails model, see section 4.2)
 
 ---
@@ -232,12 +233,22 @@ class User < ApplicationRecord
   has_many :patients, dependent: :destroy
 
   # Validations
-  validates :timezone, presence: true, inclusion: { in: -> { User.valid_timezones } }
+  validates :timezone, presence: true
   validates :language, presence: true, inclusion: { in: -> { User.valid_languages } }
 
-  # Get list of valid timezones from ActiveSupport::TimeZone
-  def self.valid_timezones
-    ActiveSupport::TimeZone.all.map(&:name)
+  validate :valid_iana_timezone
+
+  # Validate timezone using IANA format (e.g., "America/Sao_Paulo")
+  # This is the standard format returned by JavaScript Intl.DateTimeFormat
+  def valid_iana_timezone
+    return if timezone.blank?
+
+    begin
+      # Use TZInfo to validate IANA timezone identifier
+      TZInfo::Timezone.get(timezone)
+    rescue TZInfo::InvalidTimezoneIdentifier
+      errors.add(:timezone, "is not a valid IANA timezone identifier (e.g., 'America/Sao_Paulo')")
+    end
   end
 
   # Get list of valid languages from Rails i18n configuration
@@ -248,11 +259,13 @@ end
 ```
 
 **Validations:**
-- **timezone**: Must be present and must be a valid timezone from `ActiveSupport::TimeZone.all`
+- **timezone**: Must be present and must be a valid IANA timezone identifier (e.g., "America/Sao_Paulo")
+  - Uses `TZInfo::Timezone.get(timezone)` to validate IANA format
+  - This matches the format returned by JavaScript `Intl.DateTimeFormat().resolvedOptions().timeZone`
 - **language**: Must be present and must be one of the available locales configured in Rails (`config.i18n.available_locales`)
 
 **Notes:**
-- Timezone validation uses Rails' built-in timezone list (`ActiveSupport::TimeZone.all`)
+- Timezone validation uses TZInfo to validate IANA timezone identifiers (standard format from JavaScript)
 - Language validation uses Rails i18n configuration (`Rails.application.config.i18n.available_locales`)
 - These validations ensure data integrity at the model level (not at database level)
 - Invalid timezone or language values will raise validation errors before saving
@@ -289,34 +302,46 @@ The authentication flow uses **Cognito Hosted UI** for all user-facing authentic
 ### 5.2 Sign Up Flow (New User)
 
 ```
-1. User navigates to /auth/sign-up?professional_id=XX
+1. User navigates to /auth/sign_up?professional_id=XX
    ↓
-2. Rails redirects to Cognito Hosted UI:
-   https://{domain}.auth.{region}.amazoncognito.com/signup?
+2. Rails generates CSRF token and stores in session:
+   - Generates secure random token (32 bytes, base64url encoded)
+   - Stores in session[:oauth_state]
+   - Builds state parameter: csrf_token=XXX&professional_id=XX
+   ↓
+3. Rails redirects to Cognito Hosted UI (Managed Login V2):
+   https://{domain}.auth.{region}.amazoncognito.com/oauth2/authorize?
      client_id={CLIENT_ID}&
      response_type=code&
      redirect_uri={CALLBACK_URI}&
-     state=professional_id%3DXX&
-     lang=pt-BR
+     scope=openid email profile&
+     state=csrf_token%3DXXX%26professional_id%3DXX
+   (Language determined by Accept-Language header, not query parameter)
    ↓
-3. User completes signup in Cognito Hosted UI
+4. Cognito Managed Login V2 redirects to /signup page
+   ↓
+5. User completes signup in Cognito Hosted UI
    - Enters name, email, password (all handled by Cognito)
    - Cognito validates password policy
    - Cognito sends confirmation email
    ↓
-4. User confirms email in Cognito Hosted UI (handled by Cognito)
+6. User confirms email in Cognito Hosted UI (handled by Cognito)
    ↓
-5. Cognito redirects to callback:
+7. Cognito redirects to callback:
    https://app.balansi.me/auth/callback?
      code={AUTHORIZATION_CODE}&
-     state=professional_id%3DXX
+     state=csrf_token%3DXXX%26professional_id%3DXX
    ↓
-6. Rails callback endpoint:
+8. Rails callback endpoint:
+   - Validates CSRF token from state parameter (prevents CSRF attacks)
+   - Checks authorization code idempotency (prevents replay attacks)
    - Exchanges code for tokens using Cognito
-   - Gets user info from Cognito
+   - Verifies ID token signature using Cognito JWKS
+   - Extracts user info from ID token (preferred) or userinfo endpoint (fallback)
    - Creates user record in database (if doesn't exist)
-   - Creates patient record (user_id, professional_id) automatically
+   - Creates patient record (user_id, professional_id) - REQUIRED, fails if professional_id missing
    - Creates Rails session with httpOnly cookie
+   - Marks authorization code as processed (idempotency)
    - Redirects to home (onboarding to be implemented later)
 ```
 
@@ -327,30 +352,44 @@ The authentication flow uses **Cognito Hosted UI** for all user-facing authentic
    ↓
 2. Rails checks for valid session (httpOnly cookie)
    ↓
-3. If no valid session, redirects to Cognito Hosted UI:
-   https://{domain}.auth.{region}.amazoncognito.com/login?
+3. If no valid session, redirects to /auth/sign_in
+   ↓
+4. Rails generates CSRF token and stores in session:
+   - Generates secure random token (32 bytes, base64url encoded)
+   - Stores in session[:oauth_state]
+   - Builds state parameter: csrf_token=XXX (optional: &professional_id=XX)
+   ↓
+5. Rails redirects to Cognito Hosted UI (Managed Login V2):
+   https://{domain}.auth.{region}.amazoncognito.com/oauth2/authorize?
      client_id={CLIENT_ID}&
      response_type=code&
      redirect_uri={CALLBACK_URI}&
-     state=professional_id%3DXX (optional)&
-     lang=pt-BR
+     scope=openid email profile&
+     state=csrf_token%3DXXX
+   (Language determined by Accept-Language header, not query parameter)
    ↓
-4. User enters email/password in Cognito Hosted UI (handled by Cognito)
+6. Cognito Managed Login V2 redirects to /login page
    ↓
-5. Cognito validates credentials
+7. User enters email/password in Cognito Hosted UI (handled by Cognito)
    ↓
-6. Cognito redirects to callback:
+8. Cognito validates credentials
+   ↓
+9. Cognito redirects to callback:
    https://app.balansi.me/auth/callback?
      code={AUTHORIZATION_CODE}&
-     state=professional_id%3DXX
+     state=csrf_token%3DXXX
    ↓
-7. Rails callback endpoint:
-   - Exchanges code for tokens using Cognito
-   - Gets user info from Cognito
-   - Finds or creates user record
-   - Creates patient record if professional_id in state (or uses first professional)
-   - Creates Rails session with httpOnly cookie
-   - Redirects to home
+10. Rails callback endpoint:
+    - Validates CSRF token from state parameter (prevents CSRF attacks)
+    - Checks authorization code idempotency (prevents replay attacks)
+    - Exchanges code for tokens using Cognito
+    - Verifies ID token signature using Cognito JWKS
+    - Extracts user info from ID token (preferred) or userinfo endpoint (fallback)
+    - Finds or creates user record
+    - Creates patient record if professional_id in state (REQUIRED - fails if missing)
+    - Creates Rails session with httpOnly cookie
+    - Marks authorization code as processed (idempotency)
+    - Redirects to home
 ```
 
 ### 5.4 Password Recovery Flow
@@ -374,95 +413,120 @@ Password recovery is handled entirely by Cognito Hosted UI. Users click "Forgot 
 - `state` (optional): State parameter containing `professional_id=XX`
 
 **Processing Steps:**
-1. Extract `code` and `state` from query parameters
-2. Parse `state` to get `professional_id`:
+1. **CSRF Protection**: Validate state parameter contains valid CSRF token:
    ```ruby
-   state_params = URI.decode_www_form(state || "").to_h
-   professional_id = state_params["professional_id"]
+   # Validates CSRF token stored in session matches token in state parameter
+   # Uses constant-time comparison to prevent timing attacks
+   validate_state_parameter(params[:state])
    ```
-3. Exchange `code` for tokens using CognitoService:
+2. **Idempotency Check**: Verify authorization code hasn't been processed:
    ```ruby
-   # Use CognitoService to exchange authorization code for tokens
-   tokens = CognitoService.exchange_code_for_tokens(code)
-   access_token = tokens["access_token"]
-   refresh_token = tokens["refresh_token"]
+   # Prevents replay attacks - codes can only be used once
+   check_code_idempotency
    ```
-4. Get user info from Cognito using CognitoService:
+3. **Extract Validated State**: Extract business parameters (e.g., professional_id) from validated state:
    ```ruby
-   # Use CognitoService to get user information from Cognito
-   user_info = CognitoService.get_user_info(access_token)
-   # user_info contains: sub, email, name, etc.
+   # Removes CSRF token, keeps only business parameters
+   validated_state = extract_validated_state(params[:state])
    ```
-5. Find or create user record:
+4. **Run SignUpInteraction**: Delegates business logic to interaction:
    ```ruby
-   # Detect timezone and language from browser (only for new users)
-   timezone = detect_browser_timezone
-   language = detect_browser_language
-
-   user = User.find_or_initialize_by(cognito_id: user_info["sub"])
-   if user.new_record?
-     user.name = user_info["name"]
-     user.email = user_info["email"]
-     user.timezone = timezone
-     user.language = language
-     user.save!
-   end
-   # Note: timezone and language are only set during initial user creation
-   # Users can update these values manually later if needed
-   ```
-6. Create patient record (automatically):
-   ```ruby
-   # Get professional_id from state or use first professional
-   professional_id = professional_id || Professional.first&.id
-
-   # Create patient record if it doesn't exist
-   patient = Patient.find_or_create_by!(
-     user_id: user.id,
-     professional_id: professional_id
+   result = Auth::SignUpInteraction.run(
+     code: params[:code],
+     state: validated_state,
+     timezone: detect_browser_timezone,
+     language: detect_browser_language.to_s
    )
    ```
-7. Create Rails session:
+   The interaction handles:
+   - Exchange code for tokens using CognitoService
+   - Validate all required tokens are present (access_token, id_token, refresh_token)
+   - Verify ID token signature using Cognito JWKS (with caching)
+   - Extract user info from ID token (preferred) or userinfo endpoint (fallback)
+   - Find or create user record with timezone and language (only set on creation)
+   - Create patient record with professional_id from state (REQUIRED - fails if missing)
+5. **Mark Code as Processed**: Store authorization code as processed (idempotency):
    ```ruby
-   session[:user_id] = user.id
-   session[:refresh_token] = refresh_token
-   # Store user_id and refresh_token in session
-   # user_id: used to identify current user
-   # refresh_token: stored for future token refresh functionality (not used in v1, but stored to avoid logout when implementing token refresh)
-   # cognito_id can be accessed via current_user.cognito_id when needed
-   # Session cookie is automatically httpOnly, Secure, SameSite
+   # Cache code with 5-minute expiration
+   mark_code_as_processed(result)
    ```
-8. Redirect to home:
+6. **Handle Result**: Create session on success, show error on failure:
    ```ruby
-   redirect_to root_path
+   if result.valid? && result.result.present?
+     session[:user_id] = result.result[:user].id
+     session[:refresh_token] = result.result[:refresh_token]
+     reset_session  # Regenerates session ID (prevents session fixation)
+     redirect_to root_path
+   else
+     render :error, status: :unprocessable_entity
+   end
    ```
 
 **Response**: Redirect to home page
 
 **Error Handling:**
-- Invalid `code`: Redirect to login with error message
-- Token exchange failure: Redirect to login with error message
-- User creation failure: Log error, redirect to login
+- **Invalid state (CSRF)**: Returns 403 Forbidden with error view
+- **Code already processed**: Returns 400 Bad Request (idempotency check)
+- **Invalid authorization code**: Logs error, renders error view with appropriate message
+- **Token exchange failure**: Logs error, renders error view (handles invalid_grant specifically)
+- **ID token verification failure**: Logs error, renders error view
+- **Missing professional_id**: Logs error, renders error view (patient record creation fails)
+- **User creation failure**: Logs error with details, renders error view
+- **Unexpected exceptions**: Logs full backtrace, renders generic error view (production shows generic message)
 
-### 6.2 Sign Out Endpoint
+### 6.2 Sign In/Sign Up Endpoint
 
-**Route**: `DELETE /auth/sign_out` or `GET /auth/sign_out`
+**Routes**: 
+- `GET /auth/sign_in` - Login
+- `GET /auth/sign_up` - Registration
+
+**Controller**: `Auth::SessionsController#new`
+
+**Purpose**: Initiate OAuth authentication flow by generating CSRF token and redirecting to Cognito.
+
+**Processing:**
+1. Generate CSRF token:
+   ```ruby
+   csrf_token = SecureRandom.urlsafe_base64(32)
+   session[:oauth_state] = csrf_token
+   ```
+2. Build state parameter with CSRF token and optional professional_id:
+   ```ruby
+   state_params = { csrf_token: csrf_token }
+   state_params[:professional_id] = params[:professional_id] if params[:professional_id].present?
+   state = URI.encode_www_form(state_params)
+   ```
+3. Detect browser language and redirect to appropriate Cognito endpoint:
+   ```ruby
+   locale = detect_browser_language
+   if request.path == "/auth/sign_up"
+     redirect_to CognitoService.signup_url(state: state, locale: locale), allow_other_host: true
+   else
+     redirect_to CognitoService.login_url(state: state, locale: locale), allow_other_host: true
+   end
+   ```
+
+### 6.3 Sign Out Endpoint
+
+**Route**: `DELETE /auth/sign_out`
 
 **Controller**: `Auth::SessionsController#destroy`
 
 **Purpose**: Sign out user by clearing Rails session and redirecting to Cognito logout.
 
 **Processing:**
-1. Clear Rails session:
+1. Clear Rails session (regenerates session ID, prevents session fixation):
    ```ruby
    reset_session
    ```
-2. Redirect to Cognito logout URL (optional, to sign out from Cognito as well):
+2. Redirect to Cognito logout URL (invalidates Cognito session as well):
    ```ruby
-   # Use CognitoService to generate logout URL
-   redirect_to CognitoService.logout_url
+   # Normalizes logout_uri with trailing slash to match Terraform configuration
+   redirect_to CognitoService.logout_url, allow_other_host: true, status: :see_other
    ```
+3. After Cognito logout, user is redirected back to logout_uri (configured in credentials, typically app root)
 
-### 6.3 Current User Helper
+### 6.4 Current User Helper
 
 **Method**: `current_user` (ApplicationController concern)
 
@@ -470,11 +534,12 @@ Password recovery is handled entirely by Cognito Hosted UI. Users click "Forgot 
 
 **Implementation:**
 ```ruby
-module CurrentUser
+module Authentication
   extend ActiveSupport::Concern
 
   included do
     helper_method :current_user
+    before_action :authenticate_user!
   end
 
   private
@@ -505,9 +570,7 @@ end
 **Usage in Controllers:**
 ```ruby
 class ApplicationController < ActionController::Base
-  include CurrentUser
-
-  before_action :authenticate_user!
+  include Authentication
 end
 ```
 
@@ -530,11 +593,10 @@ Rails session is configured to use httpOnly cookies by default. Configuration in
 ```ruby
 config.session_store :cookie_store,
   key: '_balansi_session',
-  httponly: true,
-  secure: Rails.env.production?,
-  same_site: :lax,
   expire_after: 30.days  # Align with Cognito refresh_token_validity (30 days)
 ```
+
+**Note**: Rails sets `httponly: true` by default. `secure` and `same_site` are configured via `config.force_ssl` and session cookie settings in production environment.
 
 **Session Expiration:**
 - **Expire After**: `30.days` - Aligned with Cognito `refresh_token_validity`
@@ -555,54 +617,31 @@ config.session_store :cookie_store,
 
 ```ruby
 class ApplicationController < ActionController::Base
-  include CurrentUser
+  include Authentication
+  include BrowserLanguage
+  include BrowserTimezone
 
-  before_action :authenticate_user!
-  before_action :set_locale
+  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
+  allow_browser versions: :modern
 
-  helper_method :detect_browser_language, :detect_browser_timezone
-
-  private
-
-  # Detect browser language from Accept-Language header
-  # Returns locale symbol (:pt or :en), defaults to :pt
-  def detect_browser_language
-    accept_language = request.headers["Accept-Language"]
-    return :pt if accept_language.blank?
-
-    # Parse Accept-Language header (e.g., "pt-BR,pt;q=0.9,en;q=0.8")
-    languages = accept_language.split(",").map do |lang|
-      lang.split(";").first.strip.downcase
-    end
-
-    # Check for pt-BR or pt first
-    return :pt if languages.any? { |l| l.start_with?("pt") }
-
-    # Check for en
-    return :en if languages.any? { |l| l.start_with?("en") }
-
-    # Default to pt if not pt or en
-    :pt
-  end
-
-  # Detect browser timezone from cookies
-  # Returns timezone string (e.g., 'America/Sao_Paulo'), defaults to 'America/Sao_Paulo'
-  def detect_browser_timezone
-    # Check for timezone in cookies (set by JavaScript)
-    timezone = cookies[:timezone]
-    return timezone if timezone.present?
-
-    # Fallback to default Brazilian timezone
-    "America/Sao_Paulo"
-  end
-
-  # Set Rails locale based on browser language
-  def set_locale
-    locale = detect_browser_language
-    I18n.locale = locale || I18n.default_locale
-  end
+  # Changes to the importmap will invalidate the etag for HTML responses
+  stale_when_importmap_changes
 end
 ```
+
+**Concerns:**
+
+**BrowserLanguage** (`app/controllers/concerns/browser_language.rb`):
+- Detects language from Accept-Language header
+- Returns locale symbol (:pt or :en), defaults to :pt
+- Sets Rails locale automatically via `before_action :set_locale`
+- Provides `helper_method :detect_browser_language` for views
+
+**BrowserTimezone** (`app/controllers/concerns/browser_timezone.rb`):
+- Detects timezone from cookies (set by JavaScript)
+- Returns timezone string in IANA format (e.g., 'America/Sao_Paulo')
+- Defaults to 'America/Sao_Paulo' if cookie not present
+- Provides `helper_method :detect_browser_timezone` for views
 
 ### 7.3 Route Protection
 
@@ -610,17 +649,17 @@ end
 
 ```ruby
 Rails.application.routes.draw do
+  # Health check endpoint
+  get "up" => "rails/health#show", as: :rails_health_check
+
   # Auth routes
   get "/auth/callback", to: "auth/callbacks#show"
   get "/auth/sign_up", to: "auth/sessions#new"
-  get "/auth/sign_in", to: "auth/sessions#new"
+  get "/auth/sign_in", to: "auth/sessions#new", as: :auth_login_path
   delete "/auth/sign_out", to: "auth/sessions#destroy"
 
-  # Protected routes
-  resources :meals
-  resources :patients
-  # ... other protected resources
-
+  # Home route
+  get "home/index"
   root "home#index"
 end
 ```
@@ -636,86 +675,69 @@ end
 ```ruby
 class CognitoService
   # Use Rails credentials instead of environment variables
-  COGNITO_DOMAIN = Rails.application.credentials.cognito[:domain]
-  COGNITO_REGION = Rails.application.credentials.cognito[:region]
-  CLIENT_ID = Rails.application.credentials.cognito[:client_id]
-  CLIENT_SECRET = Rails.application.credentials.cognito[:client_secret]
-  REDIRECT_URI = Rails.application.credentials.cognito[:redirect_uri]
-  LOGOUT_URI = Rails.application.credentials.cognito[:logout_uri] rescue nil
+  # Load credentials lazily to handle cases where they're not yet configured
+
+  # Get credentials for the current environment
+  def self.credentials
+    Rails.application.credentials(Rails.env.to_sym)
+  rescue ArgumentError
+    # Fallback to default credentials if environment-specific doesn't exist
+    Rails.application.credentials
+  end
 
   def self.exchange_code_for_tokens(code)
-    response = HTTParty.post(token_url, body: {
-      grant_type: "authorization_code",
-      code: code,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      redirect_uri: REDIRECT_URI
-    })
-    JSON.parse(response.body)
+    # Exchanges authorization code for access_token, id_token, and refresh_token
+    # Returns hash with tokens or error hash on failure
   end
 
   def self.get_user_info(access_token)
-    response = HTTParty.get(userinfo_url, headers: {
-      "Authorization" => "Bearer #{access_token}"
-    })
-    JSON.parse(response.body)
+    # Retrieves user information from Cognito userinfo endpoint
+    # Returns hash with sub, email, name, etc.
+    # Note: Prefer using decode_id_token which extracts info from JWT
+  end
+
+  def self.decode_id_token(id_token)
+    # Decodes and verifies ID token (JWT) using Cognito's public keys (JWKS)
+    # Verifies JWT signature, expiration, issued-at, audience, and issuer
+    # Caches JWKS for 1 hour to avoid fetching on every verification
+    # Returns decoded payload hash or empty hash on failure
   end
 
   def self.login_url(state: nil, locale: :pt)
-    lang = cognito_language_code(locale)
-    params = {
-      client_id: CLIENT_ID,
-      response_type: "code",
-      redirect_uri: REDIRECT_URI,
-      scope: "openid email profile",
-      lang: lang
-    }
-    params[:state] = state if state
-    "#{base_url}/login?#{params.to_query}"
+    # Uses Managed Login V2 endpoint (/oauth2/authorize) which redirects to /login
+    # Language is determined by Accept-Language header (not query parameter)
+    # Returns full Cognito OAuth authorization URL
   end
 
   def self.signup_url(state: nil, locale: :pt)
-    lang = cognito_language_code(locale)
-    params = {
-      client_id: CLIENT_ID,
-      response_type: "code",
-      redirect_uri: REDIRECT_URI,
-      scope: "openid email profile",
-      lang: lang
-    }
-    params[:state] = state if state
-    "#{base_url}/signup?#{params.to_query}"
+    # Uses Managed Login V2 endpoint (/oauth2/authorize) which redirects to /signup
+    # Language is determined by Accept-Language header (not query parameter)
+    # Returns full Cognito OAuth authorization URL
   end
 
-  def self.logout_url(logout_uri: nil)
-    # Use provided logout_uri, or from credentials, or fallback to redirect_uri
-    logout_uri ||= LOGOUT_URI || REDIRECT_URI
-    params = {
-      client_id: CLIENT_ID,
-      logout_uri: logout_uri
-    }
-    "#{base_url}/logout?#{params.to_query}"
+  def self.logout_url(logout_uri_param: nil)
+    # Normalizes logout_uri to ensure trailing slash matches Terraform config
+    # Uses logout_uri from credentials or fallback to redirect_uri
+    # Returns full Cognito logout URL
   end
 
-  # Convert browser language locale to Cognito language code
-  # Returns "pt-BR" or "en", defaults to "pt-BR"
-  # @param locale [Symbol] Browser locale (:pt or :en)
-  # @return [String] Cognito language code ("pt-BR" or "en")
   def self.cognito_language_code(locale)
-    case locale
-    when :pt
-      "pt-BR"
-    when :en
-      "en"
-    else
-      "pt-BR"
-    end
+    # Converts browser locale to Cognito language code
+    # Returns "pt-BR" or "en", defaults to "pt-BR"
   end
 
   private
 
+  def self.cognito_credentials
+    credentials.dig(:cognito) || {}
+  end
+
+  def self.credentials_configured?
+    cognito_credentials.present?
+  end
+
   def self.base_url
-    "https://#{COGNITO_DOMAIN}.auth.#{COGNITO_REGION}.amazoncognito.com"
+    "https://#{cognito_credentials[:domain]}.auth.#{cognito_credentials[:region]}.amazoncognito.com"
   end
 
   def self.token_url
@@ -725,6 +747,16 @@ class CognitoService
   def self.userinfo_url
     "#{base_url}/oauth2/userInfo"
   end
+
+  def self.jwks_url
+    "https://cognito-idp.#{cognito_credentials[:region]}.amazonaws.com/#{cognito_credentials[:user_pool_id]}/.well-known/jwks.json"
+  end
+
+  def self.fetch_jwks
+    # Fetches JWKS from Cognito with 1-hour caching
+  end
+
+  class MissingCredentialsError < StandardError; end
 end
 ```
 
@@ -780,17 +812,43 @@ class Auth::SessionsController < ApplicationController
   skip_before_action :authenticate_user!
 
   def new
-    professional_id = params[:professional_id]
-    state = professional_id ? "professional_id=#{professional_id}" : nil
-    redirect_to CognitoService.signup_url(state: state, locale: detect_browser_language)
+    # Generate CSRF token and store in session for validation on callback
+    csrf_token = generate_state_token
+    session[:oauth_state] = csrf_token
+
+    # Build state parameter: CSRF token + optional professional_id
+    state_params = { csrf_token: csrf_token }
+    state_params[:professional_id] = params[:professional_id] if params[:professional_id].present?
+    state = URI.encode_www_form(state_params)
+
+    locale = detect_browser_language
+
+    # Determine if this is a sign-up or sign-in request
+    if request.path == "/auth/sign_up"
+      redirect_to CognitoService.signup_url(state: state, locale: locale), allow_other_host: true
+    else
+      redirect_to CognitoService.login_url(state: state, locale: locale), allow_other_host: true
+    end
+  rescue CognitoService::MissingCredentialsError => e
+    render :new, status: :service_unavailable
   end
 
   def destroy
+    # Clear Rails session first (regenerates session ID, prevents session fixation)
     reset_session
-    # Optionally redirect to Cognito logout to sign out from Cognito as well:
-    # redirect_to CognitoService.logout_url
-    # Or redirect to home:
-    redirect_to root_path
+
+    # Redirect to Cognito logout to invalidate Cognito session
+    redirect_to CognitoService.logout_url, allow_other_host: true, status: :see_other
+  rescue CognitoService::MissingCredentialsError => e
+    # If Cognito service is not configured, just redirect to home
+    redirect_to root_path, status: :see_other
+  end
+
+  private
+
+  # Generate a secure random token for CSRF protection
+  def generate_state_token
+    SecureRandom.urlsafe_base64(32)
   end
 end
 ```
@@ -802,43 +860,79 @@ end
 ```ruby
 class Auth::CallbacksController < ApplicationController
   skip_before_action :authenticate_user!
+  before_action :validate_csrf_protection, :check_code_idempotency
 
   def show
-    result = Auth::SignUpInteraction.run(
-      code: params[:code],
-      state: params[:state],
-      timezone: detect_browser_timezone,
-      language: detect_browser_language.to_s
-    )
+    validated_state = extract_validated_state(params[:state])
+    result = run_sign_up_interaction(validated_state)
 
-    if result.valid?
-      session[:user_id] = result.user.id
-      session[:refresh_token] = result.refresh_token
-      redirect_to root_path
-    else
-      Rails.logger.error("Auth callback error: #{result.errors.full_messages.join(', ')}")
-      redirect_to root_path, alert: "Authentication failed"
-    end
+    mark_code_as_processed(result)
+    handle_authentication_result(result)
   rescue => e
-    Rails.logger.error("Auth callback error: #{e.message}")
-    redirect_to root_path, alert: "Authentication failed"
+    handle_authentication_exception(e)
+  end
+
+  private
+
+  def validate_csrf_protection
+    # Validates CSRF token from state parameter using constant-time comparison
+    # Returns 403 Forbidden if validation fails
+  end
+
+  def check_code_idempotency
+    # Checks if authorization code has already been processed
+    # Returns 400 Bad Request if code was already used
+  end
+
+  def extract_validated_state(state)
+    # Extracts business parameters (e.g., professional_id) from validated state
+    # Removes CSRF token before passing to interaction
+  end
+
+  def mark_code_as_processed(result)
+    # Marks authorization code as processed (cached for 5 minutes)
+    # Prevents replay attacks
+  end
+
+  def handle_authentication_result(result)
+    # Creates session on success, renders error view on failure
+  end
+
+  def handle_authentication_exception(exception)
+    # Logs exception with backtrace, renders error view
+    # In production, shows generic message (no information leakage)
   end
 end
 ```
 
+**Security Features:**
+- CSRF protection via state parameter validation
+- Authorization code idempotency check (prevents replay attacks)
+- Constant-time token comparison (prevents timing attacks)
+- One-time use CSRF tokens (cleared after validation)
+- Generic error messages in production (no information leakage)
+- Comprehensive error logging for debugging
+
 **Notes:**
-- Controller is thin - business logic is delegated to `Auth::SignUpInteraction`
-- Error handling is simplified - the interaction handles all validations and errors
-- Session creation is done in the controller after successful interaction
+- Controller validates CSRF protection and idempotency before delegating to interaction
+- Business logic is delegated to `Auth::SignUpInteraction`
+- Error handling is comprehensive with appropriate HTTP status codes
+- Session creation includes `reset_session` to prevent session fixation
 
 ### 10.3 Sign Up Interaction
 
 **File**: `app/interactions/auth/sign_up_interaction.rb`
 
-**Gem**: `active_interaction` - Add to `Gemfile`:
+**Required Gems** - Add to `Gemfile`:
 ```ruby
-gem 'active_interaction', '~> 5.0'
+gem 'active_interaction', '~> 5.0'  # Service objects pattern for business logic
+gem 'jwt', '~> 3.1'                  # JWT token verification
+gem 'rack-attack'                    # Rate limiting middleware
+gem 'httparty'                       # HTTP client for Cognito API calls
+gem 'tzinfo'                         # IANA timezone validation (usually included with Rails)
 ```
+
+**Note**: `httparty`, `tzinfo`, and `jwt` are already included in most Rails setups, but explicitly add them if not present.
 
 **Interaction Implementation:**
 
@@ -853,67 +947,89 @@ module Auth
     validates :code, presence: true
 
     def execute
-      # Exchange code for tokens
-      tokens = CognitoService.exchange_code_for_tokens(code)
+      # Exchange code for tokens (handles errors internally)
+      tokens = exchange_code_for_tokens
+      return nil unless tokens
+
+      # Extract and validate tokens
       access_token = tokens["access_token"]
+      id_token = tokens["id_token"]
       refresh_token = tokens["refresh_token"]
 
-      # Get user info from Cognito
-      user_info = CognitoService.get_user_info(access_token)
+      return nil unless validate_tokens(access_token, id_token, refresh_token)
 
-      # Detect timezone and language from browser (only for new users)
+      # Retrieve user information from Cognito (ID token preferred, userinfo as fallback)
+      user_info = retrieve_user_info(id_token, access_token)
+
+      # Validate user information is complete
+      return nil unless user_info_valid?(user_info)
+
+      # Detect timezone and language from browser (defaults for new users)
       detected_timezone = timezone || "America/Sao_Paulo"
       detected_language = language || "pt"
 
-      # Find or create user
+      # Find or create user (adds errors to errors object on failure)
       user = find_or_create_user(user_info, detected_timezone, detected_language)
+      return nil unless user
 
-      # Parse state to get professional_id
-      professional_id = parse_professional_id
+      # Create patient record (required - authentication fails if this fails)
+      return nil unless create_patient_record(user)
 
-      # Create patient record automatically
-      create_patient_record(user, professional_id)
-
-      # Return user and refresh_token as result attributes
-      # ActiveInteraction automatically makes these available on the result object
+      # Return result hash with user and refresh_token
       { user: user, refresh_token: refresh_token }
     end
 
     private
 
-    def find_or_create_user(user_info, detected_timezone, detected_language)
-      user = User.find_or_initialize_by(cognito_id: user_info["sub"])
-      
-      if user.new_record?
-        user.name = user_info["name"]
-        user.email = user_info["email"]
-        user.timezone = detected_timezone
-        user.language = detected_language
-        user.save!
-      end
-      # Note: timezone and language are only set during initial user creation
-      # Users can update these values manually later if needed
+    def exchange_code_for_tokens
+      # Exchanges authorization code for tokens
+      # Handles token exchange errors with appropriate error messages
+    end
 
-      user
+    def validate_tokens(access_token, id_token, refresh_token)
+      # Validates that all required tokens are present
+      # Returns true if all tokens present, false otherwise (adds errors)
+    end
+
+    def retrieve_user_info(id_token, access_token)
+      # Tries ID token first (contains all necessary claims, verified signature)
+      # Falls back to userinfo endpoint if ID token doesn't work
+      # Returns hash with sub, email, and name keys
+    end
+
+    def user_info_valid?(user_info)
+      # Validates that user_info contains required fields (sub and email)
+      # Returns true if valid, false otherwise (adds errors)
+    end
+
+    def find_or_create_user(user_info, detected_timezone, detected_language)
+      # Finds or creates user in database based on Cognito user info
+      # Sets timezone and language only on initial creation
+      # Returns User instance on success, nil on failure (errors added)
+    end
+
+    def create_patient_record(user)
+      # Creates patient record for user (required - authentication fails if this fails)
+      # Extracts professional_id from state parameter
+      # REQUIRED: professional_id must be present in state, otherwise fails
+      # Returns true on success, false on failure (errors added)
     end
 
     def parse_professional_id
-      return nil if state.blank?
-      URI.decode_www_form(state).to_h["professional_id"]
-    end
-
-    def create_patient_record(user, professional_id)
-      professional_id ||= Professional.first&.id
-      return unless professional_id
-
-      Patient.find_or_create_by!(
-        user_id: user.id,
-        professional_id: professional_id
-      )
+      # Parses professional_id from state parameter
+      # Returns professional_id string or nil if not present or invalid
     end
   end
 end
 ```
+
+**Key Improvements from ERD:**
+- ID token signature verification using Cognito JWKS (with caching)
+- Prefer ID token over userinfo endpoint (more efficient, already verified)
+- Validates all required tokens (access_token, id_token, refresh_token)
+- Consistent error handling pattern (all errors added to errors object)
+- Professional ID is REQUIRED (no fallback to Professional.first)
+- Extracted methods for better maintainability and testability
 
 **Benefits of using ActiveInteraction:**
 - **Thin Controllers**: Business logic is encapsulated in interactions
@@ -967,12 +1083,21 @@ end
 
 **Note**: All these settings are configured in the Terraform Cognito module. No manual configuration via AWS Console is needed or recommended.
 
-### 11.2 Hosted UI Domain
+### 11.2 Hosted UI Domain and Managed Login V2
 
 **Configured via Terraform:**
 - Custom domain: `auth.balansi.me` (production)
 - Or use Cognito default: `{pool-name}.auth.{region}.amazoncognito.com` (development)
 - Domain configuration is managed in Terraform module
+- **Managed Login V2**: Uses `/oauth2/authorize` endpoint which automatically redirects to `/login` or `/signup` based on context
+- Language is determined by `Accept-Language` HTTP header (not query parameter)
+- Branding and styling can be configured via AWS Console or AWS CLI (not Terraform yet)
+
+**Managed Login V2 Notes:**
+- The `/oauth2/authorize` endpoint is used for both login and signup
+- Cognito automatically shows the appropriate page (`/login` or `/signup`) based on context
+- Language localization is handled via `Accept-Language` header (pt-BR or en)
+- The `lang` query parameter is not supported in Managed Login V2
 
 ### 11.3 Configuring Sign-up Form Fields (Including "name")
 
@@ -1105,29 +1230,32 @@ secret_key_base: your_secret_key_base_here
 
 **Access in code:**
 ```ruby
-# In config/application.rb or config/environments/*.rb
-Rails.application.credentials.cognito[:user_pool_id]
-Rails.application.credentials.cognito[:client_id]
-Rails.application.credentials.cognito[:client_secret]
-Rails.application.credentials.cognito[:domain]
-Rails.application.credentials.cognito[:region]
-Rails.application.credentials.database[:url]
-```
-
-**Update CognitoService to use credentials:**
-
-```ruby
-# app/services/cognito_service.rb
-class CognitoService
-  COGNITO_DOMAIN = Rails.application.credentials.cognito[:domain]
-  COGNITO_REGION = Rails.application.credentials.cognito[:region]
-  CLIENT_ID = Rails.application.credentials.cognito[:client_id]
-  CLIENT_SECRET = Rails.application.credentials.cognito[:client_secret]
-  REDIRECT_URI = Rails.application.credentials.cognito[:redirect_uri]
-
-  # ... rest of the service
+# CognitoService uses lazy credential loading
+def self.credentials
+  Rails.application.credentials(Rails.env.to_sym)
+rescue ArgumentError
+  Rails.application.credentials  # Fallback to default
 end
+
+def self.cognito_credentials
+  credentials.dig(:cognito) || {}
+end
+
+# Credentials are accessed via cognito_credentials method:
+cognito_credentials[:user_pool_id]
+cognito_credentials[:client_id]
+cognito_credentials[:client_secret]
+cognito_credentials[:domain]
+cognito_credentials[:region]
+cognito_credentials[:redirect_uri]
+cognito_credentials[:logout_uri]  # Optional, falls back to redirect_uri
 ```
+
+**CognitoService Implementation:**
+- Uses lazy credential loading to handle cases where credentials aren't configured yet
+- Provides `credentials_configured?` method to check if credentials are available
+- Raises `MissingCredentialsError` if credentials are missing when required
+- Supports environment-specific credentials (development, staging, production)
 
 ### 12.2 Environment-Specific Credentials
 
@@ -1322,10 +1450,15 @@ env:
 - **Session Expiration**: Managed by Rails (configurable in `config/session_store`), set to 30 days to align with Cognito refresh token validity
 - **Session Data**: `session[:user_id]` and `session[:refresh_token]` are stored in the session cookie; `cognito_id` is stored in database and accessed via `current_user.cognito_id` when needed; `refresh_token` is stored for future token refresh functionality (not used in v1, but stored to avoid logout when implementing token refresh)
 
-### 13.2 State Parameter
+### 13.2 State Parameter and CSRF Protection
 
+- **CSRF Token Generation**: Cryptographically secure token (32 bytes, base64url encoded) generated using `SecureRandom.urlsafe_base64(32)`
+- **Token Storage**: Stored in `session[:oauth_state]` for validation on callback
+- **State Format**: `csrf_token=XXX&professional_id=YYY` (URL-encoded)
+- **Validation**: State parameter validated in callback using constant-time comparison (`ActiveSupport::SecurityUtils.secure_compare`) to prevent timing attacks
+- **One-Time Use**: CSRF token is cleared from session after successful validation (prevents reuse)
+- **Business Parameters**: Only after CSRF validation, business parameters (e.g., professional_id) are extracted from state
 - **Encoding**: URL-encode state parameter before sending to Cognito
-- **Validation**: Validate state parameter in callback (prevent CSRF)
 - **Size Limit**: Cognito supports state up to 2048 characters
 
 ### 13.3 HTTPS
@@ -1334,11 +1467,30 @@ env:
 - **Development**: Can use HTTP for localhost only
 - **Session Cookie**: Secure flag automatically set in production
 
-### 13.4 CSRF Protection
+### 13.4 CSRF Protection (Additional)
 
-- **Rails CSRF Token**: Automatically included in forms
+- **OAuth State Parameter**: CSRF protection via state parameter validation (see section 13.2)
+- **Rails CSRF Token**: Automatically included in forms (for non-OAuth forms)
 - **Verify Authenticity Token**: Enabled by default in Rails controllers
 - **SameSite Cookie**: Provides additional CSRF protection
+- **ID Token Verification**: JWT signature verification using Cognito JWKS prevents token tampering
+- **Authorization Code Idempotency**: Codes can only be used once (cached for 5 minutes after processing)
+
+### 13.5 Rate Limiting
+
+**Implementation**: Uses `rack-attack` gem for rate limiting (disabled in test environment)
+
+**Rate Limits:**
+- `/auth/callback`: 5 requests per IP per minute + 30 requests per hour (strict limit to prevent arbitrary user creation)
+- `/auth/sign_up`: 5 requests per IP per minute + 20 requests per hour (prevents abuse of registration flow)
+- `/auth/sign_in`: 20 requests per IP per minute (prevents abuse of CSRF token generation)
+- Generic rule: 300 requests per IP per minute for all other endpoints (prevents general DoS attacks)
+
+**Features:**
+- Custom 429 response with `Retry-After` and `RateLimit-*` headers
+- Comprehensive logging for all throttled requests
+- Health check endpoint (`/up`) excluded from rate limiting
+- Static assets excluded from rate limiting (handled by web server/CDN in production)
 
 ---
 
@@ -1392,30 +1544,64 @@ If authentication fails:
 **Test Coverage:**
 
 **CognitoService Tests:**
-- `exchange_code_for_tokens` - Mock HTTParty responses
-- `get_user_info` - Mock HTTParty responses
-- `login_url` - URL generation with locale conversion
-- `signup_url` - URL generation with locale conversion
-- `logout_url` - URL generation
+- `exchange_code_for_tokens` - Mock HTTParty responses, error handling
+- `get_user_info` - Mock HTTParty responses, error handling
+- `decode_id_token` - JWT signature verification using JWKS (mock JWKS endpoint)
+- `verify_id_token` - Token verification with valid/invalid tokens
+- `validate_token_claims` - Audience and issuer validation
+- `fetch_jwks` - JWKS fetching with caching
+- `login_url` - URL generation with Managed Login V2 endpoint (/oauth2/authorize)
+- `signup_url` - URL generation with Managed Login V2 endpoint (/oauth2/authorize)
+- `logout_url` - URL generation with logout_uri normalization
 - `cognito_language_code` - Locale to language code conversion
+- `credentials` - Lazy credential loading, environment-specific credentials
 
 **Auth::SignUpInteraction Tests:**
 - User creation with valid Cognito response (mocked)
-- User lookup for existing users
-- Patient record creation
-- Professional ID parsing from state
-- Timezone and language detection
-- Error handling for invalid tokens
+- User lookup for existing users (by cognito_id)
+- Patient record creation with professional_id (required)
+- Patient record creation failure when professional_id missing
+- Professional ID parsing from state parameter
+- Timezone and language detection (defaults)
+- Token validation (all required tokens present)
+- ID token verification (with mocked JWKS)
+- User info extraction from ID token (preferred)
+- User info fallback to userinfo endpoint
+- Error handling for invalid tokens, expired tokens, missing tokens
+- Error handling for token exchange failures (invalid_grant, etc.)
+- Consistent error handling pattern (errors added to errors object)
 
-**ApplicationController Tests:**
+**Auth::CallbacksController Tests:**
+- CSRF protection validation (valid/invalid CSRF tokens)
+- CSRF token constant-time comparison (prevents timing attacks)
+- Authorization code idempotency check
+- State parameter extraction (removes CSRF token, keeps business params)
+- Successful authentication flow
+- Error handling for invalid codes, token exchange failures
+- Error message formatting (generic in production, detailed in development)
+- Code marking as processed (idempotency)
+
+**Auth::SessionsController Tests:**
+- CSRF token generation (secure random, proper format)
+- State parameter building (with/without professional_id)
+- Redirect to appropriate Cognito endpoint (signup vs login)
+- Managed Login V2 endpoint usage (/oauth2/authorize)
+- Missing credentials error handling
+
+**BrowserLanguage Concern Tests:**
 - `detect_browser_language` - Accept-Language header parsing
-- `detect_browser_timezone` - Cookie reading
 - `set_locale` - Locale setting based on browser language
+- Default to :pt for unknown languages
+
+**BrowserTimezone Concern Tests:**
+- `detect_browser_timezone` - Cookie reading
+- Default to 'America/Sao_Paulo' if cookie not present
 
 **User Model Tests:**
-- Timezone validation (valid/invalid timezones)
-- Language validation (valid/invalid languages)
-- Associations (patients)
+- Timezone validation using TZInfo (valid/invalid IANA timezone identifiers)
+- Language validation (valid/invalid languages from i18n config)
+- Associations (patients with dependent: :destroy)
+- Default values (timezone: 'America/Sao_Paulo', language: 'pt')
 
 **Patient Model Tests:**
 - Unique constraint validation (user_id + professional_id)
@@ -1474,7 +1660,7 @@ end
 
 ---
 
-## 17. Summary
+## 16. Summary
 
 **Key Simplifications:**
 - ✅ No custom auth forms (uses Cognito Hosted UI 100%)
@@ -1483,6 +1669,14 @@ end
 - ✅ Automatic creation of User and Patient records during callback
 - ✅ Simplified architecture using Rails conventions
 - ✅ Minimal implementation leveraging Cognito features
+
+**Security Enhancements:**
+- ✅ CSRF protection via state parameter validation with constant-time comparison
+- ✅ Authorization code idempotency (prevents replay attacks)
+- ✅ ID token signature verification using Cognito JWKS (with caching)
+- ✅ Comprehensive rate limiting via rack-attack
+- ✅ Session fixation prevention (reset_session after authentication)
+- ✅ Generic error messages in production (no information leakage)
 
 **Benefits:**
 - Less code to maintain (Rails handles sessions, Cognito handles auth)
@@ -1532,6 +1726,18 @@ end
 ---
 
 
-**Document Version**: 3.0
-**Last Updated**: 2026 Jan
-**Status**: Draft - Pending Review
+**Document Version**: 3.1
+**Last Updated**: 2026-01-10
+**Status**: Updated to reflect current implementation
+
+**Key Updates in v3.1:**
+- Updated User model validation to use TZInfo for IANA timezone validation
+- Updated authentication flows to include CSRF protection via state parameter
+- Updated SignUpInteraction to use ID token verification with JWKS
+- Updated CallbacksController to include CSRF validation and idempotency checks
+- Updated SessionsController to generate CSRF tokens
+- Updated CognitoService to use lazy credential loading and Managed Login V2 endpoints
+- Updated ApplicationController to use concerns (BrowserLanguage, BrowserTimezone)
+- Updated routes to use snake_case (/auth/sign_up, /auth/sign_in)
+- Updated error handling to be more comprehensive
+- Removed fallback to Professional.first (professional_id is now required)
