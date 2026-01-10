@@ -1,0 +1,67 @@
+---
+alwaysApply: false
+---
+
+# Code Implementation Rules
+
+Rules for code implementation and code quality.
+
+## Code Quality
+
+1. Always check for RuboCop issues after writing code and fix offenses immediately.
+2. Keep implementations simple. Do not create code for future requirements that are not specified. Stay focused on current requirements only.
+3. Before creating a method, search the codebase for similar implementations and suggest reusing or adapting existing code instead of duplicating.
+4. When finishing a class implementation, check for unused methods and duplicated code blocks and remove them immediately.
+
+## Best Practices
+
+5. Write self-documenting code with clear variable and method names. Add comments only when the "why" is not obvious from the code itself.
+6. Follow the Single Responsibility Principle: each method/class should do one thing well.
+7. Prefer explicit code over clever or overly complex solutions. Readability is prioritized over premature optimization.
+8. When modifying existing code, ensure the change doesn't break existing functionality. Maintain backward compatibility unless explicitly required otherwise.
+
+## Performance
+
+9. Always check for O(log n) complexity in loops or recursive functions and optimize when possible.
+10. Always check for N+1 ActiveRecord queries and use eager loading (`includes`, `preload`, `eager_load`) when possible.
+
+## Security
+
+11. Stay aware of OWASP security best practices when writing code. Pay special attention to input validation, SQL injection prevention, XSS protection, and authentication/authorization flows.
+
+## Testing
+
+12. Write tests alongside implementation code. Test both happy paths and error scenarios, including edge cases and boundary conditions.
+13. Use RSpec as the testing framework standard.
+
+### Test Performance
+
+14. **Test execution speed is critical**. Always optimize tests to run as fast as possible. Slow test suites hinder development velocity and CI/CD pipelines.
+15. Use fixtures for common, reusable data (e.g., system users, base configurations). Use factories for test-specific data that needs customization or varies between tests.
+16. Always prefer `let` over `let!` for lazy evaluation. Only use `let!` when the variable must be evaluated before the test runs (e.g., for side effects). Use `before(:all)` for expensive setup operations that don't change between examples.
+17. Leverage shared contexts (`shared_context` and `include_context`) to reuse setup code across multiple test files, avoiding duplication and reducing execution time.
+18. Always prefer `build_stubbed` over `create` in FactoryBot when testing object behavior without persisting to the database. Only use `create` when database persistence is required for the test (e.g., testing associations, validations, or database constraints).
+19. Use mocks and stubs whenever possible to isolate units under test and avoid external dependencies (APIs, file system, external services). This significantly improves test speed and reliability.
+20. Integration and E2E tests must execute in under 1 second. If a test exceeds this threshold, refactor to use mocks, reduce database operations, or split into smaller, focused tests. Target execution time is the primary performance metric for these test types.
+21. Always check for duplicate tests that share the same setup and merge them into a single test. Use parameterized tests, `it_behaves_like`, or multiple assertions within a single test when the setup is identical. This reduces setup overhead and improves execution time.
+22. Test database queries and ensure proper use of database transactions in tests. Use `expect { }.to change { }` when checking database changes.
+23. For background jobs, test both enqueuing and execution. Use `have_enqueued_job` to verify job parameters.
+
+## Error Handling
+
+24. Handle exceptions explicitly. Use specific exception types rather than catching generic `Exception` or `StandardError` unless necessary.
+25. Log errors with appropriate context (user_id, request_id, relevant parameters) to facilitate debugging without exposing sensitive information.
+26. Use Rails' built-in error handling mechanisms (`rescue_from` in controllers) for consistent error responses across the application.
+
+## Database
+
+27. Always add database indexes for foreign keys and frequently queried columns. Use `add_index` in migrations and ensure indexes are included in the migration rollback.
+28. Add database constraints (NOT NULL, UNIQUE, foreign keys) at the database level, not just in ActiveRecord validations. Use `add_null`, `add_check_constraint`, or `add_foreign_key` in migrations.
+29. Use database transactions for multi-step operations that must succeed or fail together. Wrap critical operations in `ActiveRecord::Base.transaction` blocks.
+
+## Rails Conventions
+
+30. Use strong parameters in controllers. Never mass-assign attributes directly from `params` without using `permit`.
+31. Place business logic in service objects, concerns, or models rather than controllers. Keep controllers thin and focused on HTTP concerns.
+32. Use Rails credentials (`bin/rails credentials:edit`) for sensitive configuration. Never commit secrets or API keys directly in code or environment variables.
+33. Follow RESTful conventions for routes and controllers. Use standard CRUD actions (`index`, `show`, `new`, `create`, `edit`, `update`, `destroy`) when appropriate.

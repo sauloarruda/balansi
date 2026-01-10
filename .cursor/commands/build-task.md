@@ -18,6 +18,7 @@ Before starting implementation:
 2. Create all necessary files for the phase
 3. Implement all required functionality
 4. Ensure proper code organization and structure
+5. Follow all rules in `@.cursor/rules/implementation.mdc` when writing code
 
 ### Step 3: Verification
 Before proceeding, verify that:
