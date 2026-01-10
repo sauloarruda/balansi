@@ -64,3 +64,15 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+
+# ActiveInteraction for service objects pattern
+gem "active_interaction", "~> 5.0"
+
+# HTTP client for Cognito API calls
+gem "httparty"
+
+# JWT token verification for Cognito ID tokens
+gem "jwt"
+
+# Rate limiting middleware
+gem "rack-attack"
