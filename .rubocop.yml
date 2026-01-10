@@ -6,3 +6,35 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false
+
+# More restrictive metrics for method complexity and size
+# Limits are reasonable to avoid over-engineering with too many small methods
+# Higher tolerances for methods with exception handling or multiple responsibilities
+Metrics/MethodLength:
+  Enabled: true
+  Max: 30
+  CountComments: false
+  ExcludedMethods: []
+  Severity: warning
+
+Metrics/CyclomaticComplexity:
+  Enabled: true
+  Max: 10
+  Severity: warning
+
+Metrics/AbcSize:
+  Enabled: true
+  Max: 40
+  Severity: warning
+
+Metrics/PerceivedComplexity:
+  Enabled: true
+  Max: 12
+  Severity: warning
+
+Metrics/BlockLength:
+  Enabled: true
+  Max: 30
+  ExcludedMethods: []
+  Severity: warning
+  CountAsOne: ['array', 'hash', 'heredoc']
