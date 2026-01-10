@@ -1,0 +1,12 @@
+<h1>Hello <%= current_user.name %></h1>
+<p>You are successfully authenticated!</p>
+<p>Email: <%= current_user.email %></p>
+<p>Timezone: <%= current_user.timezone %></p>
+<p>Language: <%= current_user.language %></p>
+<p>Cognito ID: <%= current_user.cognito_id %></p>
+
+<p>
+  <%= form_with url: "/auth/sign_out", method: :delete, local: true, data: { turbo: false } do |f| %>
+    <%= f.submit "Sign Out" %>
+  <% end %>
+</p>
