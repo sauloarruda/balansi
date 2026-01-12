@@ -187,25 +187,33 @@ module Auth
         return nil
       end
 
-      user = User.find_or_initialize_by(cognito_id: cognito_id)
-
-      # Set attributes and save if new record
-      # Note: timezone and language are only set during initial user creation
-      # Users can update these values manually later if needed
-      if user.new_record?
-        user.name = user_info["name"] || user_info["email"] || "User"
-        user.email = user_info["email"]
-        user.timezone = detected_timezone
-        user.language = detected_language
-
-        unless user.save
-          errors.add(:base, "Failed to save user: #{user.errors.full_messages.join(", ")}")
-          Rails.logger.error("User creation failed. Attributes: #{user.attributes.inspect}, Errors: #{user.errors.full_messages.inspect}")
-          return nil
-        end
+      begin
+        user = User.find_or_initialize_by(cognito_id: cognito_id)
+        setup_new_user(user, user_info, detected_timezone, detected_language) if user.new_record?
+        user
+      rescue ActiveRecord::StatementInvalid, ActiveRecord::ConnectionNotEstablished, StandardError => e
+        handle_user_creation_error(e)
+        nil
       end
+    end
 
-      user
+    def setup_new_user(user, user_info, detected_timezone, detected_language)
+      user.name = user_info["name"] || user_info["email"] || "User"
+      user.email = user_info["email"]
+      user.timezone = detected_timezone
+      user.language = detected_language
+
+      return if user.save
+
+      errors.add(:base, "Failed to save user: #{user.errors.full_messages.join(", ")}")
+      Rails.logger.error("User creation failed. Attributes: #{user.attributes.inspect}, Errors: #{user.errors.full_messages.inspect}")
+      nil
+    end
+
+    def handle_user_creation_error(error)
+      errors.add(:base, "Failed to create or find user: #{error.class}: #{error.message}")
+      Rails.logger.error("User creation exception: #{error.class}: #{error.message}")
+      Rails.logger.error(error.backtrace.first(10).join("\n"))
     end
 
     # Parse professional_id from state parameter

@@ -395,22 +395,28 @@ class CognitoService
   end
 
   def self.convert_to_big_numbers(modulus, exponent)
-    n_bn = OpenSSL::BN.new(modulus, 2)
-    e_bn = OpenSSL::BN.new(exponent, 2)
+    # OpenSSL::BN.new(data, 0) treats data as binary bytes (big-endian)
+    # This matches the JWK format where n and e are unsigned integers in big-endian byte representation
+    n_bn = OpenSSL::BN.new(modulus, 0)
+    e_bn = OpenSSL::BN.new(exponent, 0)
     [ n_bn, e_bn ]
   end
 
   def self.build_rsa_key_from_components(n_bn, e_bn)
+    # Try modern method first (OpenSSL < 3.0)
+    # Note: respond_to?(:set_key) may return true on OpenSSL 3.0, but set_key doesn't work
+    # So we try it and fall back to legacy method if it fails
     rsa_key = OpenSSL::PKey::RSA.new
-
-    return build_modern_rsa_key(rsa_key, n_bn, e_bn) if rsa_key.respond_to?(:set_key)
+    if rsa_key.respond_to?(:set_key)
+      begin
+        rsa_key.set_key(n_bn, e_bn, nil)
+        return rsa_key
+      rescue OpenSSL::PKey::PKeyError, NoMethodError
+        # Fall back to legacy method on OpenSSL 3.0+
+      end
+    end
 
     build_legacy_rsa_key(n_bn, e_bn)
-  end
-
-  def self.build_modern_rsa_key(rsa_key, n_bn, e_bn)
-    rsa_key.set_key(n_bn, e_bn, nil)
-    rsa_key
   end
 
   def self.build_legacy_rsa_key(n_bn, e_bn)

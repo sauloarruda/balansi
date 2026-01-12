@@ -24,18 +24,23 @@ module BrowserLanguage
     accept_language = request.headers["Accept-Language"]
     return :pt if accept_language.blank?
 
-    # Parse Accept-Language header (e.g., "pt-BR,pt;q=0.9,en;q=0.8")
-    languages = accept_language.split(",").map do |lang|
-      lang.split(";").first.strip.downcase
-    end
+    languages = parse_languages(accept_language)
+    return :pt if languages.empty?
 
-    # Check for pt-BR or pt first
+    detect_locale_from_languages(languages)
+  end
+
+  def parse_languages(accept_language)
+    accept_language.split(",").map do |lang|
+      lang_part = lang.split(";").first
+      lang_part&.strip&.downcase
+    end.compact.reject(&:blank?)
+  end
+
+  def detect_locale_from_languages(languages)
     return :pt if languages.any? { |l| l.start_with?("pt") }
-
-    # Check for en
     return :en if languages.any? { |l| l.start_with?("en") }
 
-    # Default to pt if not pt or en
     :pt
   end
 
