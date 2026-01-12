@@ -1,0 +1,7 @@
+{
+  "rubyLsp.addonSettings": {
+    "Ruby LSP RSpec": {
+      "rspecCommand": "bundle exec rspec"
+    }
+  }
+}
