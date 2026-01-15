@@ -363,7 +363,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
         # In controller specs, before_action render may not prevent action execution
         # We verify that the idempotency check was performed by checking the response
         # Status 400 means before_action worked, 302 means action executed (limitation)
-        expect(response.status).to be_in([400, 302])
+        expect(response.status).to be_in([ 400, 302 ])
         if response.status == 400
           expect(response.body).to include("Authentication Error")
         end
@@ -391,7 +391,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
 
         # Set up params properly
         allow(controller).to receive(:params).and_return(ActionController::Parameters.new(code: valid_code))
-        
+
         # Stub authorization_code_cache_key to return the cache key we just wrote
         allow(controller).to receive(:authorization_code_cache_key).and_return(cache_key)
         # Stub Rails.cache.exist? to return true only for our specific cache key
@@ -409,7 +409,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
         get :show, params: { code: long_code, state: state_with_csrf }
 
         # In controller specs, before_action render may not prevent action execution
-        expect(response.status).to be_in([400, 302])
+        expect(response.status).to be_in([ 400, 302 ])
       end
 
       it "handles special characters in authorization codes" do
@@ -419,7 +419,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
         get :show, params: { code: special_code, state: state_with_csrf }
 
         # In controller specs, before_action render may not prevent action execution
-        expect(response.status).to be_in([400, 302])
+        expect(response.status).to be_in([ 400, 302 ])
       end
 
       it "handles nil code gracefully" do
@@ -428,9 +428,8 @@ RSpec.describe Auth::CallbacksController, type: :controller do
         get :show, params: { code: nil, state: state_with_csrf }
 
         # In controller specs, before_action render may not prevent action execution
-        expect(response.status).to be_in([400, 302, 422])
+        expect(response.status).to be_in([ 400, 302, 422 ])
       end
-
     end
 
     context "exception handling" do
@@ -449,7 +448,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
 
       it "logs exception details" do
         exception = StandardError.new("Unexpected error")
-        exception.set_backtrace(["line1", "line2"])
+        exception.set_backtrace([ "line1", "line2" ])
         allow(Auth::SignUpInteraction).to receive(:run).and_raise(exception)
 
         expect(Rails.logger).to receive(:error).with(
@@ -559,7 +558,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
 
         get :show, params: { code: valid_code, state: state_with_csrf }
 
-        expect(response.status).to be_in([302, 422, 500])
+        expect(response.status).to be_in([ 302, 422, 500 ])
       end
 
       it "handles URI::InvalidURIError when decoding in extract_validated_state" do
@@ -573,7 +572,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
 
         get :show, params: { code: valid_code, state: state_with_csrf }
 
-        expect(response.status).to be_in([302, 422, 500])
+        expect(response.status).to be_in([ 302, 422, 500 ])
       end
 
       it "handles ArgumentError when encoding in extract_validated_state" do
@@ -590,7 +589,7 @@ RSpec.describe Auth::CallbacksController, type: :controller do
 
         get :show, params: { code: valid_code, state: state }
 
-        expect(response.status).to be_in([302, 422, 500])
+        expect(response.status).to be_in([ 302, 422, 500 ])
       end
     end
 

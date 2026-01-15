@@ -14,7 +14,7 @@ Metrics/MethodLength:
   Enabled: true
   Max: 30
   CountComments: false
-  ExcludedMethods: []
+  AllowedMethods: []
   Severity: warning
 
 Metrics/CyclomaticComplexity:
@@ -35,7 +35,7 @@ Metrics/PerceivedComplexity:
 Metrics/BlockLength:
   Enabled: true
   Max: 30
-  ExcludedMethods: []
+  AllowedMethods: []
   Severity: warning
   CountAsOne: ["array", "hash", "heredoc"]
   Exclude:

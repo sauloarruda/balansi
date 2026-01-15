@@ -26,7 +26,7 @@ module AuthControllerTestHelpers
     double(
       valid?: false,
       result: nil,
-      errors: double(full_messages: [error_message])
+      errors: double(full_messages: [ error_message ])
     )
   end
 
