@@ -14,7 +14,6 @@
 # Note: Uses controller specs which test the controller in isolation.
 
 require "rails_helper"
-require "ostruct"
 
 RSpec.describe Auth::SessionsController, type: :controller do
   include CognitoCredentialsHelper

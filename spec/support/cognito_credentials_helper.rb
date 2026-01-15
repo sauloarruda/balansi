@@ -1,4 +1,6 @@
 # Helper methods for mocking Rails.application.credentials in CognitoService specs
+require "ostruct"
+
 module CognitoCredentialsHelper
   def mock_credentials(credentials_hash = nil)
     test_hash = credentials_hash || test_credentials_hash
