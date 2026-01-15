@@ -47,21 +47,45 @@ Rules for code implementation and code quality.
 22. Test database queries and ensure proper use of database transactions in tests. Use `expect { }.to change { }` when checking database changes.
 23. For background jobs, test both enqueuing and execution. Use `have_enqueued_job` to verify job parameters.
 
+### FactoryBot Usage
+
+24. **Use `build` when:**
+    - Testing validations (no database persistence needed)
+    - Testing model methods that don't require persisted records
+    - You want faster tests (build is faster than create)
+
+25. **Use `create` when:**
+    - Testing associations (belongs_to, has_many, etc.)
+    - Testing database constraints (uniqueness, foreign keys)
+    - Testing scopes that query the database
+    - The test requires a persisted record
+
+26. **Use `build_stubbed` when:**
+    - You need an object that behaves like a persisted record
+    - But don't need actual database persistence
+    - Testing methods that check for `persisted?` or `id`
+
+27. **Factory Patterns:**
+    - Use `sequence` for attributes that need to be unique (emails, IDs)
+    - Use `association` for belongs_to relationships
+    - Use `trait` for variations of the same factory
+    - Keep factories simple and focused
+
 ## Error Handling
 
-24. Handle exceptions explicitly. Use specific exception types rather than catching generic `Exception` or `StandardError` unless necessary.
-25. Log errors with appropriate context (user_id, request_id, relevant parameters) to facilitate debugging without exposing sensitive information.
-26. Use Rails' built-in error handling mechanisms (`rescue_from` in controllers) for consistent error responses across the application.
+28. Handle exceptions explicitly. Use specific exception types rather than catching generic `Exception` or `StandardError` unless necessary.
+29. Log errors with appropriate context (user_id, request_id, relevant parameters) to facilitate debugging without exposing sensitive information.
+30. Use Rails' built-in error handling mechanisms (`rescue_from` in controllers) for consistent error responses across the application.
 
 ## Database
 
-27. Always add database indexes for foreign keys and frequently queried columns. Use `add_index` in migrations and ensure indexes are included in the migration rollback.
-28. Add database constraints (NOT NULL, UNIQUE, foreign keys) at the database level, not just in ActiveRecord validations. Use `add_null`, `add_check_constraint`, or `add_foreign_key` in migrations.
-29. Use database transactions for multi-step operations that must succeed or fail together. Wrap critical operations in `ActiveRecord::Base.transaction` blocks.
+31. Always add database indexes for foreign keys and frequently queried columns. Use `add_index` in migrations and ensure indexes are included in the migration rollback.
+32. Add database constraints (NOT NULL, UNIQUE, foreign keys) at the database level, not just in ActiveRecord validations. Use `add_null`, `add_check_constraint`, or `add_foreign_key` in migrations.
+33. Use database transactions for multi-step operations that must succeed or fail together. Wrap critical operations in `ActiveRecord::Base.transaction` blocks.
 
 ## Rails Conventions
 
-30. Use strong parameters in controllers. Never mass-assign attributes directly from `params` without using `permit`.
-31. Place business logic in service objects, concerns, or models rather than controllers. Keep controllers thin and focused on HTTP concerns.
-32. Use Rails credentials (`bin/rails credentials:edit`) for sensitive configuration. Never commit secrets or API keys directly in code or environment variables.
-33. Follow RESTful conventions for routes and controllers. Use standard CRUD actions (`index`, `show`, `new`, `create`, `edit`, `update`, `destroy`) when appropriate.
+34. Use strong parameters in controllers. Never mass-assign attributes directly from `params` without using `permit`.
+35. Place business logic in service objects, concerns, or models rather than controllers. Keep controllers thin and focused on HTTP concerns.
+36. Use Rails credentials (`bin/rails credentials:edit`) for sensitive configuration. Never commit secrets or API keys directly in code or environment variables.
+37. Follow RESTful conventions for routes and controllers. Use standard CRUD actions (`index`, `show`, `new`, `create`, `edit`, `update`, `destroy`) when appropriate.
