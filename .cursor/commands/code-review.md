@@ -29,6 +29,9 @@ You are a Staff Engineer with 20+ years of experience reviewing web application 
 - Provide specific examples and suggestions
 - Group related issues together
 - Use code references when citing existing code
+- For each review item, the reviewer will leave a comment either approving the recommendation or requesting changes
 - Generate a review file named `CR-{file-name-or-context}.md` in `doc/reviews/` directory and delete this command file when the review is approved by the user
+
+
 
 Review the selected code or diff and provide structured feedback.
