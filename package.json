@@ -1,0 +1,9 @@
+{
+  "name": "balansi",
+  "version": "1.0.0",
+  "description": "Balansi application",
+  "private": true,
+  "dependencies": {
+    "flowbite": "^4.0.1"
+  }
+}
