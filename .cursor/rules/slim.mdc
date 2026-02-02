@@ -1,0 +1,12 @@
+---
+globs: *.slim
+alwaysApply: false
+---
+**i18n**
+- Always use i18n in views
+- Use relative paths whenever possible
+- Reuse texts from default.* for common texts
+
+**tailwindcss**
+- Use the minimum number of classes possible to achieve the result
+- Always maintain the pattern of other similar views
