@@ -217,15 +217,16 @@ module Auth
     end
 
     # Parse professional_id from state parameter
-    # Returns professional_id string or nil if not present or invalid
+    # Returns professional_id string or "1" as default if not present or invalid
     def parse_professional_id
-      return nil if state.blank?
+      return "1" if state.blank?
 
       state_params = URI.decode_www_form(state).to_h
-      state_params["professional_id"]
+      professional_id = state_params["professional_id"]
+      professional_id.present? ? professional_id : "1"
     rescue ArgumentError, URI::InvalidURIError => e
       Rails.logger.warn("Failed to parse professional_id from state parameter: #{e.class}: #{e.message}")
-      nil
+      "1"
     end
   end
 end
