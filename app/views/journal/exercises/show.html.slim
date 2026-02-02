@@ -1,0 +1,33 @@
+- content_for :title, t("exercises.show.title")
+
+.max-w-3xl.mx-auto.py-8
+  h1.text-3xl.font-bold.mb-6 = t("exercises.show.heading")
+
+  .mb-6.p-4.bg-yellow-50.border.border-yellow-200.text-yellow-800.rounded-lg.text-center
+    strong = t("exercises.show.ai_suggestion")
+    |  - #{t("exercises.show.ai_suggestion_text")}
+
+  .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
+    .mb-6.pb-4.border-b.border-gray-200
+      h2.text-2xl.font-bold.text-gray-800.mb-2 = t("exercises.show.exercise_label")
+      span.text-gray-600.italic = @exercise[:description]
+
+    = form_with url: journal_exercise_path(journal_date: (params[:journal_date] || params[:journal_id]), id: @exercise[:id]), method: :patch, local: true, class: "space-y-6" do |f|
+      .grid.grid-cols-1.md:grid-cols-2.gap-4
+        .mb-4
+          = f.label :duration, t("exercises.show.duration"), class: "block mb-2 text-sm font-medium text-gray-900"
+          = f.number_field :duration, value: @exercise[:duration], class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 1, max: 1440, step: 1
+        .mb-4
+          = f.label :calories, t("exercises.show.calories_burned"), class: "block mb-2 text-sm font-medium text-gray-900"
+          = f.number_field :calories, value: @exercise[:calories], class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 0, max: 10000, step: 1
+        .mb-4
+          = f.label :neat, t("exercises.show.neat"), class: "block mb-2 text-sm font-medium text-gray-900"
+          = f.number_field :neat, value: @exercise[:neat], class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 0, max: 5000, step: 1
+        .mb-4.md:col-span-2
+          = f.label :structured_description, t("exercises.show.structured_description"), class: "block mb-2 text-sm font-medium text-gray-900"
+          = f.text_field :structured_description, value: @exercise[:structured_description], class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", maxlength: 255
+
+      .flex.gap-4.pt-4.border-t.border-gray-200
+        = f.submit t("exercises.show.confirm"), name: "confirm", class: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-lg px-8 py-3 cursor-pointer"
+        = link_to t("exercises.show.edit_description"), edit_journal_exercise_path(journal_date: (params[:journal_date] || params[:journal_id]), id: @exercise[:id]), class: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-lg px-6 py-3"
+        = link_to t("exercises.show.cancel"), journal_path(date: (params[:journal_date] || params[:journal_id])), class: "text-gray-600 hover:text-gray-800 text-lg px-6 py-3"
