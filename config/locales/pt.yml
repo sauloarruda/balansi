@@ -1,0 +1,279 @@
+# Arquivos no diretório config/locales são usados para internacionalização e
+# são carregados automaticamente pelo Rails. Se você quiser usar outros locales
+# além do português, adicione os arquivos necessários neste diretório.
+#
+# Para usar os locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# Nas views, isso é um alias para apenas `t`:
+#
+#     <%= t("hello") %>
+#
+# Para usar um locale diferente, defina com `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# Isso usaria as informações em config/locales/es.yml.
+#
+# Para saber mais sobre a API, leia o guia de Internacionalização do Rails
+# em https://guides.rubyonrails.org/i18n.html.
+#
+# Esteja ciente de que o YAML interpreta as seguintes strings case-insensitive como
+# booleanos: `true`, `false`, `on`, `off`, `yes`, `no`. Portanto, essas strings
+# devem ser colocadas entre aspas para serem interpretadas como strings. Por exemplo:
+#
+#     pt:
+#       "yes": sim
+#       enabled: "ON"
+
+pt:
+  hello: "Olá mundo"
+  defaults:
+    confirm_delete: "Tem certeza?"
+    protein: "proteína"
+    carbs: "carboidratos"
+    fats: "gorduras"
+    kcal: "kcal"
+    minutes: "minutos"
+    kcal_burned: "kcal queimadas"
+    item:
+      one: "item"
+      other: "itens"
+    meal_type:
+      breakfast: "Café da manhã"
+      lunch: "Almoço"
+      snack: "Lanche"
+      dinner: "Jantar"
+    actions:
+      review: "Revisar"
+      edit: "Editar"
+      delete: "Excluir"
+      add: "Adicionar %{model}"
+      no_items: "Nenhum %{model} registrado ainda."
+      add_first: "Adicione seu primeiro %{model}"
+  date:
+    formats:
+      long: "%d de %B de %Y"
+    month_names:
+      - ~
+      - Janeiro
+      - Fevereiro
+      - Março
+      - Abril
+      - Maio
+      - Junho
+      - Julho
+      - Agosto
+      - Setembro
+      - Outubro
+      - Novembro
+      - Dezembro
+    abbr_month_names:
+      - ~
+      - Jan
+      - Fev
+      - Mar
+      - Abr
+      - Mai
+      - Jun
+      - Jul
+      - Ago
+      - Set
+      - Out
+      - Nov
+      - Dez
+    day_names:
+      - Domingo
+      - Segunda-feira
+      - Terça-feira
+      - Quarta-feira
+      - Quinta-feira
+      - Sexta-feira
+      - Sábado
+    abbr_day_names:
+      - Dom
+      - Seg
+      - Ter
+      - Qua
+      - Qui
+      - Sex
+      - Sáb
+  journals:
+    date_navigator:
+      today: "Hoje"
+      previous_day: "Dia anterior"
+      next_day: "Próximo dia"
+    show:
+      title: "Diário Diário - %{date}"
+      warning: "Aviso:"
+      today: "Hoje"
+      meals: "Refeições"
+      exercises: "Exercícios"
+      add_meal: "Adicionar Refeição"
+      add_exercise: "Adicionar Exercício"
+      add_first_meal: "Adicione sua primeira refeição"
+      add_first_exercise: "Adicione seu primeiro exercício"
+      no_meals: "Nenhuma refeição registrada ainda."
+      no_exercises: "Nenhum exercício registrado ainda."
+      review: "Revisar"
+      edit: "Editar"
+      delete: "Excluir"
+      close_day: "Fechar Dia"
+      exercise: "Exercício"
+      pending_items_warning: "Você tem %{count} %{items} não confirmados. Eles serão excluídos quando você fechar o dia."
+      daily_feedback: "Feedback Diário"
+      what_went_well: "O que foi bem:"
+      what_to_improve: "O que melhorar:"
+      protein: "proteína"
+      carbs: "carboidratos"
+      fats: "gorduras"
+      kcal: "kcal"
+      confirm_delete: "Tem certeza?"
+    close:
+      title: "Fechar Dia - %{date}"
+      heading: "Fechar Dia"
+      description: "Responda estas perguntas para fechar seu dia e obter sua pontuação diária."
+      warning: "Aviso:"
+      pending_items_auto_delete: "Você tem %{count} %{items} não confirmados. Eles serão excluídos automaticamente quando você fechar este dia."
+      daily_metrics: "Métricas Diárias"
+      feeling_label: "Como você está se sentindo em relação ao plano?"
+      sleep_label: "Qualidade do sono ontem à noite?"
+      hydration_label: "Hidratação durante o dia?"
+      hydration_goal: "Meta: %{goal} ml"
+      hydration_goal_not_set: "Meta: Não definida ml"
+      steps_label: "Contagem de passos diários"
+      steps_goal: "Meta: %{goal} passos"
+      steps_goal_not_set: "Meta: Não definida passos"
+      steps_placeholder: "Digite seus passos diários"
+      daily_note_label: "Nota Diária (opcional)"
+      daily_note_placeholder: "Escreva qualquer coisa que você gostaria de lembrar sobre este dia..."
+      feeling_options:
+        good: "Bom"
+        ok: "Ok"
+        bad: "Ruim"
+      sleep_options:
+        excellent: "Excelente"
+        good: "Bom"
+        poor: "Ruim"
+      hydration_options:
+        excellent: "Excelente"
+        good: "Bom"
+        poor: "Ruim"
+      daily_summary_title: "Resumo Diário"
+      calories_consumed: "Calorias Consumidas"
+      calories_burned: "Calorias Queimadas"
+      balance: "Balanço"
+      meals: "Refeições"
+      exercises: "Exercícios"
+      close_day_button: "Fechar Dia e Obter Pontuação"
+      cancel: "Cancelar"
+    daily_summary:
+      title: "Resumo"
+      meals: "Refeições"
+      exercises: "Exercícios"
+      consumption: "Consumo"
+      expenditure: "Gasto"
+      kcal: "kcal"
+      caloric_balance: "Balanço Calórico"
+      above_goal: "Você está acima da meta de calorias"
+      below_goal: "Você está abaixo da meta de calorias"
+      balanced: "Balanço calórico equilibrado"
+      daily_goal_progress: "Progresso da Meta Diária"
+      daily_score: "Pontuação Diária"
+      close_day: "Fechar Dia"
+      daily_feedback: "Feedback Diário"
+      what_went_well: "O que foi bem:"
+      what_to_improve: "O que melhorar:"
+
+  exercises:
+    show:
+      title: "Revisar Exercício"
+      heading: "Revisar Exercício"
+      ai_suggestion: "Sugestão da IA"
+      ai_suggestion_text: "Por favor, revise e confirme"
+      exercise_label: "Exercício"
+      duration: "Duração (minutos)"
+      calories_burned: "Calorias Queimadas (kcal)"
+      neat: "NEAT (kcal)"
+      structured_description: "Descrição Estruturada"
+      confirm: "Confirmar Exercício"
+      edit_description: "Editar Descrição e Reprocessar"
+      cancel: "Cancelar"
+    edit:
+      title: "Editar Exercício"
+      heading: "Editar Exercício"
+      description: "Descrição"
+      description_placeholder: "Descreva seu exercício"
+      characters: "/140 caracteres"
+      info_text: "Edite a descrição e clique em \"Reprocessar com IA\" para obter nova análise, ou ajuste os valores diretamente abaixo."
+      duration: "Duração (minutos)"
+      calories_burned: "Calorias Queimadas (kcal)"
+      neat: "NEAT (kcal)"
+      structured_description: "Descrição Estruturada"
+      save_changes: "Salvar Alterações"
+      reprocess: "Reprocessar com IA"
+      cancel: "Cancelar"
+    new:
+      title: "Adicionar Exercício"
+      heading: "Adicionar Exercício"
+      date: "Data"
+      description: "Descrição"
+      description_placeholder: "Descreva seu exercício (ex: 'Corrida moderada de 5 km no parque')"
+      characters: "/140 caracteres"
+      analyze: "Analisar com IA"
+      cancel: "Cancelar"
+  meals:
+    show:
+      title: "Revisar Refeição"
+      heading: "Revisar Refeição"
+      error: "Erro:"
+      retry: "Tentar Novamente"
+      ai_suggestion: "Sugestão da IA"
+      ai_suggestion_text: "Por favor, revise e confirme"
+      calories: "Calorias (kcal)"
+      proteins: "Proteínas (g)"
+      carbs: "Carboidratos (g)"
+      fats: "Gorduras (g)"
+      total_weight: "Peso Total (g)"
+      ai_comment: "Comentário da IA"
+      feeling: "Sensação:"
+      feeling_positive: "✓ Positivo"
+      feeling_not_ideal: "✗ Não Ideal"
+      confirm: "Confirmar Refeição"
+      edit_description: "Editar Descrição e Reprocessar"
+      cancel: "Cancelar"
+    edit:
+      title: "Editar Refeição"
+      heading: "Editar Refeição"
+      meal_type: "Tipo de Refeição"
+      description: "Descrição"
+      description_placeholder: "Descreva o que você comeu"
+      characters: "/140 caracteres"
+      info_text: "Edite a descrição e clique em \"Reprocessar com IA\" para obter nova análise, ou ajuste os valores diretamente abaixo."
+      calories: "Calorias (kcal)"
+      proteins: "Proteínas (g)"
+      carbs: "Carboidratos (g)"
+      fats: "Gorduras (g)"
+      total_weight: "Peso Total (g)"
+      save_changes: "Salvar Alterações"
+      reprocess: "Reprocessar com IA"
+      cancel: "Cancelar"
+    new:
+      title: "Adicionar Refeição"
+      heading: "Adicionar Refeição"
+      date: "Data"
+      meal_type: "Tipo de Refeição"
+      description: "Descrição"
+      description_placeholder: "Descreva o que você comeu (ex: 'Frango grelhado com arroz e vegetais')"
+      characters: "/140 caracteres"
+      analyze: "Analisar com IA"
+      cancel: "Cancelar"
+  activerecord:
+    models:
+      meal:
+        one: "Refeição"
+        other: "Refeições"
+      exercise:
+        one: "Exercício"
+        other: "Exercícios"

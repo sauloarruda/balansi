@@ -16,6 +16,17 @@ Rails.application.routes.draw do
   get "/auth/sign_in", to: "auth/sessions#new", as: :auth_login_path
   delete "/auth/sign_out", to: "auth/sessions#destroy"
 
+  # Journal routes
+  resources :journals, param: :date, constraints: { date: /\d{4}-\d{2}-\d{2}/ }, only: [ :index, :show ] do
+    member do
+      get :close
+      patch :close
+    end
+
+    resources :meals, controller: "journal/meals", except: [ :index ]
+    resources :exercises, controller: "journal/exercises", except: [ :index ]
+  end
+
   # Defines the root path route ("/")
   root "home#index"
 end

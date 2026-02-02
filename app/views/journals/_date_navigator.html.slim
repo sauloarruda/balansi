@@ -1,0 +1,15 @@
+/ Date Navigator
+.bg-pink-50.border.border-pink-200.rounded-base.p-4.mb-6 data-controller="date-navigator"
+  / Hidden input for Flowbite datepicker
+  input#datepicker-input.absolute.opacity-0.pointer-events-none type="text" data-date-navigator-target="datepickerInput"
+  .flex.items-center.justify-center.gap-4
+    button.inline-flex.items-center.justify-center.text-white.bg-pink-600.hover:bg-pink-700.border.border-transparent.focus:ring-4.focus:ring-pink-300.shadow-xs.font-medium.leading-5.rounded-base.w-10.h-10 type="button" data-action="click->date-navigator#previousDay" aria-label=t(".previous_day")
+      = heroicon "chevron-left", variant: :solid, options: { class: "w-5 h-5 text-white" }
+    .date-display data-date-navigator-target="display"
+      button.inline-flex.items-center.justify-center.text-pink-900.bg-white.hover:bg-pink-50.border.border-pink-200.focus:ring-4.focus:ring-pink-300.shadow-xs.font-medium.leading-5.rounded-base.px-4.py-2 type="button" data-action="click->date-navigator#openCalendar"
+        - if journal_date == Date.current
+          strong = t(".today")
+        - else
+          = format_date(journal_date)
+    button.inline-flex.items-center.justify-center.text-white.bg-pink-600.hover:bg-pink-700.border.border-transparent.focus:ring-4.focus:ring-pink-300.shadow-xs.font-medium.leading-5.rounded-base.w-10.h-10 type="button" data-action="click->date-navigator#nextDay" aria-label=t(".next_day")
+      = heroicon "chevron-right", variant: :solid, options: { class: "w-5 h-5 text-white" }

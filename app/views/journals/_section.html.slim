@@ -1,0 +1,39 @@
+/ Generic section partial for meals, exercises, etc.
+/ locals:
+/   model: Model class (e.g., Meal, Exercise)
+/   items: Array of items to display
+/   journal_date: Date object
+/   journal: Journal hash
+/   new_path: Path helper method name as symbol (e.g., :new_journal_meal_path)
+/   item_partial: Partial path for rendering each item (e.g., "journal/meals/meal")
+/   item_local_name: Name of the local variable for the item in the partial (e.g., :meal or :exercise)
+/   icon: Emoji or icon to display
+/   color_scheme: Hash with color classes (bg, border, text, hover, focus_ring)
+- color_scheme ||= { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" }
+- bg_color = "bg-#{color_scheme[:bg]}-50"
+- border_color = "border-#{color_scheme[:border]}-300"
+- text_color = "text-#{color_scheme[:text]}-700"
+- button_bg_class = (color_scheme[:bg] == "pink" ? "bg-pink-600" : (color_scheme[:bg] == "sky" ? "bg-sky-600" : "bg-#{color_scheme[:bg]}-600"))
+- button_hover_class = (color_scheme[:hover] == "pink" ? "hover:bg-pink-700" : (color_scheme[:hover] == "sky" ? "hover:bg-sky-700" : "hover:bg-#{color_scheme[:hover]}-700"))
+- button_focus_class = (color_scheme[:focus_ring] == "pink" ? "focus:ring-pink-300" : (color_scheme[:focus_ring] == "sky" ? "focus:ring-sky-300" : "focus:ring-#{color_scheme[:focus_ring]}-300"))
+- icon_color = "text-#{color_scheme[:text]}-600"
+
+section.mb-8
+  .flex.justify-between.items-center.mb-6
+    h2.text-2xl.font-bold.tracking-tight.text-heading.flex.items-center.gap-2
+      span class=icon_color = icon
+      = model.model_name.human(count: 2)
+    - unless journal[:closed_at]
+      = link_to t("defaults.actions.add", model: model.model_name.human), send(new_path, journal_date: journal_date.to_s), class: "inline-flex items-center justify-center text-white #{button_bg_class} #{button_hover_class} box-border border border-transparent focus:ring-4 #{button_focus_class} shadow-xs font-medium rounded-base text-sm px-5 py-2.5 focus:outline-none"
+
+  - if items.any?
+    .space-y-4
+      - items.each do |item|
+        - item_locals = { journal_date: journal_date, journal: journal }
+        - item_locals[item_local_name] = item
+        = render partial: item_partial, locals: item_locals
+  - else
+    .border-2.border-dashed.rounded-base.p-12.text-center class="#{bg_color} #{border_color}"
+      p.mb-4 class=text_color = t("defaults.actions.no_items", model: model.model_name.human(count: 2))
+      - unless journal[:closed_at]
+        = link_to t("defaults.actions.add_first", model: model.model_name.human), send(new_path, journal_date: journal_date.to_s), class: "inline-flex items-center justify-center text-white #{button_bg_class} #{button_hover_class} box-border border border-transparent focus:ring-4 #{button_focus_class} shadow-xs font-medium rounded-base text-sm px-5 py-2.5 focus:outline-none"
