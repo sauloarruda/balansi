@@ -17,6 +17,14 @@ gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
+# Slim template engine for views
+gem "slim-rails"
+# Heroicons for Rails
+gem "heroicon"
+
+# TailwindCSS integration for Rails
+gem "tailwindcss-rails"
+
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 
@@ -55,6 +63,9 @@ group :development, :test do
 
   # Ruby LSP RSpec integration for running tests from editor
   gem "ruby-lsp-rspec", require: false
+
+  # Process manager for running multiple processes [https://github.com/ddollar/foreman]
+  gem "foreman", require: false
 end
 
 group :development do
