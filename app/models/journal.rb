@@ -100,5 +100,4 @@ class Journal < ApplicationRecord
 
     "balanced"
   end
-
 end

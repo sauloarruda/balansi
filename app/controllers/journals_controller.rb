@@ -46,5 +46,4 @@ class JournalsController < ApplicationController
   rescue ArgumentError
     nil
   end
-
 end

@@ -5,7 +5,7 @@ module JournalHelper
 
   def progress_percentage(consumed, goal)
     return 0 if goal.nil? || goal.zero?
-    [(consumed.to_f / goal * 100).round, 100].min
+    [ (consumed.to_f / goal * 100).round, 100 ].min
   end
 
   def score_color(score)
