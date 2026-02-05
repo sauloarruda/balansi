@@ -5,12 +5,14 @@
 The Journal module is the core daily tracking experience of Balansi, allowing patients to log meals and exercises with AI-assisted analysis and receive daily feedback based on nutritionist-defined scoring rules.
 
 **Key Components:**
-- **Frontend**: Rails views for daily journal, meal/exercise entry and review screens
+- **Frontend**: Rails Slim views for daily journal, meal/exercise entry and review screens
 - **Backend**: Ruby on Rails application (handles journal operations, LLM integration)
 - **AI Service**: OpenAI (latest model - meal analysis, exercise analysis, daily scoring)
 - **Database**: PostgreSQL (journals, meals, exercises tables)
 
 **Key Design Decisions:**
+- **Template Engine**: Uses Slim for all views (`.slim` files) for cleaner, more maintainable templates
+- **UI Framework**: TailwindCSS 3.4+ with Flowbite for pre-built components (forms, modals, tables, date pickers)
 - **Journal Ownership**: Journals belong to Patients (not Users directly) to ensure data isolation per professional
 - **Auto-Creation**: Journal records are created automatically when the first meal or exercise is logged for a date
 - **Status Workflow**: Meals and exercises have 3 states: `pending_llm` (awaiting AI response), `pending_patient` (awaiting user confirmation), and `confirmed` (user confirmed). Only `confirmed` entries are counted in daily totals
