@@ -1,5 +1,4 @@
 class JournalsController < ApplicationController
-  before_action :ensure_current_patient!
   before_action :set_current_date, only: [ :index, :show ]
 
   def index
@@ -28,12 +27,6 @@ class JournalsController < ApplicationController
   end
 
   private
-
-  def ensure_current_patient!
-    return if current_patient
-
-    head :forbidden
-  end
 
   def set_current_date
     @current_date = parse_date_param(params[:date]) || Date.current

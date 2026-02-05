@@ -4,6 +4,7 @@ class ApplicationController < ActionController::Base
   include BrowserTimezone
 
   around_action :use_user_timezone
+  before_action :ensure_current_patient!
 
   helper_method :current_patient
 
@@ -19,6 +20,13 @@ class ApplicationController < ActionController::Base
     return nil unless current_user
 
     @current_patient ||= current_user.patients.order(:id).first
+  end
+
+  def ensure_current_patient!
+    return if current_user.nil?
+    return if current_patient
+
+    head :forbidden
   end
 
   def use_user_timezone(&block)

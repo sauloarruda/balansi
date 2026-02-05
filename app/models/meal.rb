@@ -14,7 +14,7 @@ class Meal < ApplicationRecord
   }, default: :pending_llm, predicates: true, scope: true
 
   validates :meal_type, presence: true, inclusion: { in: MEAL_TYPES }
-  validates :description, presence: true, length: { maximum: 140 }
+  validates :description, presence: true, length: { maximum: 500 }
   validates :proteins, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true
   validates :carbs, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true
   validates :fats, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true

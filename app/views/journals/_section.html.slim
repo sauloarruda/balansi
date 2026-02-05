@@ -34,6 +34,7 @@ section.mb-8
         = render partial: item_partial, locals: item_locals
   - else
     .border-2.border-dashed.rounded-base.p-12.text-center class="#{bg_color} #{border_color}"
-      p.mb-4 class=text_color = t("defaults.actions.no_items", model: model.model_name.human(count: 2))
+      - model_key = model.model_name.i18n_key.to_s
+      p.mb-4 class=text_color = t("journals.show.no_#{model_key}", default: t("defaults.actions.no_items", model: model.model_name.human(count: 2)))
       - unless journal.closed_at
         = link_to t("defaults.actions.add_first", model: model.model_name.human), send(new_path, journal_date: journal_date.to_s), class: "inline-flex items-center justify-center text-white #{button_bg_class} #{button_hover_class} box-border border border-transparent focus:ring-4 #{button_focus_class} shadow-xs font-medium rounded-base text-sm px-5 py-2.5 focus:outline-none"
