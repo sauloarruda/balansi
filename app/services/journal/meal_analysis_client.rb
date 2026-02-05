@@ -9,10 +9,12 @@ class Journal::MealAnalysisClient
 
   def analyze_with_openai(description:, meal_type:, user_language:)
     api_key = openai_api_key
-    raise StandardError, "OpenAI API key not configured" if api_key.blank?
-
     request_payload = build_request_payload(description:, meal_type:, user_language:)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    response = nil
+
+    raise StandardError, "OpenAI API key not configured" if api_key.blank?
+
     response = send_request(api_key: api_key, request_payload: request_payload)
 
     if response.code >= 500 || response.code == 429
@@ -76,6 +78,7 @@ class Journal::MealAnalysisClient
 
   def log_llm_debug(request_payload:, response:, started_at:)
     return unless Rails.logger.debug?
+    return if started_at.nil?
 
     elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round(2)
     payload = {

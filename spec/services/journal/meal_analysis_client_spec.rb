@@ -5,6 +5,9 @@ RSpec.describe Journal::MealAnalysisClient, type: :service do
   let(:api_key) { "test-api-key" }
 
   before do
+    allow(ENV).to receive(:[]).with("OPENAI_API_KEY").and_call_original
+    allow(ENV).to receive(:[]).with("OPENAI_MODEL").and_call_original
+    allow(ENV).to receive(:[]).with("OPENAI_API_KEY").and_return(api_key)
     allow(Rails.application.credentials).to receive(:dig).with(:openai, :api_key).and_return(api_key)
     allow(Rails.application.credentials).to receive(:dig).with(:openai, :model).and_return("gpt-4.1-mini")
   end
