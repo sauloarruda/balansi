@@ -1,0 +1,9 @@
+default_user:
+  id: 1001
+  name: Default User
+  email: default_user@example.com
+  cognito_id: cognito_default_user
+  timezone: America/Sao_Paulo
+  language: pt
+  created_at: 2026-02-05 10:00:00
+  updated_at: 2026-02-05 10:00:00

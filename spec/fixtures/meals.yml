@@ -1,0 +1,15 @@
+today_breakfast:
+  id: 4001
+  journal_id: 3001
+  meal_type: breakfast
+  description: Whole grain toast and eggs
+  proteins: 20
+  carbs: 28
+  fats: 12
+  calories: 300
+  gram_weight: 200
+  ai_comment: Balanced breakfast
+  feeling: 1
+  status: confirmed
+  created_at: 2026-02-05 08:00:00
+  updated_at: 2026-02-05 08:00:00
