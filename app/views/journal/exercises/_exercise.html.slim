@@ -1,26 +1,27 @@
 / Exercise card partial
-.bg-white.border.border-default.rounded-base.shadow-xs.p-6 class="border-l-4 #{exercise[:status] == 'confirmed' ? 'border-blue-500 bg-blue-50' : 'border-yellow-500 bg-yellow-50'}"
+- status = exercise.status.to_s
+.bg-white.border.border-default.rounded-base.shadow-xs.p-6 class="border-l-4 #{status == 'confirmed' ? 'border-blue-500 bg-blue-50' : 'border-yellow-500 bg-yellow-50'}"
   .flex.justify-between.items-start.mb-4
     div.flex-1
       h5.text-xl.font-semibold.tracking-tight.text-heading.leading-8.mb-2
         | 🏃 
         = t("journals.show.exercise")
-      p.text-body = exercise[:description]
-    span.inline-flex.items-center.px-3.py-1.text-xs.font-bold.rounded-full class="#{exercise[:status] == 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}"
-      = format_status(exercise[:status])
+      p.text-body = exercise.description
+    span.inline-flex.items-center.px-3.py-1.text-xs.font-bold.rounded-full class="#{status == 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}"
+      = exercise.status_text
   
-  - if exercise[:status] == "confirmed"
+  - if status == "confirmed"
     .flex.flex-wrap.gap-4.mb-4.p-4.bg-sky-50.border.border-sky-100.rounded-base
       span.text-sm.font-medium.text-sky-800
-        strong.text-sky-900 = "#{exercise[:duration]} "
+        strong.text-sky-900 = "#{exercise.duration} "
         = t("defaults.minutes")
       span.text-sm.font-medium.text-sky-800
-        strong.text-sky-900 = "#{exercise[:calories]} "
+        strong.text-sky-900 = "#{exercise.calories} "
         = t("defaults.kcal_burned")
   
   .flex.gap-2.mt-4
-    - if exercise[:status] == "pending_patient"
-      = link_to t("defaults.actions.review"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise[:id]), class: "inline-flex items-center text-white bg-pink-600 hover:bg-pink-700 box-border border border-transparent focus:ring-4 focus:ring-pink-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
-    - elsif exercise[:status] == "confirmed" && (journal[:closed_at].nil? || journal_editable?(journal))
-      = link_to t("defaults.actions.edit"), edit_journal_exercise_path(journal_date: journal_date.to_s, id: exercise[:id]), class: "inline-flex items-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2 focus:outline-none"
-      = link_to t("defaults.actions.delete"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise[:id]), method: :delete, data: { confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
+    - if status == "pending_patient"
+      = link_to t("defaults.actions.review"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), class: "inline-flex items-center text-white bg-pink-600 hover:bg-pink-700 box-border border border-transparent focus:ring-4 focus:ring-pink-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
+    - elsif status == "confirmed" && (journal.closed_at.nil? || journal.editable?)
+      = link_to t("defaults.actions.edit"), edit_journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), class: "inline-flex items-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2 focus:outline-none"
+      = link_to t("defaults.actions.delete"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), method: :delete, data: { confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"

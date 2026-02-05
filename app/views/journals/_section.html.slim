@@ -3,7 +3,7 @@
 /   model: Model class (e.g., Meal, Exercise)
 /   items: Array of items to display
 /   journal_date: Date object
-/   journal: Journal hash
+/   journal: Journal object
 /   new_path: Path helper method name as symbol (e.g., :new_journal_meal_path)
 /   item_partial: Partial path for rendering each item (e.g., "journal/meals/meal")
 /   item_local_name: Name of the local variable for the item in the partial (e.g., :meal or :exercise)
@@ -23,7 +23,7 @@ section.mb-8
     h2.text-2xl.font-bold.tracking-tight.text-heading.flex.items-center.gap-2
       span class=icon_color = icon
       = model.model_name.human(count: 2)
-    - unless journal[:closed_at]
+    - unless journal.closed_at
       = link_to t("defaults.actions.add", model: model.model_name.human), send(new_path, journal_date: journal_date.to_s), class: "inline-flex items-center justify-center text-white #{button_bg_class} #{button_hover_class} box-border border border-transparent focus:ring-4 #{button_focus_class} shadow-xs font-medium rounded-base text-sm px-5 py-2.5 focus:outline-none"
 
   - if items.any?
@@ -35,5 +35,5 @@ section.mb-8
   - else
     .border-2.border-dashed.rounded-base.p-12.text-center class="#{bg_color} #{border_color}"
       p.mb-4 class=text_color = t("defaults.actions.no_items", model: model.model_name.human(count: 2))
-      - unless journal[:closed_at]
+      - unless journal.closed_at
         = link_to t("defaults.actions.add_first", model: model.model_name.human), send(new_path, journal_date: journal_date.to_s), class: "inline-flex items-center justify-center text-white #{button_bg_class} #{button_hover_class} box-border border border-transparent focus:ring-4 #{button_focus_class} shadow-xs font-medium rounded-base text-sm px-5 py-2.5 focus:outline-none"

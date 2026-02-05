@@ -37,11 +37,11 @@ class Journal < ApplicationRecord
   end
 
   def confirmed_meals
-    meals.status_confirmed
+    meals.where(status: "confirmed")
   end
 
   def confirmed_exercises
-    exercises.status_confirmed
+    exercises.where(status: "confirmed")
   end
 
   def pending_meals
@@ -56,6 +56,18 @@ class Journal < ApplicationRecord
     pending_meals.exists? || pending_exercises.exists?
   end
 
+  def pending_entries_count
+    pending_meals.count + pending_exercises.count
+  end
+
+  def confirmed_meals_count
+    confirmed_meals.count
+  end
+
+  def confirmed_exercises_count
+    confirmed_exercises.count
+  end
+
   def calculate_calories_consumed
     confirmed_meals.sum(:calories) || 0
   end
@@ -68,5 +80,35 @@ class Journal < ApplicationRecord
 
   def calculate_balance
     calculate_calories_consumed - calculate_calories_burned
+  end
+
+  def effective_calories_consumed
+    calories_consumed || calculate_calories_consumed
+  end
+
+  def effective_calories_burned
+    calories_burned || calculate_calories_burned
+  end
+
+  def effective_balance
+    effective_calories_consumed - effective_calories_burned
+  end
+
+  def balance_status
+    return "positive" if effective_balance > 300
+    return "negative" if effective_balance < -500
+
+    "balanced"
+  end
+
+  def score_color
+    case score
+    when 1 then "red"
+    when 2 then "orange"
+    when 3 then "yellow"
+    when 4 then "teal"
+    when 5 then "green"
+    else "gray"
+    end
   end
 end
