@@ -14,17 +14,17 @@ class JournalsController < ApplicationController
   end
 
   def close
-    if request.get?
-      date = parse_date_param(params[:date]) || Date.current
-      @journal = current_patient.journals.find_by(date: date) || current_patient.journals.build(date: date)
-      @meals = @journal.persisted? ? @journal.meals.order(:created_at) : Meal.none
-      @exercises = @journal.persisted? ? @journal.exercises.order(:created_at) : Exercise.none
-      @patient = current_patient
+    if request.patch?
+      flash[:notice] = "Day closed successfully! (Mock implementation)"
+      redirect_to journal_path(date: params[:date])
       return
     end
 
-    flash[:notice] = "Day closed successfully! (Mock implementation)"
-    redirect_to journal_path(date: params[:date])
+    date = parse_date_param(params[:date]) || Date.current
+    @journal = current_patient.journals.find_by(date: date) || current_patient.journals.build(date: date)
+    @meals = @journal.persisted? ? @journal.meals.order(:created_at) : Meal.none
+    @exercises = @journal.persisted? ? @journal.exercises.order(:created_at) : Exercise.none
+    @patient = current_patient
   end
 
   private
