@@ -10,13 +10,77 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_10_155044) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_05_110300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
-  create_table "patients", force: :cascade do |t|
+  # Custom types defined in this database.
+  # Note that some types may not work with other database engines. Be careful if changing database.
+  create_enum "exercise_status_enum", ["pending_llm", "pending_patient", "confirmed"]
+  create_enum "meal_status_enum", ["pending_llm", "pending_patient", "confirmed"]
+  create_enum "meal_type_enum", ["breakfast", "lunch", "snack", "dinner"]
+
+  create_table "exercises", force: :cascade do |t|
+    t.integer "calories"
     t.datetime "created_at", null: false
+    t.string "description", null: false
+    t.integer "duration"
+    t.bigint "journal_id", null: false
+    t.integer "neat"
+    t.enum "status", default: "pending_llm", null: false, enum_type: "exercise_status_enum"
+    t.string "structured_description"
+    t.datetime "updated_at", null: false
+    t.index ["journal_id", "status"], name: "exercises_journal_status_idx"
+    t.index ["journal_id"], name: "index_exercises_on_journal_id"
+  end
+
+  create_table "journals", force: :cascade do |t|
+    t.integer "calories_burned"
+    t.integer "calories_consumed"
+    t.datetime "closed_at", precision: nil
+    t.datetime "created_at", null: false
+    t.text "daily_note"
+    t.date "date", null: false
+    t.text "feedback_improvement"
+    t.text "feedback_positive"
+    t.integer "feeling_today"
+    t.integer "hydration_quality"
+    t.bigint "patient_id", null: false
+    t.integer "score"
+    t.integer "sleep_quality"
+    t.integer "steps_count"
+    t.datetime "updated_at", null: false
+    t.index ["closed_at"], name: "index_journals_on_closed_at"
+    t.index ["date"], name: "index_journals_on_date"
+    t.index ["patient_id", "date"], name: "journals_patient_date_unique_idx", unique: true
+    t.index ["patient_id"], name: "index_journals_on_patient_id"
+  end
+
+  create_table "meals", force: :cascade do |t|
+    t.text "ai_comment"
+    t.integer "calories"
+    t.integer "carbs"
+    t.datetime "created_at", null: false
+    t.string "description", null: false
+    t.integer "fats"
+    t.integer "feeling"
+    t.integer "gram_weight"
+    t.bigint "journal_id", null: false
+    t.enum "meal_type", null: false, enum_type: "meal_type_enum"
+    t.integer "proteins"
+    t.enum "status", default: "pending_llm", null: false, enum_type: "meal_status_enum"
+    t.datetime "updated_at", null: false
+    t.index ["journal_id", "status"], name: "meals_journal_status_idx"
+    t.index ["journal_id"], name: "index_meals_on_journal_id"
+  end
+
+  create_table "patients", force: :cascade do |t|
+    t.integer "bmr"
+    t.datetime "created_at", null: false
+    t.integer "daily_calorie_goal"
+    t.integer "hydration_goal"
     t.integer "professional_id", null: false
+    t.integer "steps_goal"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["professional_id"], name: "index_patients_on_professional_id"
@@ -36,5 +100,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_10_155044) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "exercises", "journals", on_delete: :cascade
+  add_foreign_key "journals", "patients", on_delete: :cascade
+  add_foreign_key "meals", "journals", on_delete: :cascade
   add_foreign_key "patients", "users", on_delete: :cascade
 end
