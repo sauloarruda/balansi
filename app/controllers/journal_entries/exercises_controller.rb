@@ -1,4 +1,4 @@
-module Journal
+module JournalEntries
   class ExercisesController < ApplicationController
     before_action :set_journal
 

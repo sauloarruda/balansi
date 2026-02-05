@@ -18,7 +18,7 @@
           = t(".pending_items_warning", count: pending_count, items: t("defaults.item", count: pending_count))
 
   / Meals Section
-  = render partial: "section", locals: { model: Meal, items: @meals, journal_date: @journal.date, journal: @journal, new_path: :new_journal_meal_path, item_partial: "journal/meals/meal", item_local_name: :meal, icon: "🍽️", color_scheme: { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" } }
+  = render partial: "section", locals: { model: Meal, items: @meals, journal_date: @journal.date, journal: @journal, new_path: :new_journal_meal_path, item_partial: "journal_entries/meals/meal", item_local_name: :meal, icon: "🍽️", color_scheme: { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" } }
 
   / Exercises Section
-  = render partial: "section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }
+  = render partial: "section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal_entries/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }

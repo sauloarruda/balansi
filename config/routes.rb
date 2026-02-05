@@ -23,8 +23,8 @@ Rails.application.routes.draw do
       patch :close
     end
 
-    resources :meals, controller: "journal/meals", except: [ :index ]
-    resources :exercises, controller: "journal/exercises", except: [ :index ]
+    resources :meals, controller: "journal_entries/meals", except: [ :index ]
+    resources :exercises, controller: "journal_entries/exercises", except: [ :index ]
   end
 
   # Defines the root path route ("/")
