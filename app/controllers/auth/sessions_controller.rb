@@ -1,5 +1,6 @@
 class Auth::SessionsController < ApplicationController
   skip_before_action :authenticate_user!
+  skip_before_action :ensure_current_patient!
 
   # Initiate OAuth authentication flow (sign in or sign up)
   #

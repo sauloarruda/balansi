@@ -1380,7 +1380,7 @@ This implementation plan breaks down the Journal module development into 5 phase
 
 ### Phase 2: Daily Journal Backend & Frontend Integration
 
-**Status**: ⏳ **Pending**
+**Status**: ✅ **Complete**
 
 **Objective**: Implement the backend for the daily journal view and integrate with the frontend. Use seed data for initial testing.
 
@@ -1394,16 +1394,35 @@ This implementation plan breaks down the Journal module development into 5 phase
 - Date boundary calculations
 
 **Acceptance Criteria**:
-- [ ] All migrations are created and tested (up/down)
-- [ ] Journal, Meal, and Exercise models are implemented with all validations
-- [ ] Journal controller handles date navigation correctly
-- [ ] Daily journal view displays real data from database
-- [ ] Date navigator works with timezone-aware dates
-- [ ] Empty states show when no journal exists for a date
-- [ ] Seed data includes various scenarios (multiple days, meals, exercises)
-- [ ] All model tests pass
-- [ ] All controller tests pass
-- [ ] Timezone handling is tested
+- [x] All migrations are created and tested (up/down)
+- [x] Journal, Meal, and Exercise models are implemented with all validations
+- [x] Journal controller handles date navigation correctly
+- [x] Daily journal view displays real data from database
+- [x] Date navigator works with timezone-aware dates
+- [x] Empty states show when no journal exists for a date
+- [x] Seed data includes various scenarios (multiple days, meals, exercises)
+- [x] All model tests pass
+- [x] All controller tests pass
+- [x] Timezone handling is tested
+
+**Implementation Status**:
+- ✅ Database and domain layer delivered
+  - Migrations created for `patients` extension, `journals`, `meals`, and `exercises`
+  - Models `Journal`, `Meal`, and `Exercise` implemented with validations, status handling, and helper methods
+  - Enumerize used for journal qualitative fields and entry statuses
+- ✅ Seed data delivered
+  - Idempotent seed for Journal Phase 2 in pt-BR (`db/seeds/todays_journal_pt.rb`)
+  - Seed flow wired through `db/seeds.rb`
+- ✅ Daily Journal integration delivered
+  - `JournalsController` integrated with persisted data and timezone-aware date navigation
+  - Daily summary and journal sections render from database records instead of mock data
+  - Authorization guard for authenticated users without patient record (`403`)
+- ✅ Test coverage delivered
+  - Model and controller specs covering data loading, isolation by patient/professional context, and timezone boundaries
+  - Fixture + factory fallback strategy for journal-centric controller tests
+- ✅ CI and reliability adjustments delivered
+  - Controller namespace collision fixed for CI eager loading (`JournalEntries::*`)
+  - Test workflow updated to install JS dependencies and precompile assets before specs
 
 **Estimated Files**:
 - Migrations: 4 files
@@ -1426,7 +1445,7 @@ This implementation plan breaks down the Journal module development into 5 phase
 
 ### Phase 3: Meal Entry Backend & Frontend Integration
 
-**Status**: ⏳ **Pending**
+**Status**: ✅ **Completed**
 
 **Objective**: Implement meal entry flow with LLM integration. Users can create meals, receive AI analysis, and confirm/edit entries.
 
@@ -1441,18 +1460,18 @@ This implementation plan breaks down the Journal module development into 5 phase
 - Error handling for LLM failures
 
 **Acceptance Criteria**:
-- [ ] Users can create meals with description and meal_type
-- [ ] Journal is auto-created when first meal is logged
-- [ ] LLM interaction analyzes meal and updates status to pending_patient
-- [ ] Meal review screen shows LLM analysis results
-- [ ] Users can confirm meals (status → confirmed)
-- [ ] Users can edit meal values before confirming
-- [ ] Users can reprocess with AI (status → pending_llm)
-- [ ] Rate limiting is enforced (50/day, 10/hour)
-- [ ] LLM errors are handled gracefully with retry option
-- [ ] All interaction tests pass
-- [ ] All controller tests pass
-- [ ] Integration tests for meal flow pass
+- [x] Users can create meals with description and meal_type
+- [x] Journal is auto-created when first meal is logged
+- [x] LLM interaction analyzes meal and updates status to pending_patient
+- [x] Meal review screen shows LLM analysis results
+- [x] Users can confirm meals (status → confirmed)
+- [x] Users can edit meal values before confirming
+- [x] Users can reprocess with AI (status → pending_llm)
+- [x] Rate limiting is enforced (50/day, 10/hour)
+- [x] LLM errors are handled gracefully with retry option
+- [x] All interaction tests pass
+- [x] All controller tests pass
+- [x] Integration tests for meal flow pass
 
 **Estimated Files**:
 - Interactions: 1 file
@@ -1468,6 +1487,7 @@ This implementation plan breaks down the Journal module development into 5 phase
 - Mock ruby_llm calls in tests
 - Implement retry logic with exponential backoff
 - Validate LLM response structure and ranges
+- Implemented via `Journal::AnalyzeMealInteraction` + `Journal::MealAnalysisClient` (wrapper-friendly for LLM provider mocking)
 
 ---
 
@@ -1569,9 +1589,9 @@ This implementation plan breaks down the Journal module development into 5 phase
 
 | Phase | Description | Status | Dependencies |
 |-------|-------------|--------|--------------|
-| 1 | UI Prototyping | ⏳ Pending | None |
-| 2 | Daily Journal Backend | ⏳ Pending | Phase 1 |
-| 3 | Meal Entry | ⏳ Pending | Phase 2 |
+| 1 | UI Prototyping | ✅ Complete | None |
+| 2 | Daily Journal Backend | ✅ Complete | Phase 1 |
+| 3 | Meal Entry | ✅ Complete | Phase 2 |
 | 4 | Exercise Entry | ⏳ Pending | Phase 3 |
 | 5 | Daily Closure | ⏳ Pending | Phase 4 |
 

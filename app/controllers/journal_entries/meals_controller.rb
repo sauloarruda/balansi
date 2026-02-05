@@ -1,85 +1,157 @@
 module JournalEntries
   class MealsController < ApplicationController
-    before_action :set_journal
+    before_action :set_journal_date
+    before_action :set_journal, only: [ :create ]
+    before_action :set_meal, only: [ :show, :edit, :update, :destroy ]
 
     def new
-      @meal = mock_new_meal
+      @meal = Meal.new(meal_type: params[:meal_type] || Meal::MEAL_TYPES.first)
     end
 
     def create
-      # In Phase 1, just simulate LLM processing delay
-      # In real implementation, this would call AnalyzeMealInteraction
-      flash[:notice] = "Meal submitted! Processing with AI... (Mock)"
-      redirect_to journal_meal_path(journal_id: @journal[:date].to_s, id: 1)
+      @meal = @journal.meals.build(create_meal_params)
+      @meal.status = :pending_llm
+
+      unless @meal.save
+        render :new, status: :unprocessable_entity
+        return
+      end
+
+      if analyze_meal(@meal)
+        flash[:notice] = I18n.t("defaults.messages.create_success", model: meal_model_name)
+      else
+        flash[:error] = analysis_error_message
+      end
+
+      redirect_to journal_meal_path(journal_date: @journal.date.iso8601, id: @meal.id)
     end
 
-    def show
-      @meal = mock_meal_for_review
-      @journal = @journal || mock_journal
-    end
+    def show; end
 
-    def edit
-      @meal = mock_meal_for_review
-    end
+    def edit; end
 
     def update
-      # In Phase 1, just redirect with success
-      flash[:notice] = "Meal updated! (Mock)"
-      redirect_to journal_path(date: @journal[:date].to_s)
+      if params[:reprocess].present?
+        reprocess_meal
+        return
+      end
+
+      if @meal.update(update_meal_params)
+        @meal.confirm! if params[:confirm].present?
+
+        flash[:notice] = I18n.t("defaults.messages.update_success", model: meal_model_name)
+        redirect_to journal_path(date: @meal.journal.date.iso8601)
+      else
+        template = params[:confirm].present? ? :show : :edit
+        render template, status: :unprocessable_entity
+      end
     end
 
     def destroy
-      flash[:notice] = "Meal deleted! (Mock)"
-      redirect_to journal_path(date: @journal[:date].to_s)
+      journal_date = @meal.journal.date.iso8601
+      @meal.destroy!
+
+      flash[:notice] = I18n.t("defaults.messages.delete_success", model: meal_model_name)
+      redirect_to journal_path(date: journal_date)
     end
 
     private
 
+    def set_journal_date
+      @journal_date = parse_date_param(meal_form_date_param) ||
+        parse_date_param(params[:journal_date] || params[:journal_id]) ||
+        Date.current
+    end
+
     def set_journal
-      date_param = params[:journal_date] || params[:journal_id]
-      date = date_param ? Date.parse(date_param) : Date.current
-      @journal = mock_journal_for_date(date)
+      @journal = current_patient.journals.find_or_create_by!(date: @journal_date)
+    end
+
+    def set_meal
+      @meal = Meal.joins(:journal)
+        .includes(:journal)
+        .find_by(id: params[:id], journals: { patient_id: current_patient.id })
+
+      return if @meal
+
+      head :not_found
+    end
+
+    def reprocess_meal
+      previous_status = @meal.status
+
+      if @meal.update(reprocess_meal_params)
+        @meal.update!(status: :pending_llm)
+
+        if analyze_meal(@meal, previous_status: previous_status)
+          flash[:notice] = I18n.t("defaults.messages.reprocess_success", model: meal_model_name)
+        else
+          flash[:error] = analysis_error_message
+        end
+
+        redirect_to journal_meal_path(journal_date: @meal.journal.date.iso8601, id: @meal.id)
+      else
+        render :edit, status: :unprocessable_entity
+      end
+    end
+
+    def analyze_meal(meal, previous_status: nil)
+      result = Journal::AnalyzeMealInteraction.run(
+        meal: meal,
+        user_id: current_user.id,
+        description: meal.description,
+        meal_type: meal.meal_type,
+        user_language: current_user.language
+      )
+
+      @analysis_errors = result.errors
+      if result.valid?
+        true
+      else
+        meal.update!(status: previous_status) if previous_status.present?
+        false
+      end
+    end
+
+    def analysis_error_message
+      @analysis_errors&.full_messages&.to_sentence.presence ||
+        I18n.t("journal.errors.llm_unavailable", locale: current_user.language)
+    end
+
+    def meal_model_name
+      I18n.t("activerecord.models.meal.one", locale: current_user.language)
+    end
+
+    def parse_date_param(raw_date)
+      return nil if raw_date.blank?
+
+      Date.iso8601(raw_date)
     rescue ArgumentError
-      @journal = mock_journal_for_date(Date.current)
+      nil
     end
 
-    def mock_new_meal
-      {
-        meal_type: params[:meal_type] || "breakfast",
-        description: "",
-        date: params[:date] || Date.current
-      }
+    def meal_form_date_param
+      params.dig(:meal, :date)
     end
 
-    def mock_meal_for_review
-      {
-        id: 1,
-        journal_id: @journal[:id],
-        meal_type: "dinner",
-        description: "Fish with sweet potato and salad",
-        proteins: 30,
-        carbs: 40,
-        fats: 12,
-        calories: 380,
-        gram_weight: 350,
-        ai_comment: "Excellent dinner choice with lean protein and complex carbs. The fish provides high-quality protein while sweet potato offers complex carbohydrates and fiber.",
-        feeling: 1,
-        status: "pending_patient"
-      }
+    def create_meal_params
+      params.require(:meal).permit(:meal_type, :description)
     end
 
-    def mock_journal
-      {
-        id: 1,
-        date: Date.current
-      }
+    def update_meal_params
+      params.require(:meal).permit(
+        :meal_type,
+        :description,
+        :calories,
+        :proteins,
+        :carbs,
+        :fats,
+        :gram_weight
+      )
     end
 
-    def mock_journal_for_date(date)
-      {
-        id: 1,
-        date: date
-      }
+    def reprocess_meal_params
+      params.require(:meal).permit(:meal_type, :description)
     end
   end
 end

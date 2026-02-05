@@ -50,6 +50,7 @@ RSpec.describe Authentication, type: :controller do
 
     it "allows access when user is authenticated" do
       session[:user_id] = user.id
+      create(:patient, user: user, professional_id: 1)
       get :protected_action
       expect(response).to have_http_status(:success)
     end

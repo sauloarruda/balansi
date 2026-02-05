@@ -1,5 +1,6 @@
 class Auth::CallbacksController < ApplicationController
   skip_before_action :authenticate_user!
+  skip_before_action :ensure_current_patient!
   before_action :validate_csrf_protection, :check_code_idempotency
 
   # Handles OAuth callback from AWS Cognito

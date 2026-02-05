@@ -52,6 +52,11 @@ pt:
       add: "Adicionar %{model}"
       no_items: "Nenhum %{model} registrado ainda."
       add_first: "Adicione seu primeiro %{model}"
+    messages:
+      create_success: "%{model} analisada com sucesso."
+      update_success: "%{model} atualizada com sucesso."
+      delete_success: "%{model} excluída com sucesso."
+      reprocess_success: "%{model} reprocessada com sucesso."
   date:
     formats:
       long: "%d de %B de %Y"
@@ -249,7 +254,7 @@ pt:
       meal_type: "Tipo de Refeição"
       description: "Descrição"
       description_placeholder: "Descreva o que você comeu"
-      characters: "/140 caracteres"
+      characters: "/500 caracteres"
       info_text: "Edite a descrição e clique em \"Reprocessar com IA\" para obter nova análise, ou ajuste os valores diretamente abaixo."
       calories: "Calorias (kcal)"
       proteins: "Proteínas (g)"
@@ -266,9 +271,18 @@ pt:
       meal_type: "Tipo de Refeição"
       description: "Descrição"
       description_placeholder: "Descreva o que você comeu (ex: 'Frango grelhado com arroz e vegetais')"
-      characters: "/140 caracteres"
+      characters: "/500 caracteres"
       analyze: "Analisar com IA"
       cancel: "Cancelar"
+  meal:
+    status:
+      pending_llm: "Aguardando IA"
+      pending_patient: "Aguardando Confirmação"
+      confirmed: "Confirmada"
+  journal:
+    errors:
+      llm_unavailable: "Não foi possível analisar sua refeição agora. Tente novamente."
+      rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
   activerecord:
     models:
       meal:

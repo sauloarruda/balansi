@@ -52,6 +52,11 @@ en:
       add: "Add %{model}"
       no_items: "No %{model} logged yet."
       add_first: "Add your first %{model}"
+    messages:
+      create_success: "%{model} analyzed successfully."
+      update_success: "%{model} updated successfully."
+      delete_success: "%{model} deleted successfully."
+      reprocess_success: "%{model} reprocessed successfully."
   date:
     formats:
       long: "%B %d, %Y"
@@ -200,7 +205,7 @@ en:
       meal_type: "Meal Type"
       description: "Description"
       description_placeholder: "Describe what you ate"
-      characters: "/140 characters"
+      characters: "/500 characters"
       info_text: "Edit the description and click \"Reprocess with AI\" to get new analysis, or adjust values directly below."
       calories: "Calories (kcal)"
       proteins: "Proteins (g)"
@@ -217,9 +222,18 @@ en:
       meal_type: "Meal Type"
       description: "Description"
       description_placeholder: "Describe what you ate (e.g., 'Grilled chicken with rice and vegetables')"
-      characters: "/140 characters"
+      characters: "/500 characters"
       analyze: "Analyze with AI"
       cancel: "Cancel"
+  meal:
+    status:
+      pending_llm: "Waiting for AI"
+      pending_patient: "Awaiting Confirmation"
+      confirmed: "Confirmed"
+  journal:
+    errors:
+      llm_unavailable: "We could not analyze your meal right now. Please try again."
+      rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
   activerecord:
     models:
       meal:
