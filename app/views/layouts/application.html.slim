@@ -19,7 +19,7 @@ html
 
     / TailwindCSS stylesheet (includes Flowbite via @plugin and @source)
     = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
-    
+
     = javascript_importmap_tags
 
   body.bg-gray-50
@@ -27,18 +27,22 @@ html
     nav.bg-white.border-b.border-gray-200.px-4.py-3
       .max-w-7xl.mx-auto.flex.items-center.justify-between
         / Logo
-        = link_to root_path, class: "flex items-center" do
-          = image_tag "balansi-logo.svg", alt: "Balansi", class: "h-6"
-        
+        - if respond_to?(:root_path)
+          = link_to root_path, class: "flex items-center" do
+            = image_tag "balansi-logo.svg", alt: "Balansi", class: "h-6"
+        - else
+          .flex.items-center
+            = image_tag "balansi-logo.svg", alt: "Balansi", class: "h-6"
+
         / Hamburger Menu Button
         button.inline-flex.items-center.p-2.text-sm.text-gray-500.rounded-lg.hover:bg-gray-100.focus:outline-none.focus:ring-2.focus:ring-gray-200 data-drawer-target="drawer-navigation" data-drawer-show="drawer-navigation" aria-controls="drawer-navigation" type="button"
           span.sr-only Open sidebar
           svg.w-6.h-6 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
             path fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clip-rule="evenodd"
-    
+
     / Drawer Backdrop
     div.drawer-backdrop.fixed.inset-0.bg-gray-900.bg-opacity-50.hidden.z-30 data-drawer-backdrop="drawer-navigation"
-    
+
     / Drawer Menu
     div#drawer-navigation.fixed.top-0.left-0.z-40.h-screen.p-4.overflow-y-auto.transition-transform.-translate-x-full.bg-white.w-64.shadow-xl data-drawer="drawer-navigation" tabindex="-1" aria-labelledby="drawer-navigation-label"
       h5#drawer-navigation-label.text-base.font-semibold.text-gray-500.uppercase.mb-4 Menu
@@ -49,16 +53,18 @@ html
       .py-4.overflow-y-auto
         ul.space-y-2.font-medium
           li
-            = link_to journals_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
-              svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
-                path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"
-                path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"
-              span.ml-3 Journal
+            - if respond_to?(:journals_path)
+              = link_to journals_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
+                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+                  path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"
+                  path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"
+                span.ml-3 Journal
           li
-            = link_to auth_sign_out_path, method: :delete, class: "flex items-center p-2 text-red-600 rounded-lg hover:bg-red-50 group" do
-              svg.w-5.h-5.text-red-500.transition.duration-75.group-hover:text-red-600 aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-                path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              span.ml-3 Logout
+            - if respond_to?(:auth_sign_out_path)
+              = link_to auth_sign_out_path, method: :delete, class: "flex items-center p-2 text-red-600 rounded-lg hover:bg-red-50 group" do
+                svg.w-5.h-5.text-red-500.transition.duration-75.group-hover:text-red-600 aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                  path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                span.ml-3 Logout
 
     / Flash messages
     - if notice

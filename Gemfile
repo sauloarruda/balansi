@@ -98,3 +98,6 @@ gem "jwt"
 
 # Rate limiting middleware
 gem "rack-attack"
+
+# Enum helper with i18n support for model attributes
+gem "enumerize"

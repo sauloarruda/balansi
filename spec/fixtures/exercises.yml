@@ -1,0 +1,11 @@
+today_walk:
+  id: 5001
+  journal_id: 3001
+  description: Moderate walk for 30 minutes
+  duration: 30
+  calories: 160
+  neat: 0
+  structured_description: Moderate walk 30 min
+  status: confirmed
+  created_at: 2026-02-05 09:00:00
+  updated_at: 2026-02-05 09:00:00

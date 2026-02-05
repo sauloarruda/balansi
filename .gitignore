@@ -79,4 +79,3 @@ spec/examples.txt
 
 # Node modules
 /node_modules
-package-lock.json

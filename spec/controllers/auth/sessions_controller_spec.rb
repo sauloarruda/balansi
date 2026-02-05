@@ -33,16 +33,6 @@ RSpec.describe Auth::SessionsController, type: :controller do
     }
   end
 
-  # Setup routes
-  before do
-    routes.draw do
-      get "/auth/sign_up", to: "auth/sessions#new"
-      get "/auth/sign_in", to: "auth/sessions#new", as: :auth_login_path
-      delete "/auth/sign_out", to: "auth/sessions#destroy"
-      root to: "home#index"
-    end
-  end
-
   before do
     mock_credentials
   end

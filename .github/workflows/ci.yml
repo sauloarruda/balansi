@@ -96,6 +96,20 @@ jobs:
         with:
           bundler-cache: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Precompile assets for tests
+        env:
+          RAILS_ENV: test
+        run: bin/rails assets:precompile
+
       - name: Run tests
         env:
           RAILS_ENV: test

@@ -32,14 +32,6 @@ RSpec.describe Auth::CallbacksController, type: :controller do
   let(:refresh_token) { "refresh_token_123" }
   let(:valid_result) { create_valid_result(user: user, refresh_token: refresh_token) }
 
-  # Setup routes
-  before do
-    routes.draw do
-      get "/auth/callback", to: "auth/callbacks#show"
-      root to: "home#index"
-    end
-  end
-
   # Ensure cache isolation between tests
   before do
     clear_auth_code_cache

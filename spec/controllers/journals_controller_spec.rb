@@ -1,0 +1,94 @@
+require "rails_helper"
+
+RSpec.describe JournalsController, type: :controller do
+  include ActiveSupport::Testing::TimeHelpers
+  render_views
+
+  before do
+    create(:journal)
+    session[:user_id] = User.find(1001).id
+  end
+
+  describe "GET #index" do
+    it "redirects to today's journal date in the user's timezone" do
+      travel_to(Time.utc(2026, 2, 5, 14, 0, 0)) do
+        get :index
+      end
+
+      expect(response).to redirect_to("/journals/2026-02-05")
+    end
+
+    it "uses user timezone boundaries when utc day differs" do
+      User.find(1001).update!(timezone: "America/Los_Angeles")
+
+      travel_to(Time.utc(2026, 2, 5, 7, 30, 0)) do
+        get :index
+      end
+
+      expect(response).to redirect_to("/journals/2026-02-04")
+    end
+  end
+
+  describe "GET #show" do
+    it "loads data from fixture-backed journal via factory fallback" do
+      journal = create(:journal)
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      journal_payload = controller.instance_variable_get(:@journal)
+      meals_payload = controller.instance_variable_get(:@meals)
+      exercises_payload = controller.instance_variable_get(:@exercises)
+      expect(journal.id).to eq(3001)
+      expect(journal_payload.id).to eq(3001)
+      expect(journal_payload.date).to eq(Date.new(2026, 2, 5))
+      expect(meals_payload.size).to eq(1)
+      expect(exercises_payload.size).to eq(1)
+    end
+
+    it "returns empty payload when journal does not exist for date" do
+      get :show, params: { date: "2026-02-06" }
+
+      expect(response).to have_http_status(:ok)
+      journal_payload = controller.instance_variable_get(:@journal)
+      meals_payload = controller.instance_variable_get(:@meals)
+      exercises_payload = controller.instance_variable_get(:@exercises)
+      expect(journal_payload).to be_a(Journal)
+      expect(journal_payload.id).to be_nil
+      expect(journal_payload.date).to eq(Date.new(2026, 2, 6))
+      expect(meals_payload).to be_empty
+      expect(exercises_payload).to be_empty
+    end
+
+    it "does not leak journal data from another user's patient" do
+      other_user = create(:user)
+      other_patient = create(:patient, user: other_user, professional_id: 2)
+      other_journal = Journal.create!(patient: other_patient, date: Date.new(2026, 2, 5))
+      Meal.create!(
+        journal: other_journal,
+        meal_type: "lunch",
+        description: "Other user meal",
+        calories: 450,
+        status: "confirmed"
+      )
+
+      get :show, params: { date: "2026-02-05" }
+
+      journal_payload = controller.instance_variable_get(:@journal)
+      meals_payload = controller.instance_variable_get(:@meals)
+      expect(journal_payload.id).to eq(3001)
+      expect(meals_payload.size).to eq(1)
+    end
+  end
+
+  describe "authorization without patient" do
+    it "returns forbidden for authenticated user without patient record" do
+      user_without_patient = create(:user)
+      session[:user_id] = user_without_patient.id
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+end

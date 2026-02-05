@@ -131,7 +131,7 @@ RSpec.describe BrowserLanguage, type: :controller do
       it "always uses database language for authenticated users, ignoring Accept-Language header" do
         user.update(language: "pt")
         request.headers["Accept-Language"] = "en-US"
-        
+
         get :index
         expect(controller.send(:detect_browser_language)).to eq(:pt)
         expect(I18n.locale).to eq(:pt)
@@ -140,7 +140,7 @@ RSpec.describe BrowserLanguage, type: :controller do
       it "uses database language even when Accept-Language suggests different language" do
         user.update(language: "en")
         request.headers["Accept-Language"] = "pt-BR"
-        
+
         get :index
         expect(controller.send(:detect_browser_language)).to eq(:en)
         expect(I18n.locale).to eq(:en)
@@ -149,7 +149,7 @@ RSpec.describe BrowserLanguage, type: :controller do
       it "preserves language across requests via database for authenticated users" do
         user.update(language: "pt")
         request.headers["Accept-Language"] = "en-US"
-        
+
         # First request should use database
         get :index
         expect(controller.send(:detect_browser_language)).to eq(:pt)
@@ -164,7 +164,7 @@ RSpec.describe BrowserLanguage, type: :controller do
       it "ignores URL parameter and uses database language" do
         user.update(language: "en")
         request.headers["Accept-Language"] = "pt-BR"
-        
+
         get :index, params: { language: "pt" }
         # Should still use database, not URL parameter
         expect(controller.send(:detect_browser_language)).to eq(:en)
@@ -174,7 +174,7 @@ RSpec.describe BrowserLanguage, type: :controller do
       it "falls back to Accept-Language header if database has invalid locale" do
         user.update(language: "invalid")
         request.headers["Accept-Language"] = "en-US"
-        
+
         get :index
         # Should fall back to header when DB has invalid locale
         expect(controller.send(:detect_browser_language)).to eq(:en)
