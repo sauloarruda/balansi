@@ -143,7 +143,7 @@ section.mb-8 role="region" aria-label=t(".title")
               
               / Score
               - if journal.closed_at && journal.score
-                - score_color_class = journal.score_color
+                - score_color_class = score_color(journal.score)
                 div
                   .flex.items-center.justify-between
                     h5.text-sm.font-semibold.text-heading = t(".daily_score")

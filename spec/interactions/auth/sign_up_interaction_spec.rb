@@ -179,7 +179,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         expect(result.errors[:code]).to be_present
       end
 
-      it "fails when professional_id missing from state" do
+      it "uses fallback professional_id when state is missing" do
         valid_tokens = {
           "access_token" => "access_token_123",
           "id_token" => "id_token_123",
@@ -198,8 +198,10 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           state: nil
         )
 
-        expect(result).not_to be_valid
-        expect(result.errors.full_messages.join(" ")).to include("Missing professional identification")
+        expect(result).to be_valid
+        created_patient = Patient.find_by(user_id: result.result[:user].id)
+        expect(created_patient).to be_present
+        expect(created_patient.professional_id).to eq(1)
       end
 
       context "token exchange errors" do
@@ -404,7 +406,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
       context "patient creation errors" do
         include_context "cognito stubs"
 
-        it "fails when parse_professional_id raises ArgumentError" do
+        it "uses fallback professional_id when parse_professional_id raises ArgumentError" do
           # Force ArgumentError by stubbing URI.decode_www_form to raise ArgumentError
           allow(URI).to receive(:decode_www_form).and_raise(ArgumentError.new("invalid byte sequence"))
 
@@ -413,11 +415,13 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
             state: "professional_id=1"
           )
 
-          expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Missing professional identification")
+          expect(result).to be_valid
+          created_patient = Patient.find_by(user_id: result.result[:user].id)
+          expect(created_patient).to be_present
+          expect(created_patient.professional_id).to eq(1)
         end
 
-        it "fails when parse_professional_id raises URI::InvalidURIError" do
+        it "uses fallback professional_id when parse_professional_id raises URI::InvalidURIError" do
           # Force URI::InvalidURIError by stubbing URI.decode_www_form to raise it
           allow(URI).to receive(:decode_www_form).and_raise(URI::InvalidURIError.new("invalid URI"))
 
@@ -426,8 +430,10 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
             state: "professional_id=1"
           )
 
-          expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Missing professional identification")
+          expect(result).to be_valid
+          created_patient = Patient.find_by(user_id: result.result[:user].id)
+          expect(created_patient).to be_present
+          expect(created_patient.professional_id).to eq(1)
         end
 
         it "handles RecordInvalid exception when creating patient" do

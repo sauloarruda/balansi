@@ -80,4 +80,15 @@ RSpec.describe JournalsController, type: :controller do
       expect(meals_payload.size).to eq(1)
     end
   end
+
+  describe "authorization without patient" do
+    it "returns forbidden for authenticated user without patient record" do
+      user_without_patient = create(:user)
+      session[:user_id] = user_without_patient.id
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
 end
