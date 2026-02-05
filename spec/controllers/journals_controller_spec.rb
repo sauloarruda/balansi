@@ -17,6 +17,16 @@ RSpec.describe JournalsController, type: :controller do
 
       expect(response).to redirect_to("/journals/2026-02-05")
     end
+
+    it "uses user timezone boundaries when utc day differs" do
+      User.find(1001).update!(timezone: "America/Los_Angeles")
+
+      travel_to(Time.utc(2026, 2, 5, 7, 30, 0)) do
+        get :index
+      end
+
+      expect(response).to redirect_to("/journals/2026-02-04")
+    end
   end
 
   describe "GET #show" do
@@ -48,6 +58,26 @@ RSpec.describe JournalsController, type: :controller do
       expect(journal_payload.date).to eq(Date.new(2026, 2, 6))
       expect(meals_payload).to be_empty
       expect(exercises_payload).to be_empty
+    end
+
+    it "does not leak journal data from another user's patient" do
+      other_user = create(:user)
+      other_patient = create(:patient, user: other_user, professional_id: 2)
+      other_journal = Journal.create!(patient: other_patient, date: Date.new(2026, 2, 5))
+      Meal.create!(
+        journal: other_journal,
+        meal_type: "lunch",
+        description: "Other user meal",
+        calories: 450,
+        status: "confirmed"
+      )
+
+      get :show, params: { date: "2026-02-05" }
+
+      journal_payload = controller.instance_variable_get(:@journal)
+      meals_payload = controller.instance_variable_get(:@meals)
+      expect(journal_payload.id).to eq(3001)
+      expect(meals_payload.size).to eq(1)
     end
   end
 end
