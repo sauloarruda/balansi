@@ -4,18 +4,24 @@
   h1.text-3xl.font-bold.mb-6 = t("exercises.new.heading")
 
   .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
-    = form_with url: journal_exercises_path(journal_date: (params[:journal_date] || params[:journal_id])), local: true, class: "space-y-6" do |f|
+    = form_with model: @exercise, url: journal_exercises_path(journal_date: @journal_date.iso8601), local: true, class: "space-y-6" do |f|
       .mb-6
         = f.label :date, t("exercises.new.date"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.date_field :date, value: @exercise[:date], class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", required: true
+        = f.date_field :date, value: @journal_date, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", required: true
 
       .mb-6 data-controller="character-counter"
         = f.label :description, t("exercises.new.description"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.text_area :description, value: @exercise[:description], placeholder: t("exercises.new.description_placeholder"), maxlength: 140, class: "block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500", rows: 3, required: true, data: { target: "character-counter.input" }
+        = f.text_area :description, placeholder: t("exercises.new.description_placeholder"), maxlength: 140, class: "block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500", rows: 3, required: true, data: { target: "character-counter.input" }
         .text-right.text-sm.text-gray-600.mt-1 data-character-counter-target="counter"
           span 0
           = " #{t("exercises.new.characters")}"
 
+      - if @exercise.errors.any?
+        .mb-6.p-4.bg-red-50.border.border-red-200.text-red-800.rounded-lg
+          ul.list-disc.list-inside
+            - @exercise.errors.full_messages.each do |message|
+              li = message
+
       .flex.gap-4.pt-4.border-t.border-gray-200
         = f.submit t("exercises.new.analyze"), class: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-lg px-8 py-3 cursor-pointer"
-        = link_to t("exercises.new.cancel"), journal_path(date: (params[:journal_date] || params[:journal_id])), class: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-lg px-8 py-3"
+        = link_to t("exercises.new.cancel"), journal_path(date: @journal_date.iso8601), class: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-lg px-8 py-3"

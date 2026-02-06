@@ -1,25 +1,23 @@
-class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
+class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
   DAILY_LIMIT = 50
   HOURLY_LIMIT = 10
   MAX_RETRIES = 3
 
-  object :meal, class: Meal
+  object :exercise, class: Exercise
   integer :user_id
   string :description
-  string :meal_type
   string :user_language, default: "pt"
 
-  validates :description, presence: true, length: { maximum: 500 }
-  validates :meal_type, inclusion: { in: Meal::MEAL_TYPES }
+  validates :description, presence: true, length: { maximum: 140 }
   validates :user_language, presence: true
 
   def execute
     return nil unless rate_limit_ok?
 
-    analysis = call_llm_for_meal_analysis
+    analysis = call_llm_for_exercise_analysis
     return nil unless analysis
 
-    update_meal_with_analysis(analysis)
+    update_exercise_with_analysis(analysis)
   end
 
   private
@@ -68,48 +66,45 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
     "journal:llm:user:#{user_id}:hour:#{Time.current.strftime('%Y%m%d%H')}"
   end
 
-  def call_llm_for_meal_analysis
+  def call_llm_for_exercise_analysis
     retries = 0
 
     begin
-      llm_client.analyze(description: description, meal_type: meal_type, user_language: user_language)
-    rescue Journal::MealAnalysisClient::TransientError => e
+      llm_client.analyze(description: description, user_language: user_language)
+    rescue Journal::ExerciseAnalysisClient::TransientError => e
       retries += 1
       if retries < MAX_RETRIES
         sleep((2**retries) * 0.1)
         retry
       end
 
-      Rails.logger.error("Meal analysis transient failure user_id=#{user_id} meal_id=#{meal.id}: #{e.class}: #{e.message}")
-      errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
+      Rails.logger.error("Exercise analysis transient failure user_id=#{user_id} exercise_id=#{exercise.id}: #{e.class}: #{e.message}")
+      errors.add(:base, I18n.t("journal.errors.exercise_llm_unavailable", locale: user_language))
       nil
     rescue StandardError => e
-      Rails.logger.error("Meal analysis failure user_id=#{user_id} meal_id=#{meal.id}: #{e.class}: #{e.message}")
-      errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
+      Rails.logger.error("Exercise analysis failure user_id=#{user_id} exercise_id=#{exercise.id}: #{e.class}: #{e.message}")
+      errors.add(:base, I18n.t("journal.errors.exercise_llm_unavailable", locale: user_language))
       nil
     end
   end
 
   def llm_client
-    @llm_client ||= Journal::MealAnalysisClient.new
+    @llm_client ||= Journal::ExerciseAnalysisClient.new
   end
 
-  def update_meal_with_analysis(raw_response)
+  def update_exercise_with_analysis(raw_response)
     parsed_response = normalize_response(raw_response)
     return nil unless parsed_response
 
-    meal.update!(
-      proteins: parsed_response[:p],
-      carbs: parsed_response[:c],
-      fats: parsed_response[:f],
+    exercise.update!(
+      duration: parsed_response[:d],
       calories: parsed_response[:cal],
-      gram_weight: parsed_response[:gw],
-      ai_comment: parsed_response[:cmt],
-      feeling: parsed_response[:feel],
+      neat: parsed_response[:n],
+      structured_description: parsed_response[:sd],
       status: :pending_patient
     )
 
-    meal
+    exercise
   rescue ActiveRecord::RecordInvalid => e
     errors.add(:base, e.record.errors.full_messages.to_sentence)
     nil
@@ -118,42 +113,37 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
   def normalize_response(raw_response)
     response = raw_response.respond_to?(:deep_symbolize_keys) ? raw_response.deep_symbolize_keys : {}
 
-    required_keys = %i[p c f cal gw cmt feel]
+    required_keys = %i[d cal n sd]
     missing_keys = required_keys.reject { |key| response.key?(key) }
 
     if missing_keys.any?
-      errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
-      Rails.logger.warn("Meal analysis invalid response: missing_keys=#{missing_keys.join(',')} meal_id=#{meal.id} user_id=#{user_id}")
+      errors.add(:base, I18n.t("journal.errors.exercise_llm_unavailable", locale: user_language))
+      Rails.logger.warn("Exercise analysis invalid response: missing_keys=#{missing_keys.join(',')} exercise_id=#{exercise.id} user_id=#{user_id}")
       return nil
     end
 
     normalized = {
-      p: response[:p].to_i,
-      c: response[:c].to_i,
-      f: response[:f].to_i,
+      d: response[:d].to_i,
       cal: response[:cal].to_i,
-      gw: response[:gw].to_i,
-      cmt: response[:cmt].to_s.strip,
-      feel: response[:feel].to_i
+      n: response[:n].to_i,
+      sd: response[:sd].to_s.strip
     }
 
     return normalized if valid_ranges?(normalized)
 
-    errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
+    errors.add(:base, I18n.t("journal.errors.exercise_llm_unavailable", locale: user_language))
     nil
   end
 
   def valid_ranges?(normalized)
-    normalized[:p].between?(0, 10_000) &&
-      normalized[:c].between?(0, 10_000) &&
-      normalized[:f].between?(0, 10_000) &&
-      normalized[:cal].between?(1, 49_999) &&
-      normalized[:gw].between?(1, 99_999) &&
-      [ Meal::FEELING_POSITIVE, Meal::FEELING_NEGATIVE ].include?(normalized[:feel]) &&
-      normalized[:cmt].present?
+    normalized[:d].between?(1, 1439) &&
+      normalized[:cal].between?(0, 9_999) &&
+      normalized[:n].between?(0, 4_999) &&
+      normalized[:sd].present? &&
+      normalized[:sd].length <= 255
   end
 
   def log_rate_limit_exceeded(limit:, key:)
-    Rails.logger.warn("Meal analysis rate limit exceeded limit=#{limit} key=#{key} user_id=#{user_id} meal_id=#{meal.id}")
+    Rails.logger.warn("Exercise analysis rate limit exceeded limit=#{limit} key=#{key} user_id=#{user_id} exercise_id=#{exercise.id}")
   end
 end

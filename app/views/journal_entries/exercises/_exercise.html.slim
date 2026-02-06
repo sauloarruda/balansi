@@ -20,8 +20,9 @@
         = t("defaults.kcal_burned")
   
   .flex.gap-2.mt-4
-    - if status == "pending_patient"
+    - if exercise.pending? && (journal.closed_at.nil? || journal.editable?)
       = link_to t("defaults.actions.review"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), class: "inline-flex items-center text-white bg-pink-600 hover:bg-pink-700 box-border border border-transparent focus:ring-4 focus:ring-pink-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
+      = link_to t("defaults.actions.delete"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), data: { turbo_method: :delete, turbo_confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
     - elsif status == "confirmed" && (journal.closed_at.nil? || journal.editable?)
       = link_to t("defaults.actions.edit"), edit_journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), class: "inline-flex items-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2 focus:outline-none"
-      = link_to t("defaults.actions.delete"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), method: :delete, data: { confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
+      = link_to t("defaults.actions.delete"), journal_exercise_path(journal_date: journal_date.to_s, id: exercise.id), data: { turbo_method: :delete, turbo_confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"

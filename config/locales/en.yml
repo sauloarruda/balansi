@@ -53,10 +53,22 @@ en:
       no_items: "No %{model} logged yet."
       add_first: "Add your first %{model}"
     messages:
-      create_success: "%{model} analyzed successfully."
-      update_success: "%{model} updated successfully."
-      delete_success: "%{model} deleted successfully."
-      reprocess_success: "%{model} reprocessed successfully."
+      create_success:
+        default: "%{model} analyzed successfully."
+        male: "%{model} analyzed successfully."
+        female: "%{model} analyzed successfully."
+      update_success:
+        default: "%{model} updated successfully."
+        male: "%{model} updated successfully."
+        female: "%{model} updated successfully."
+      delete_success:
+        default: "%{model} deleted successfully."
+        male: "%{model} deleted successfully."
+        female: "%{model} deleted successfully."
+      reprocess_success:
+        default: "%{model} reprocessed successfully."
+        male: "%{model} reprocessed successfully."
+        female: "%{model} reprocessed successfully."
   date:
     formats:
       long: "%B %d, %Y"
@@ -146,6 +158,8 @@ en:
     show:
       title: "Review Exercise"
       heading: "Review Exercise"
+      error: "Error:"
+      retry: "Retry"
       ai_suggestion: "AI Suggestion"
       ai_suggestion_text: "Please review and confirm"
       exercise_label: "Exercise"
@@ -230,9 +244,26 @@ en:
       pending_llm: "Waiting for AI"
       pending_patient: "Awaiting Confirmation"
       confirmed: "Confirmed"
+  exercise:
+    status:
+      pending_llm: "Waiting for AI"
+      pending_patient: "Awaiting Confirmation"
+      confirmed: "Confirmed"
+  enumerize:
+    meal:
+      status:
+        pending_llm: "Waiting for AI"
+        pending_patient: "Awaiting Confirmation"
+        confirmed: "Confirmed"
+    exercise:
+      status:
+        pending_llm: "Waiting for AI"
+        pending_patient: "Awaiting Confirmation"
+        confirmed: "Confirmed"
   journal:
     errors:
       llm_unavailable: "We could not analyze your meal right now. Please try again."
+      exercise_llm_unavailable: "We could not analyze your exercise right now. Please try again."
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
   activerecord:
     models:

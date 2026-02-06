@@ -1,79 +1,152 @@
 module JournalEntries
   class ExercisesController < ApplicationController
-    before_action :set_journal
+    include JournalEntries::GenderedFlashMessages
+
+    before_action :set_journal_date
+    before_action :set_journal, only: [ :create ]
+    before_action :set_exercise, only: [ :show, :edit, :update, :destroy ]
 
     def new
-      @exercise = mock_new_exercise
+      @exercise = Exercise.new
     end
 
     def create
-      # In Phase 1, just simulate LLM processing delay
-      flash[:notice] = "Exercise submitted! Processing with AI... (Mock)"
-      redirect_to journal_exercise_path(journal_id: @journal[:date].to_s, id: 1)
+      @exercise = @journal.exercises.build(create_exercise_params)
+      @exercise.status = :pending_llm
+
+      unless @exercise.save
+        render :new, status: :unprocessable_entity
+        return
+      end
+
+      if analyze_exercise(@exercise)
+        flash[:notice] = success_message_for(action: :create, model_key: :exercise, gender: :male)
+      else
+        flash[:error] = analysis_error_message
+      end
+
+      redirect_to journal_exercise_path(journal_date: @journal.date.iso8601, id: @exercise.id)
     end
 
-    def show
-      @exercise = mock_exercise_for_review
-      @journal = @journal || mock_journal
-    end
+    def show; end
 
-    def edit
-      @exercise = mock_exercise_for_review
-    end
+    def edit; end
 
     def update
-      # In Phase 1, just redirect with success
-      flash[:notice] = "Exercise updated! (Mock)"
-      redirect_to journal_path(date: @journal[:date].to_s)
+      if params[:reprocess].present?
+        reprocess_exercise
+        return
+      end
+
+      if @exercise.update(update_exercise_params)
+        @exercise.confirm! if params[:confirm].present?
+
+        flash[:notice] = success_message_for(action: :update, model_key: :exercise, gender: :male)
+        redirect_to journal_path(date: @exercise.journal.date.iso8601)
+      else
+        template = params[:confirm].present? ? :show : :edit
+        render template, status: :unprocessable_entity
+      end
     end
 
     def destroy
-      flash[:notice] = "Exercise deleted! (Mock)"
-      redirect_to journal_path(date: @journal[:date].to_s)
+      journal_date = @exercise.journal.date.iso8601
+      @exercise.destroy!
+
+      flash[:notice] = success_message_for(action: :delete, model_key: :exercise, gender: :male)
+      redirect_to journal_path(date: journal_date)
     end
 
     private
 
+    def set_journal_date
+      @journal_date = parse_date_param(exercise_form_date_param) ||
+        parse_date_param(params[:journal_date] || params[:journal_id]) ||
+        Date.current
+    end
+
     def set_journal
-      date_param = params[:journal_date] || params[:journal_id]
-      date = date_param ? Date.parse(date_param) : Date.current
-      @journal = mock_journal_for_date(date)
+      @journal = current_patient.journals.find_or_create_by!(date: @journal_date)
+    end
+
+    def set_exercise
+      @exercise = Exercise.joins(:journal)
+        .includes(:journal)
+        .find_by(id: params[:id], journals: { patient_id: current_patient.id })
+
+      return if @exercise
+
+      head :not_found
+    end
+
+    def reprocess_exercise
+      previous_status = @exercise.status
+
+      if @exercise.update(reprocess_exercise_params)
+        @exercise.update!(status: :pending_llm)
+
+        if analyze_exercise(@exercise, previous_status: previous_status)
+          flash[:notice] = success_message_for(action: :reprocess, model_key: :exercise, gender: :male)
+        else
+          flash[:error] = analysis_error_message
+        end
+
+        redirect_to journal_exercise_path(journal_date: @exercise.journal.date.iso8601, id: @exercise.id)
+      else
+        render :edit, status: :unprocessable_entity
+      end
+    end
+
+    def analyze_exercise(exercise, previous_status: nil)
+      result = Journal::AnalyzeExerciseInteraction.run(
+        exercise: exercise,
+        user_id: current_user.id,
+        description: exercise.description,
+        user_language: current_user.language
+      )
+
+      @analysis_errors = result.errors
+      if result.valid?
+        true
+      else
+        exercise.update!(status: previous_status) if previous_status.present?
+        false
+      end
+    end
+
+    def analysis_error_message
+      @analysis_errors&.full_messages&.to_sentence.presence ||
+        I18n.t("journal.errors.exercise_llm_unavailable", locale: current_user.language)
+    end
+
+    def parse_date_param(raw_date)
+      return nil if raw_date.blank?
+
+      Date.iso8601(raw_date)
     rescue ArgumentError
-      @journal = mock_journal_for_date(Date.current)
+      nil
     end
 
-    def mock_new_exercise
-      {
-        description: "",
-        date: params[:date] || Date.current
-      }
+    def exercise_form_date_param
+      params.dig(:exercise, :date)
     end
 
-    def mock_exercise_for_review
-      {
-        id: 1,
-        journal_id: @journal[:id],
-        description: "5 km moderate run in the park",
-        duration: 30,
-        calories: 250,
-        neat: 0,
-        structured_description: "5 km moderate run",
-        status: "pending_patient"
-      }
+    def create_exercise_params
+      params.require(:exercise).permit(:description)
     end
 
-    def mock_journal
-      {
-        id: 1,
-        date: Date.current
-      }
+    def update_exercise_params
+      params.require(:exercise).permit(
+        :description,
+        :duration,
+        :calories,
+        :neat,
+        :structured_description
+      )
     end
 
-    def mock_journal_for_date(date)
-      {
-        id: 1,
-        date: date
-      }
+    def reprocess_exercise_params
+      params.require(:exercise).permit(:description)
     end
   end
 end
