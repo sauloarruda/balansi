@@ -11,7 +11,7 @@
 
       .mb-6 data-controller="character-counter"
         = f.label :description, t("meals.edit.description"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.text_area :description, placeholder: t("meals.edit.description_placeholder"), maxlength: 500, class: "block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500", rows: 3, required: true, data: { target: "character-counter.input" }
+        = f.text_area :description, placeholder: t("meals.edit.description_placeholder"), maxlength: 500, class: "block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500", rows: 8, required: true, data: { target: "character-counter.input" }
         .text-right.text-sm.text-gray-600.mt-1 data-character-counter-target="counter"
           span 0
           = " #{t("meals.edit.characters")}"

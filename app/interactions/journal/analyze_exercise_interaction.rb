@@ -8,7 +8,7 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
   string :description
   string :user_language, default: "pt"
 
-  validates :description, presence: true, length: { maximum: 140 }
+  validates :description, presence: true, length: { maximum: 500 }
   validates :user_language, presence: true
 
   def execute

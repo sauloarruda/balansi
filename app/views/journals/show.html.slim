@@ -1,6 +1,6 @@
 - content_for :title, t(".title", date: format_date(@journal.date))
 
-.max-w-6xl.mx-auto.py-4.px-4
+.max-w-7xl.mx-auto.py-4.px-4
   / Date Navigator
   = render partial: "date_navigator", locals: { journal_date: @journal.date }
 
