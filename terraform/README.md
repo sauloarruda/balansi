@@ -7,16 +7,74 @@ This directory contains Terraform configurations for managing Balansi infrastruc
 ```
 terraform/
 ├── modules/
-│   └── cognito/          # Reusable Cognito module
-│       ├── main.tf       # Main resources
-│       ├── variables.tf  # Input variables
-│       ├── outputs.tf    # Output values
-│       └── data.tf       # Data sources
+│   ├── cognito/          # Reusable Cognito module
+│   ├── compute/          # EC2 instance used by Kamal
+│   ├── dns/              # Route53 records
+│   ├── ecr/              # Container registry for app images
+│   ├── network/          # VPC, subnets, route tables, security groups
+│   └── rds/              # PostgreSQL database for Rails
 └── environments/
-    └── dev/              # Development environment
-        ├── main.tf       # Environment-specific configuration
-        └── outputs.tf    # Environment outputs
+    ├── dev/              # Development environment (Cognito only)
+    └── staging/          # Staging environment (Kamal + EC2 + RDS + Route53 + Cognito)
+        ├── main.tf
+        ├── variables.tf
+        ├── outputs.tf
+        └── terraform.tfvars.example
 ```
+
+## Staging Environment Setup
+
+### Step 1: Prepare Variables
+
+```bash
+cd terraform/environments/staging
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars` with your values:
+- `ssh_cidr_blocks`: your IP/CIDR for SSH access
+- `app_domain`: staging domain (for Route53 + Cognito callbacks)
+- `route53_zone_id`: hosted zone ID
+- `ec2_key_name`: EC2 key pair
+- `rds_manage_master_user_password = true` (recommended, default)
+- optional: `cognito_callback_urls` and `cognito_logout_urls` (auto-generated from `app_domain` when omitted)
+
+### Step 2: Plan and Apply
+
+```bash
+cd terraform/environments/staging
+terraform init
+terraform plan
+terraform apply
+```
+
+Resources created in staging:
+- VPC + public/private DB subnets
+- EC2 for Kamal
+- RDS PostgreSQL
+- ECR repository
+- Route53 A record
+- Cognito user pool/client/domain
+
+### Step 3: Configure Kamal Secrets
+
+After apply:
+
+```bash
+terraform output
+terraform output -raw ecr_repository_url
+terraform output -raw rds_master_secret_arn
+terraform output -raw rails_master_key_secret_arn
+terraform output -raw app_env_secret_arn
+terraform output -raw cognito_client_secret_secret_arn
+```
+
+Store values in AWS Secrets Manager and let the app read them at runtime:
+- RDS master password comes from `rds_master_secret_arn` (managed by AWS)
+- app/Kamal secrets should be written into `rails_master_key_secret_arn` and `app_env_secret_arn`
+- Cognito client secret can be stored in `cognito_client_secret_secret_arn`
+
+This staging setup keeps `Rails.cache` on Solid Cache backed by Postgres, so Redis is not required.
 
 ## Prerequisites
 

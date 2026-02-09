@@ -54,6 +54,20 @@ bin/setup
 - **Authentication ERD**: [`doc/auth/erd.md`](doc/auth/erd.md) - Authentication architecture and data model
 - **Infrastructure**: [`terraform/README.md`](terraform/README.md) - Terraform setup and Cognito configuration
 
+## Kamal Secrets
+
+Use the template in `/Users/sauloarruda/Developer/balansi/.kamal/secrets.example` and keep real secrets only in your local `.kamal/secrets`:
+
+```bash
+cp .kamal/secrets.example .kamal/secrets
+```
+
+Required values:
+- `RAILS_MASTER_KEY`
+- `KAMAL_REGISTRY_PASSWORD` (for ECR, generate with `aws ecr get-login-password --region sa-east-1`)
+
+The project is configured to ignore `.kamal/secrets` in git, so only the example file should be committed.
+
 ## Testing
 
 Run the test suite:

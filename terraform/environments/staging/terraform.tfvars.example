@@ -1,0 +1,24 @@
+aws_region = "sa-east-1"
+
+# Restrict SSH to your public IP/CIDR
+ssh_cidr_blocks = ["203.0.113.10/32"]
+
+# App domain used by Route53 and Cognito URLs
+app_domain = "staging.balansi.me"
+route53_zone_id = "Z123456789ABCDEFG"
+
+# EC2 access key pair
+ec2_key_name = "my-ec2-key"
+
+# RDS credentials
+rds_master_username = "balansi"
+
+# Recommended: keep this as true so AWS manages DB password in Secrets Manager
+rds_manage_master_user_password = true
+
+# Only set when rds_manage_master_user_password = false
+# rds_master_password = "CHANGE_ME_WITH_A_STRONG_PASSWORD"
+
+# Optional: leave empty to auto-generate from app_domain
+# cognito_callback_urls = ["https://staging.balansi.me/auth/callback"]
+# cognito_logout_urls   = ["https://staging.balansi.me/"]

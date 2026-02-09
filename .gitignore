@@ -79,3 +79,15 @@ spec/examples.txt
 
 # Node modules
 /node_modules
+
+# Kamal local secrets (never commit)
+/.kamal/secrets
+/.kamal/secrets*
+
+# Terraform local environment artifacts
+/terraform/environments/*/.terraform/
+/terraform/environments/*/.terraform.lock.hcl
+/terraform/environments/*/terraform.tfstate
+/terraform/environments/*/terraform.tfstate.*
+/terraform/environments/*/terraform.tfvars
+/terraform/environments/*/terraform.tfvars.json
