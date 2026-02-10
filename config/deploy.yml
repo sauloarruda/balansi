@@ -7,7 +7,7 @@ image: balansi
 # Deploy to these servers.
 servers:
   web:
-    - 18.231.49.227
+    - 192.168.0.1
   # job:
   #   hosts:
   #     - 192.168.0.1
@@ -20,21 +20,21 @@ servers:
 #
 # Don't use this when deploying to multiple web servers (then you have to terminate SSL at your load balancer).
 #
-proxy:
-  ssl: true
-  host: staging.balansi.me
+# proxy:
+#   ssl: true
+#   host: app.example.com
 
 # Where you keep your container images.
 registry:
   # Alternatives: hub.docker.com / registry.digitalocean.com / ghcr.io / ...
-  server: 371952811921.dkr.ecr.sa-east-1.amazonaws.com
+  server: localhost:5555
 
   # Needed for authenticated registries.
-  username: AWS
+  # username: your-user
 
   # Always use an access token rather than real password when possible.
-  password:
-    - KAMAL_REGISTRY_PASSWORD
+  # password:
+  #   - KAMAL_REGISTRY_PASSWORD
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
