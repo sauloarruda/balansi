@@ -7,7 +7,16 @@
 - balance_status = journal.balance_status
 - calorie_goal = patient.daily_calorie_goal
 - balance_percentage = calorie_goal.to_f.positive? ? (balance.to_f / calorie_goal.to_f) * 100 : nil
-- balance_visual_status = if balance_percentage.nil? then balance_status elsif balance_percentage > 10 then "positive" elsif balance_percentage < -20 then "low_severe" elsif balance_percentage < -10 then "low_moderate" else "balanced" end
+- balance_visual_status = if balance_percentage.nil?
+  - balance_status == "negative" ? "low_severe" : "balanced"
+- elsif balance_percentage > 10
+  - "positive"
+- elsif balance_percentage < -20
+  - "low_severe"
+- elsif balance_percentage < -10
+  - "low_moderate"
+- else
+  - "balanced"
 
 section.mb-8 role="region" aria-label=t(".title")
   .bg-gradient-to-br.from-white.to-brand-softer.border.border-default-medium.rounded-base.shadow-xs.overflow-hidden data-accordion="open"
