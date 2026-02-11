@@ -9,10 +9,11 @@ class Exercise < ApplicationRecord
     confirmed: "confirmed"
   }, default: :pending_llm, predicates: true, scope: true
 
-  validates :description, presence: true, length: { maximum: 140 }
+  validates :description, presence: true, length: { maximum: 500 }
   validates :duration, numericality: { greater_than: 0, less_than: 1440 }, allow_nil: true
   validates :calories, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true
   validates :neat, numericality: { greater_than_or_equal_to: 0, less_than: 5_000 }, allow_nil: true
+  validates :structured_description, length: { maximum: 255 }, allow_blank: true
 
   scope :pending, -> { where(status: [ "pending_llm", "pending_patient" ]) }
 

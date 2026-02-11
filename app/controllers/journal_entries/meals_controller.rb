@@ -1,5 +1,7 @@
 module JournalEntries
   class MealsController < ApplicationController
+    include JournalEntries::GenderedFlashMessages
+
     before_action :set_journal_date
     before_action :set_journal, only: [ :create ]
     before_action :set_meal, only: [ :show, :edit, :update, :destroy ]
@@ -18,7 +20,7 @@ module JournalEntries
       end
 
       if analyze_meal(@meal)
-        flash[:notice] = I18n.t("defaults.messages.create_success", model: meal_model_name)
+        flash[:notice] = success_message_for(action: :create, model_key: :meal, gender: :female)
       else
         flash[:error] = analysis_error_message
       end
@@ -39,7 +41,7 @@ module JournalEntries
       if @meal.update(update_meal_params)
         @meal.confirm! if params[:confirm].present?
 
-        flash[:notice] = I18n.t("defaults.messages.update_success", model: meal_model_name)
+        flash[:notice] = success_message_for(action: :update, model_key: :meal, gender: :female)
         redirect_to journal_path(date: @meal.journal.date.iso8601)
       else
         template = params[:confirm].present? ? :show : :edit
@@ -51,7 +53,7 @@ module JournalEntries
       journal_date = @meal.journal.date.iso8601
       @meal.destroy!
 
-      flash[:notice] = I18n.t("defaults.messages.delete_success", model: meal_model_name)
+      flash[:notice] = success_message_for(action: :delete, model_key: :meal, gender: :female)
       redirect_to journal_path(date: journal_date)
     end
 
@@ -84,7 +86,7 @@ module JournalEntries
         @meal.update!(status: :pending_llm)
 
         if analyze_meal(@meal, previous_status: previous_status)
-          flash[:notice] = I18n.t("defaults.messages.reprocess_success", model: meal_model_name)
+          flash[:notice] = success_message_for(action: :reprocess, model_key: :meal, gender: :female)
         else
           flash[:error] = analysis_error_message
         end
@@ -116,10 +118,6 @@ module JournalEntries
     def analysis_error_message
       @analysis_errors&.full_messages&.to_sentence.presence ||
         I18n.t("journal.errors.llm_unavailable", locale: current_user.language)
-    end
-
-    def meal_model_name
-      I18n.t("activerecord.models.meal.one", locale: current_user.language)
     end
 
     def parse_date_param(raw_date)

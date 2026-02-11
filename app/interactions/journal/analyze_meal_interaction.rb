@@ -3,6 +3,8 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
   HOURLY_LIMIT = 10
   MAX_RETRIES = 3
 
+  include Journal::LlmRateLimitable
+
   object :meal, class: Meal
   integer :user_id
   string :description
@@ -23,50 +25,6 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
   end
 
   private
-
-  def rate_limit_ok?
-    return true if rate_limit_disabled?
-
-    day_key = daily_limit_key
-    hour_key = hourly_limit_key
-
-    if exceeded_limit?(day_key, DAILY_LIMIT)
-      log_rate_limit_exceeded(limit: "daily", key: day_key)
-      errors.add(:base, I18n.t("journal.errors.rate_limit_exceeded", locale: user_language))
-      return false
-    end
-
-    if exceeded_limit?(hour_key, HOURLY_LIMIT)
-      log_rate_limit_exceeded(limit: "hourly", key: hour_key)
-      errors.add(:base, I18n.t("journal.errors.rate_limit_exceeded", locale: user_language))
-      return false
-    end
-
-    increment_counter(day_key, expires_at: Time.current.end_of_day + 5.minutes)
-    increment_counter(hour_key, expires_at: Time.current.end_of_hour + 5.minutes)
-    true
-  end
-
-  def rate_limit_disabled?
-    ActiveModel::Type::Boolean.new.cast(ENV["DISABLE_LLM_RATE_LIMIT"])
-  end
-
-  def exceeded_limit?(key, max)
-    Rails.cache.read(key).to_i >= max
-  end
-
-  def increment_counter(key, expires_at:)
-    current = Rails.cache.read(key).to_i
-    Rails.cache.write(key, current + 1, expires_at: expires_at)
-  end
-
-  def daily_limit_key
-    "journal:meal:llm:user:#{user_id}:day:#{Time.current.strftime('%Y%m%d')}"
-  end
-
-  def hourly_limit_key
-    "journal:meal:llm:user:#{user_id}:hour:#{Time.current.strftime('%Y%m%d%H')}"
-  end
 
   def call_llm_for_meal_analysis
     retries = 0
@@ -153,7 +111,11 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
       normalized[:cmt].present?
   end
 
-  def log_rate_limit_exceeded(limit:, key:)
-    Rails.logger.warn("Meal analysis rate limit exceeded limit=#{limit} key=#{key} user_id=#{user_id} meal_id=#{meal.id}")
+  def rate_limit_log_context
+    {
+      analysis_label: "Meal analysis",
+      record_label: "meal_id",
+      record_id: meal.id
+    }
   end
 end

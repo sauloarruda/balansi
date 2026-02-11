@@ -53,10 +53,22 @@ pt:
       no_items: "Nenhum %{model} registrado ainda."
       add_first: "Adicione seu primeiro %{model}"
     messages:
-      create_success: "%{model} analisada com sucesso."
-      update_success: "%{model} atualizada com sucesso."
-      delete_success: "%{model} excluída com sucesso."
-      reprocess_success: "%{model} reprocessada com sucesso."
+      create_success:
+        default: "%{model} analisado com sucesso."
+        male: "%{model} analisado com sucesso."
+        female: "%{model} analisada com sucesso."
+      update_success:
+        default: "%{model} atualizado com sucesso."
+        male: "%{model} atualizado com sucesso."
+        female: "%{model} atualizada com sucesso."
+      delete_success:
+        default: "%{model} excluído com sucesso."
+        male: "%{model} excluído com sucesso."
+        female: "%{model} excluída com sucesso."
+      reprocess_success:
+        default: "%{model} reprocessado com sucesso."
+        male: "%{model} reprocessado com sucesso."
+        female: "%{model} reprocessada com sucesso."
   date:
     formats:
       long: "%d de %B de %Y"
@@ -183,6 +195,7 @@ pt:
       caloric_balance: "Balanço Calórico"
       above_goal: "Você está acima da meta de calorias"
       below_goal: "Você está abaixo da meta de calorias"
+      far_below_goal: "Você está muito abaixo da meta de calorias"
       balanced: "Balanço calórico equilibrado"
       daily_goal_progress: "Progresso da Meta Diária"
       daily_score: "Pontuação Diária"
@@ -195,6 +208,8 @@ pt:
     show:
       title: "Revisar Exercício"
       heading: "Revisar Exercício"
+      error: "Erro:"
+      retry: "Tentar Novamente"
       ai_suggestion: "Sugestão da IA"
       ai_suggestion_text: "Por favor, revise e confirme"
       exercise_label: "Exercício"
@@ -210,7 +225,7 @@ pt:
       heading: "Editar Exercício"
       description: "Descrição"
       description_placeholder: "Descreva seu exercício"
-      characters: "/140 caracteres"
+      characters: "/500 caracteres"
       info_text: "Edite a descrição e clique em \"Reprocessar com IA\" para obter nova análise, ou ajuste os valores diretamente abaixo."
       duration: "Duração (minutos)"
       calories_burned: "Calorias Queimadas (kcal)"
@@ -225,7 +240,7 @@ pt:
       date: "Data"
       description: "Descrição"
       description_placeholder: "Descreva seu exercício (ex: 'Corrida moderada de 5 km no parque')"
-      characters: "/140 caracteres"
+      characters: "/500 caracteres"
       analyze: "Analisar com IA"
       cancel: "Cancelar"
   meals:
@@ -279,9 +294,26 @@ pt:
       pending_llm: "Aguardando IA"
       pending_patient: "Aguardando Confirmação"
       confirmed: "Confirmada"
+  exercise:
+    status:
+      pending_llm: "Aguardando IA"
+      pending_patient: "Aguardando Confirmação"
+      confirmed: "Confirmado"
+  enumerize:
+    meal:
+      status:
+        pending_llm: "Aguardando IA"
+        pending_patient: "Aguardando Confirmação"
+        confirmed: "Confirmada"
+    exercise:
+      status:
+        pending_llm: "Aguardando IA"
+        pending_patient: "Aguardando Confirmação"
+        confirmed: "Confirmado"
   journal:
     errors:
       llm_unavailable: "Não foi possível analisar sua refeição agora. Tente novamente."
+      exercise_llm_unavailable: "Não foi possível analisar seu exercício agora. Tente novamente."
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
   activerecord:
     models:

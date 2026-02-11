@@ -79,6 +79,29 @@ RSpec.describe JournalsController, type: :controller do
       expect(journal_payload.id).to eq(3001)
       expect(meals_payload.size).to eq(1)
     end
+
+    it "shows delete actions for pending meals and exercises" do
+      journal = create(:journal)
+      pending_meal = Meal.create!(
+        journal: journal,
+        meal_type: "lunch",
+        description: "Refeição pendente",
+        status: "pending_patient"
+      )
+      pending_exercise = Exercise.create!(
+        journal: journal,
+        description: "Exercício pendente",
+        status: "pending_llm"
+      )
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(href="/journals/2026-02-05/meals/#{pending_meal.id}"))
+      expect(response.body).to include(%(href="/journals/2026-02-05/exercises/#{pending_exercise.id}"))
+      expect(response.body).to include("data-turbo-method=\"delete\"")
+      expect(response.body).to include("data-turbo-confirm=")
+    end
   end
 
   describe "authorization without patient" do

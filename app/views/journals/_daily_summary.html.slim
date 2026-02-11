@@ -5,6 +5,9 @@
 - calories_burned = journal.effective_calories_burned
 - balance = journal.effective_balance
 - balance_status = journal.balance_status
+- calorie_goal = patient.daily_calorie_goal
+- balance_percentage = calorie_goal.to_f.positive? ? (balance.to_f / calorie_goal.to_f) * 100 : nil
+- balance_visual_status = if balance_percentage.nil? then (balance_status == "negative" ? "low_severe" : "balanced") elsif balance_percentage > 10 then "positive" elsif balance_percentage < -20 then "low_severe" elsif balance_percentage < -10 then "low_moderate" else "balanced" end
 
 section.mb-8 role="region" aria-label=t(".title")
   .bg-gradient-to-br.from-white.to-brand-softer.border.border-default-medium.rounded-base.shadow-xs.overflow-hidden data-accordion="open"
@@ -38,100 +41,121 @@ section.mb-8 role="region" aria-label=t(".title")
                         h3.text-lg.font-semibold.text-orange-800.mb-3 = t(".what_to_improve")
                         p.text-orange-900 = journal.feedback_improvement
 
-        / Activity Counts Row
-        .grid.grid-cols-2.gap-4.mb-6
-            / Meals Card
-            .bg-white.rounded-base.border.border-default-medium.p-4.shadow-xs
-                .flex.items-start.justify-between
-                    div
-                        p.text-xs.font-medium.text-body-subtle.uppercase.tracking-wide.mb-1 = t(".meals")
-                        p.text-3xl.font-bold.text-heading = confirmed_meals_count
-                    span.text-2xl(class="text-#{confirmed_meals_count > 0 ? 'green' : 'red'}-600") 🍽️
-
-            / Exercises Card
-            .bg-white.rounded-base.border.border-default-medium.p-4.shadow-xs
-                .flex.items-start.justify-between
-                    div
-                        p.text-xs.font-medium.text-body-subtle.uppercase.tracking-wide.mb-1 = t(".exercises")
-                        p.text-3xl.font-bold.text-heading = confirmed_exercises_count
-                    span.text-2xl 🏃
-
         / Calorie Metrics Row
-        - grid_cols_class = journal.closed_at ? "grid-cols-2" : "grid-cols-1"
-        .grid.gap-4.mb-6 class=grid_cols_class
-            / Calories Consumed (only if day is closed)
-            - if journal.closed_at
-            .bg-cyan-50.border.border-cyan-200.rounded-base.p-5.shadow-xs.border-l-4.border-cyan-500
-                .flex.items-center.justify-between.mb-2
-                    p.text-xs.font-semibold.text-cyan-800.uppercase.tracking-wide = t(".consumption")
-                p.text-3xl.font-bold.text-cyan-900
-                    = "#{calories_consumed}"
-                    span.text-xl.text-cyan-700.ml-1 = t(".kcal")
+        - metrics_grid_class = "grid-cols-1 md:grid-cols-3"
+        .grid.gap-4.mb-6 class=metrics_grid_class
+          / Calories Consumed
+          .bg-pink-50.border.border-pink-200.rounded-base.p-5.shadow-xs.border-l-4.border-pink-500
+            .flex.items-start.justify-between.gap-3
+              div
+                p.text-xs.font-semibold.text-pink-800.uppercase.tracking-wide.mb-2 = t(".consumption")
+                p.text-3xl.font-bold.text-pink-900
+                  = calories_consumed
+                  span.text-xl.text-pink-700.ml-1 = t(".kcal")
+                p.text-sm.font-medium.text-pink-800.mt-2
+                  = "#{t('.meals')}: #{confirmed_meals_count}"
+              span.text-2xl(class="text-#{confirmed_meals_count > 0 ? 'green' : 'red'}-600") 🍽️
 
-            / Calories Burned
-            .bg-orange-50.border.border-orange-200.rounded-base.p-5.shadow-xs.border-l-4.border-orange-500
-                .flex.items-center.justify-between.mb-2
-                    p.text-xs.font-semibold.text-orange-800.uppercase.tracking-wide = t(".expenditure")
-                p.text-3xl.font-bold.text-orange-900
-                    = "#{calories_burned}"
-                    span.text-xl.text-orange-700.ml-1 = t(".kcal")
+          / Calories Burned
+          .bg-sky-50.border.border-sky-200.rounded-base.p-5.shadow-xs.border-l-4.border-sky-500
+            .flex.items-start.justify-between.gap-3
+              div
+                p.text-xs.font-semibold.text-sky-800.uppercase.tracking-wide.mb-2 = t(".expenditure")
+                p.text-3xl.font-bold.text-sky-900
+                  = calories_burned
+                  span.text-xl.text-sky-700.ml-1 = t(".kcal")
+                p.text-sm.font-medium.text-sky-800.mt-2
+                  = "#{t('.exercises')}: #{confirmed_exercises_count}"
+              span.text-2xl 🏃
 
-        / Balance Card - Featured
-        - if balance_status == "positive"
-          - balance_border_class = "border-green-500"
-          - balance_bg_class = "from-green-50 to-green-100"
-        - elsif balance_status == "negative"
-          - balance_border_class = "border-red-500"
-          - balance_bg_class = "from-red-50 to-red-100"
-        - else
-          - balance_border_class = "border-indigo-500"
-          - balance_bg_class = "from-indigo-50 to-indigo-100"
-
-        - balance_card_classes = "bg-gradient-to-br #{balance_bg_class} border-l-4 #{balance_border_class} rounded-base shadow-md p-6"
-        div class=balance_card_classes
-          .flex.items-start.justify-between.mb-4
-            div.flex-1
-              p.text-sm.font-semibold.uppercase.tracking-wide.mb-2 class="#{balance_status == 'positive' ? 'text-green-800' : balance_status == 'negative' ? 'text-red-800' : 'text-indigo-800'}"
-                = t(".caloric_balance")
-              p.text-4xl.font-bold class="#{balance_status == 'positive' ? 'text-green-900' : balance_status == 'negative' ? 'text-red-900' : 'text-indigo-900'}"
-                - if balance >= 0
-                  | +
-                = balance
-                |
-                span.text-2xl.font-medium.ml-2 class="#{balance_status == 'positive' ? 'text-green-700' : balance_status == 'negative' ? 'text-red-700' : 'text-indigo-700'}"
-                  = t('.kcal')
-            .flex.flex-col.items-center.justify-center.ml-4
-              - if balance_status == "positive"
-                svg.w-16.h-16.text-green-600 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
-              - elsif balance_status == "negative"
-                svg.w-16.h-16.text-red-600 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
-              - else
-                svg.w-16.h-16.text-indigo-600 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
-
-          / Balance Status Message
-          - if balance_status == "positive"
-            p.text-sm.font-medium.text-green-800.mt-4.flex.items-center.gap-2
-              svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
-              = t(".above_goal")
-          - elsif balance_status == "negative"
-            p.text-sm.font-medium.text-red-800.mt-4.flex.items-center.gap-2
-              svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
-              = t(".below_goal")
+          / Balance Card - Featured
+          - if balance_visual_status == "positive"
+            - balance_border_class = "border-red-500"
+            - balance_bg_class = "from-red-50 to-red-100"
+            - balance_text_class = "text-red-800"
+            - balance_value_class = "text-red-900"
+            - balance_unit_class = "text-red-700"
+            - balance_message_class = "text-red-800"
+            - balance_message_key = ".above_goal"
+          - elsif balance_visual_status == "low_moderate"
+            - balance_border_class = "border-green-500"
+            - balance_bg_class = "from-green-50 to-green-100"
+            - balance_text_class = "text-green-800"
+            - balance_value_class = "text-green-900"
+            - balance_unit_class = "text-green-700"
+            - balance_message_class = "text-green-800"
+            - balance_message_key = ".below_goal"
+          - elsif balance_visual_status == "low_severe"
+            - balance_border_class = "border-orange-500"
+            - balance_bg_class = "from-orange-50 to-orange-100"
+            - balance_text_class = "text-orange-800"
+            - balance_value_class = "text-orange-900"
+            - balance_unit_class = "text-orange-700"
+            - balance_message_class = "text-orange-800"
+            - balance_message_key = balance_percentage && balance_percentage < -25 ? ".far_below_goal" : ".below_goal"
           - else
-            p.text-sm.font-medium.text-indigo-800.mt-4.flex.items-center.gap-2
-              svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
-              = t(".balanced")
+            - balance_border_class = "border-blue-500"
+            - balance_bg_class = "from-blue-50 to-blue-100"
+            - balance_text_class = "text-blue-800"
+            - balance_value_class = "text-blue-900"
+            - balance_unit_class = "text-blue-700"
+            - balance_message_class = "text-blue-800"
+            - balance_message_key = ".balanced"
+
+          - balance_card_classes = "bg-gradient-to-br #{balance_bg_class} border-l-4 #{balance_border_class} rounded-base shadow-md p-6"
+          div class=balance_card_classes
+            .flex.items-start.justify-between.mb-4
+              div.flex-1
+                p.text-sm.font-semibold.uppercase.tracking-wide.mb-2 class=balance_text_class
+                  = t(".caloric_balance")
+                p.text-4xl.font-bold class=balance_value_class
+                  - if balance >= 0
+                    | +
+                  = balance
+                  |
+                  span.text-2xl.font-medium.ml-2 class=balance_unit_class
+                    = t(".kcal")
+              .flex.flex-col.items-center.justify-center.ml-4
+                - if balance_visual_status == "low_moderate"
+                  svg.w-16.h-16.text-green-600 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
+                - elsif balance_visual_status == "positive"
+                  svg.w-16.h-16.text-red-600 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
+                - elsif balance_visual_status == "low_severe"
+                  svg.w-16.h-16.text-orange-600 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
+                - else
+                  svg.w-16.h-16.text-blue-600 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
+
+            / Balance Status Message
+            - if balance_visual_status == "low_moderate"
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
+                = t(balance_message_key)
+            - elsif balance_visual_status == "positive"
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
+                = t(balance_message_key)
+            - elsif balance_visual_status == "low_severe"
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                  path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
+                = t(balance_message_key)
+            - else
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
+                = t(balance_message_key)
 
         / Progress and Score Footer (if applicable)
         - if patient.daily_calorie_goal || (journal.closed_at && journal.score)
           .px-6.py-4.mt-4
-            .grid.grid-cols-1.md:grid-cols-2.gap-6
+            - footer_grid_class = journal.closed_at && journal.score ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+            .grid.gap-6 class=footer_grid_class
               / Progress Bar
               - if patient.daily_calorie_goal
                 div

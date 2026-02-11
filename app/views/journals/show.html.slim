@@ -1,24 +1,24 @@
 - content_for :title, t(".title", date: format_date(@journal.date))
 
-.max-w-6xl.mx-auto.py-4.px-4
-  / Date Navigator
-  = render partial: "date_navigator", locals: { journal_date: @journal.date }
 
-  / Daily Summary Section
-  = render partial: "daily_summary", locals: { journal: @journal, patient: @patient, meals: @meals, exercises: @exercises }
+/ Date Navigator
+= render partial: "date_navigator", locals: { journal_date: @journal.date }
 
-  / Pending Entries Alert
-  - pending_count = @journal.pending_entries_count
-  - if pending_count > 0 && !@journal.closed?
-    .mb-6.p-4.bg-yellow-50.border.border-yellow-200.text-yellow-800.rounded-base
-      .flex.items-center
-        = heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 me-3 text-yellow-800" }
-        div
-          span.font-semibold = t(".warning")
-          = t(".pending_items_warning", count: pending_count, items: t("defaults.item", count: pending_count))
+/ Daily Summary Section
+= render partial: "daily_summary", locals: { journal: @journal, patient: @patient, meals: @meals, exercises: @exercises }
 
-  / Meals Section
-  = render partial: "section", locals: { model: Meal, items: @meals, journal_date: @journal.date, journal: @journal, new_path: :new_journal_meal_path, item_partial: "journal_entries/meals/meal", item_local_name: :meal, icon: "🍽️", color_scheme: { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" } }
+/ Pending Entries Alert
+- pending_count = @journal.pending_entries_count
+- if pending_count > 0 && !@journal.closed?
+  .mb-6.p-4.bg-yellow-50.border.border-yellow-200.text-yellow-800.rounded-base
+    .flex.items-center
+      = heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 me-3 text-yellow-800" }
+      div
+        span.font-semibold = t(".warning")
+        = t(".pending_items_warning", count: pending_count, items: t("defaults.item", count: pending_count))
 
-  / Exercises Section
-  = render partial: "section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal_entries/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }
+/ Meals Section
+= render partial: "section", locals: { model: Meal, items: @meals, journal_date: @journal.date, journal: @journal, new_path: :new_journal_meal_path, item_partial: "journal_entries/meals/meal", item_local_name: :meal, icon: "🍽️", color_scheme: { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" } }
+
+/ Exercises Section
+= render partial: "section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal_entries/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }
