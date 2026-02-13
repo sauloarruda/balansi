@@ -29,6 +29,18 @@ RSpec.describe JournalsController, type: :controller do
     end
   end
 
+  describe "GET #today" do
+    it "renders today's journal without redirecting to a dated URL" do
+      travel_to(Time.zone.local(2026, 2, 5, 12, 0, 0)) do
+        get :today
+      end
+
+      expect(response).to have_http_status(:ok)
+      journal_payload = controller.instance_variable_get(:@journal)
+      expect(journal_payload.date).to eq(Date.new(2026, 2, 5))
+    end
+  end
+
   describe "GET #show" do
     it "loads data from fixture-backed journal via factory fallback" do
       journal = create(:journal)
@@ -58,6 +70,12 @@ RSpec.describe JournalsController, type: :controller do
       expect(journal_payload.date).to eq(Date.new(2026, 2, 6))
       expect(meals_payload).to be_empty
       expect(exercises_payload).to be_empty
+    end
+
+    it "redirects to /journals/today when date is in the future" do
+      get :show, params: { date: "2030-01-01" }
+
+      expect(response).to redirect_to("/journals/today")
     end
 
     it "does not leak journal data from another user's patient" do
@@ -101,6 +119,28 @@ RSpec.describe JournalsController, type: :controller do
       expect(response.body).to include(%(href="/journals/2026-02-05/exercises/#{pending_exercise.id}"))
       expect(response.body).to include("data-turbo-method=\"delete\"")
       expect(response.body).to include("data-turbo-confirm=")
+    end
+
+    it "uses effective_calories_burned in daily summary" do
+      journal = create(:journal)
+      Exercise.create!(
+        journal: journal,
+        description: "Bike",
+        calories: 432,
+        status: "confirmed"
+      )
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(journal.effective_calories_burned.to_s)
+    end
+
+    it "does not render close day button in daily summary" do
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(close_journal_path(date: "2026-02-05"))
     end
   end
 

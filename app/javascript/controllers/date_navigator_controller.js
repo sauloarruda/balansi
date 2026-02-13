@@ -1,73 +1,168 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["datepickerInput", "display"]
+  static targets = ["calendarInput", "previousButton", "nextButton"]
+  static values = { currentDate: String }
 
   connect() {
-    // Initialize Flowbite datepicker if available
-    if (typeof window.Flowbite !== 'undefined' && this.hasDatepickerInputTarget) {
-      this.initializeDatepicker()
+    this.maxDate = this.startOfDay(new Date())
+    this.currentDate = this.resolveCurrentDate()
+
+    if (this.currentDate > this.maxDate) {
+      this.currentDate = this.maxDate
     }
+
+    if (this.hasCalendarInputTarget) {
+      this.calendarInputTarget.max = this.toIsoDate(this.maxDate)
+      this.calendarInputTarget.value = this.toIsoDate(this.currentDate)
+    }
+
+    this.refreshNavigationControls()
   }
 
-  initializeDatepicker() {
-    // Flowbite datepicker initialization
-    // The datepicker will be initialized on the hidden input
-    const datepickerEl = this.datepickerInputTarget
-    
-    if (window.Flowbite && window.Flowbite.Datepicker) {
-      const datepicker = new window.Flowbite.Datepicker(datepickerEl, {
-        format: 'yyyy-mm-dd',
-        autohide: true
-      })
-
-      // Listen for date changes
-      datepickerEl.addEventListener('changeDate', (e) => {
-        const selectedDate = e.detail.date
-        this.navigateToDate(selectedDate)
-      })
-
-      this.datepicker = datepicker
+  onCalendarChange() {
+    if (!this.hasCalendarInputTarget || !this.calendarInputTarget.value) {
+      return
     }
+
+    const selectedDate = this.parseIsoDate(this.calendarInputTarget.value)
+    if (!selectedDate) {
+      return
+    }
+
+    this.navigateToDate(selectedDate)
   }
 
   previousDay() {
-    const currentDate = this.getCurrentDate()
-    const previousDate = new Date(currentDate)
-    previousDate.setDate(previousDate.getDate() - 1)
-    this.navigateToDate(previousDate)
+    this.navigateByDays(-1)
   }
 
   nextDay() {
-    const currentDate = this.getCurrentDate()
-    const nextDate = new Date(currentDate)
-    nextDate.setDate(nextDate.getDate() + 1)
-    this.navigateToDate(nextDate)
+    if (this.currentDate >= this.maxDate) {
+      this.refreshNavigationControls()
+      return
+    }
+
+    this.navigateByDays(1)
   }
 
   openCalendar() {
-    if (this.datepicker && this.hasDatepickerInputTarget) {
-      this.datepicker.show()
+    if (!this.hasCalendarInputTarget) {
+      return
     }
+
+    if (typeof this.calendarInputTarget.showPicker === "function") {
+      this.calendarInputTarget.showPicker()
+      return
+    }
+
+    this.calendarInputTarget.focus()
+    this.calendarInputTarget.click()
   }
 
-  getCurrentDate() {
-    // Extract date from current URL path (Rails route: /journals/YYYY-MM-DD)
-    const pathMatch = window.location.pathname.match(/\/journals\/(\d{4}-\d{2}-\d{2})/)
-    
-    if (pathMatch && pathMatch[1]) {
-      return new Date(pathMatch[1])
+  resolveCurrentDate() {
+    if (this.hasCurrentDateValue) {
+      const parsedCurrentDate = this.parseIsoDate(this.currentDateValue)
+      if (parsedCurrentDate) {
+        return parsedCurrentDate
+      }
     }
-    
-    // Fallback to today
-    return new Date()
+
+    const pathMatch = window.location.pathname.match(/\/journals\/(\d{4}-\d{2}-\d{2})/)
+
+    if (pathMatch && pathMatch[1]) {
+      const parsedPathDate = this.parseIsoDate(pathMatch[1])
+      if (parsedPathDate) {
+        return parsedPathDate
+      }
+    }
+
+    return this.maxDate
+  }
+
+  navigateByDays(days) {
+    this.disableArrowButtons()
+
+    const targetDate = new Date(this.currentDate)
+    targetDate.setDate(targetDate.getDate() + days)
+    this.navigateToDate(targetDate)
   }
 
   navigateToDate(date) {
-    // Format date as YYYY-MM-DD
-    const formattedDate = date.toISOString().split('T')[0]
-    
-    // Navigate to Rails route: /journals/YYYY-MM-DD
+    const targetDate = date > this.maxDate ? this.maxDate : date
+    const formattedDate = this.toIsoDate(targetDate)
     window.location.href = `/journals/${formattedDate}`
+  }
+
+  parseIsoDate(isoDate) {
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
+    if (!dateMatch) {
+      return null
+    }
+
+    const year = Number(dateMatch[1])
+    const month = Number(dateMatch[2])
+    const day = Number(dateMatch[3])
+
+    const parsedDate = new Date(year, month - 1, day)
+    if (!this.isValidDateParts(parsedDate, year, month, day)) {
+      return null
+    }
+
+    return parsedDate
+  }
+
+  isValidDateParts(date, year, month, day) {
+    return date.getFullYear() === year &&
+      date.getMonth() + 1 === month &&
+      date.getDate() === day
+  }
+
+  toIsoDate(date) {
+    const year = date.getFullYear()
+    const month = `${date.getMonth() + 1}`.padStart(2, "0")
+    const day = `${date.getDate()}`.padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
+  startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  }
+
+  disableArrowButtons() {
+    if (this.hasPreviousButtonTarget) {
+      this.setButtonState(this.previousButtonTarget, true)
+    }
+
+    if (this.hasNextButtonTarget) {
+      this.setButtonState(this.nextButtonTarget, true)
+    }
+  }
+
+  refreshNavigationControls() {
+    if (this.hasPreviousButtonTarget) {
+      this.setButtonState(this.previousButtonTarget, false)
+    }
+
+    if (this.hasNextButtonTarget) {
+      this.setButtonState(this.nextButtonTarget, this.currentDate >= this.maxDate)
+    }
+  }
+
+  setButtonState(button, disabled) {
+    if (!button) {
+      return
+    }
+
+    button.disabled = disabled
+
+    if (disabled) {
+      button.classList.remove("cursor-pointer")
+      button.classList.add("cursor-not-allowed", "opacity-50")
+      return
+    }
+
+    button.classList.remove("cursor-not-allowed", "opacity-50")
+    button.classList.add("cursor-pointer")
   }
 }

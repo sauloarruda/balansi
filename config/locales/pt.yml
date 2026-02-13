@@ -117,6 +117,8 @@ pt:
       - Sex
       - Sáb
   journals:
+    navigation:
+      title: "Diário Alimentar"
     date_navigator:
       today: "Hoje"
       previous_day: "Dia anterior"

@@ -18,6 +18,10 @@ Rails.application.routes.draw do
 
   # Journal routes
   resources :journals, param: :date, constraints: { date: /\d{4}-\d{2}-\d{2}/ }, only: [ :index, :show ] do
+    collection do
+      get :today
+    end
+
     member do
       get :close
       patch :close
@@ -28,5 +32,5 @@ Rails.application.routes.draw do
   end
 
   # Defines the root path route ("/")
-  root "journals#index"
+  root to: redirect("/journals/today")
 end

@@ -36,6 +36,7 @@ RSpec.describe Journal, type: :model do
 
     it "calculates effective calories and balance from confirmed entries" do
       expect(journal.effective_calories_consumed).to eq(300)
+      expect(journal.exercise_calories_burned).to eq(250)
       expect(journal.effective_calories_burned).to eq(1950)
       expect(journal.effective_balance).to eq(-1650)
       expect(journal.balance_status).to eq("negative")

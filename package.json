@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Balansi application",
   "private": true,
+  "scripts": {
+    "test:js": "node --test spec/javascript/controllers/*.test.cjs"
+  },
   "dependencies": {
     "flowbite": "^4.0.1"
   }

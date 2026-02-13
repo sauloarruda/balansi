@@ -73,6 +73,8 @@ en:
     formats:
       long: "%B %d, %Y"
   journals:
+    navigation:
+      title: "Daily Journal"
     date_navigator:
       today: "Today"
       previous_day: "Previous day"
