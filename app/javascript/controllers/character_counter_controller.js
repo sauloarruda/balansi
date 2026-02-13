@@ -5,14 +5,16 @@ export default class extends Controller {
 
   connect() {
     this.updateCounter()
+
     if (this.hasInputTarget) {
-      this.inputTarget.addEventListener("input", this.updateCounter.bind(this))
+      this.updateCounterHandler = this.updateCounterHandler || this.updateCounter.bind(this)
+      this.inputTarget.addEventListener("input", this.updateCounterHandler)
     }
   }
 
   disconnect() {
-    if (this.hasInputTarget) {
-      this.inputTarget.removeEventListener("input", this.updateCounter.bind(this))
+    if (this.hasInputTarget && this.updateCounterHandler) {
+      this.inputTarget.removeEventListener("input", this.updateCounterHandler)
     }
   }
 
@@ -21,11 +23,11 @@ export default class extends Controller {
       const length = this.inputTarget.value.length
       const maxLength = this.inputTarget.maxLength || 140
       const counterSpan = this.counterTarget.querySelector("span")
-      
+
       if (counterSpan) {
         counterSpan.textContent = length
       }
-      
+
       // Add visual feedback when approaching limit
       if (length > maxLength * 0.9) {
         this.counterTarget.classList.add("warning")
