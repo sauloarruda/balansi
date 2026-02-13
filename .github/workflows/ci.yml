@@ -166,3 +166,66 @@ jobs:
   #         name: screenshots
   #         path: ${{ github.workspace }}/tmp/screenshots
   #         if-no-files-found: ignore
+
+  deploy_staging:
+    runs-on: ubuntu-latest
+    needs:
+      - scan_ruby
+      - scan_js
+      - lint
+      - test
+    # Keep pull_request enabled temporarily to validate deploy flow quickly.
+    # Later, remove the pull_request branch from this condition and keep only push/main.
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    concurrency:
+      group: staging-deploy
+      cancel-in-progress: false
+    environment: staging
+    permissions:
+      contents: read
+    env:
+      AWS_REGION: sa-east-1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" > ~/.ssh/balansi-staging-key.pem
+          chmod 600 ~/.ssh/balansi-staging-key.pem
+          ssh-keyscan -H 18.231.49.227 >> ~/.ssh/known_hosts
+
+      - name: Build Kamal secrets file
+        run: |
+          KAMAL_REGISTRY_PASSWORD="$(aws ecr get-login-password --region "$AWS_REGION")"
+          mkdir -p .kamal
+          cat > .kamal/secrets <<EOF
+          RAILS_MASTER_KEY=${{ secrets.STAGING_RAILS_MASTER_KEY }}
+          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+          DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          CACHE_DATABASE_URL=${{ secrets.STAGING_CACHE_DATABASE_URL }}
+          QUEUE_DATABASE_URL=${{ secrets.STAGING_QUEUE_DATABASE_URL }}
+          CABLE_DATABASE_URL=${{ secrets.STAGING_CABLE_DATABASE_URL }}
+          EOF
+          chmod 600 .kamal/secrets
+
+      - name: Deploy to staging
+        run: bin/kamal deploy -d staging
