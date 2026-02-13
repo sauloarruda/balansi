@@ -54,6 +54,49 @@ bin/setup
 - **Authentication ERD**: [`doc/auth/erd.md`](doc/auth/erd.md) - Authentication architecture and data model
 - **Infrastructure**: [`terraform/README.md`](terraform/README.md) - Terraform setup and Cognito configuration
 
+## Kamal Secrets
+
+Use the template in `/Users/sauloarruda/Developer/balansi/.kamal/secrets.example` and keep real secrets only in your local `.kamal/secrets`:
+
+```bash
+cp .kamal/secrets.example .kamal/secrets
+```
+
+Required values:
+- `RAILS_MASTER_KEY`
+- `KAMAL_REGISTRY_PASSWORD`
+- `DATABASE_URL`
+- `CACHE_DATABASE_URL`
+- `QUEUE_DATABASE_URL`
+- `CABLE_DATABASE_URL`
+
+Safer approach:
+- do not hardcode plaintext values in `.kamal/secrets`
+- fetch secrets dynamically from AWS Secrets Manager and ECR (see template)
+- use AWS SSO/MFA locally so tokens are short-lived
+
+The project is configured to ignore `.kamal/secrets` in git, so only `.kamal/secrets.example` should be committed.
+
+## Kamal Environments
+
+Kamal is split by environment config files:
+- Base/default: `/Users/sauloarruda/Developer/balansi/config/deploy.yml`
+- Staging: `/Users/sauloarruda/Developer/balansi/config/deploy.staging.yml`
+
+Run staging with destination flag:
+
+```bash
+bin/kamal deploy -d staging
+```
+
+Useful staging commands:
+
+```bash
+bin/kamal setup -d staging
+bin/kamal logs -d staging
+bin/kamal app exec -d staging --interactive "bin/rails db:prepare"
+```
+
 ## Testing
 
 Run the test suite:
