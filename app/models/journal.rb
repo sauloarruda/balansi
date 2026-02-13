@@ -72,10 +72,14 @@ class Journal < ApplicationRecord
     confirmed_meals.sum(:calories) || 0
   end
 
+  def exercise_calories_burned
+    confirmed_exercises.sum(:calories)
+  end
+
   def calculate_calories_burned
     return 0 unless patient.bmr
 
-    patient.bmr + confirmed_exercises.sum(:calories)
+    patient.bmr + exercise_calories_burned
   end
 
   def calculate_balance
