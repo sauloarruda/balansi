@@ -10,8 +10,9 @@ In v1, the module introduces:
   - patient-managed personal fields,
   - owner professional-managed clinical goal fields,
 - support for sharing patient access with additional professionals,
-- professional-initiated patient onboarding via invite link,
+- professional-context patient onboarding via signup link,
 - a professional patient list with ownership visibility (owner vs shared),
+- profile metadata showing the latest profile update timestamp,
 - and mandatory profile completion by the patient on first login before accessing the system.
 
 ---
@@ -22,11 +23,12 @@ In v1, the module introduces:
 
 - Allow an authorized professional to view all records of their patient in read-only mode.
 - Allow a patient to grant access to an additional professional without removing access from the existing one.
-- Allow professionals to invite patients through a signup link for initial account creation (name, email, password).
+- Allow professionals to share a signup link for initial patient account creation (name, email, password) with professional context.
 - Provide a patient list for professionals with clear ownership status (owner vs shared access).
 - Allow the owner professional to create and maintain only professional-managed profile fields.
 - Allow the patient to edit only patient-managed personal fields.
 - Enforce a first-login completion gate until required patient-managed fields are filled.
+- Track and display the latest profile update timestamp.
 - Ensure non-owner professionals can only view the patient profile.
 
 ### 2.2 Non-Goals (for v1)
@@ -74,7 +76,7 @@ In v1, the module introduces:
   - patient edits patient-managed personal fields,
   - owner professional edits professional-managed clinical goal fields.
 - Patient profile read-only access for additional professionals.
-- Professional-generated invite link for patient initial signup.
+- Professional-context signup link for patient initial signup (without invite lifecycle table).
 - Patient action to grant access to a new professional without revoking prior grants.
 - Professional patient list showing relationship type:
   - owner patients
@@ -91,6 +93,8 @@ In v1, the module introduces:
   - `steps_goal`
   - `hydration_goal`
 - First-login profile completion gate for patient-managed personal fields.
+- Profile metadata fields:
+  - `profile_last_updated_at` (last update to any profile field)
 - Phone number parsing/validation/normalization strategy in v1:
   - use `phonelib` gem (libphonenumber-based)
   - normalize and persist phone as single `phone_e164` field
@@ -103,6 +107,7 @@ In v1, the module introduces:
 - AI-generated profile recommendations.
 - Owner transfer initiated by patient UI.
 - Patient revocation of professional access.
+- Invite lifecycle management (token issuance, expiry, reminders).
 
 ---
 
@@ -138,6 +143,8 @@ In v1, the module introduces:
 - **FR-PM-05**: The patient cannot edit professional-managed clinical goal fields.
 - **FR-PM-06**: The owner professional cannot edit patient-managed personal fields.
 - **FR-PM-07**: Profile updates must be visible immediately to all users with profile read access.
+- **FR-PM-08**: The system must track the latest profile update timestamp in `profile_last_updated_at`.
+- **FR-PM-09**: The profile screen must display `profile_last_updated_at` to users with profile read access.
 
 ### 5.4 Ownership Rules
 
@@ -157,11 +164,12 @@ In v1, the module introduces:
   - shared access (professional has read-only shared access).
 - **FR-PL-03**: The ownership label must be available in both list and detail entry points.
 
-### 5.6 Patient Onboarding via Professional Invite Link
+### 5.6 Patient Onboarding via Professional Signup Link
 
-- **FR-ON-01**: A professional must be able to generate or share an invite link for patient onboarding.
-- **FR-ON-02**: The invite flow must collect at least name, email, and password.
-- **FR-ON-03**: When signup is completed through this link, the inviting professional becomes the owner professional for that patient.
+- **FR-ON-01**: A professional must be able to share a signup link for patient onboarding.
+- **FR-ON-02**: The signup flow must collect at least name, email, and password.
+- **FR-ON-03**: When signup is completed through this link, the linked professional becomes the owner professional for that patient.
+- **FR-ON-04**: In v1, no invite token lifecycle is required; onboarding can rely on a direct signup link with professional context.
 
 ### 5.7 First-Login Mandatory Profile Completion
 
@@ -185,13 +193,13 @@ In v1, the module introduces:
 2. System shows editable form only for professional-managed clinical goal fields.
 3. Professional updates one or more profile fields.
 4. Professional saves changes.
-5. System validates, persists, and confirms update.
+5. System validates, persists, updates `profile_last_updated_at`, and confirms update.
 6. Updated profile becomes visible in read-only views for patient and additional professionals.
 
 ### 6.2 Flow: Patient Grants Access to a New Professional
 
 1. Patient opens sharing settings.
-2. Patient selects or invites a new professional.
+2. Patient selects a new professional.
 3. Patient confirms access grant.
 4. System creates additional professional-to-patient access link.
 5. Existing professional links remain active.
@@ -210,11 +218,11 @@ In v1, the module introduces:
 3. Each patient entry shows relationship type (`owner` or `shared access`).
 4. Professional selects a patient and navigates to the patient detail page.
 
-### 6.5 Flow: Patient Initial Signup via Professional Link
+### 6.5 Flow: Patient Initial Signup via Professional Signup Link
 
-1. Professional shares invite link with a patient.
+1. Professional shares signup link with professional context.
 2. Patient opens link and fills name, email, and password.
-3. System creates patient account and links ownership to inviting professional.
+3. System creates patient account and links ownership to the professional from link context.
 4. On first login, patient is sent to mandatory profile completion.
 5. Professional sees the new patient in the list as `owner`.
 
@@ -228,7 +236,7 @@ In v1, the module introduces:
    - birth date (formatted date field, no calendar)
    - phone number as a single international field (country context default `BR`, persisted as `phone_e164`)
    - weight (kg) and height (cm), each validated by min/max rules
-5. System validates and saves.
+5. System validates, saves, and updates `profile_last_updated_at`.
 6. Patient can access the rest of the system only after successful completion.
 
 ---
@@ -274,14 +282,15 @@ In v1, the module introduces:
 - A patient cannot edit `daily_calorie_goal`, `bmr`, `steps_goal`, or `hydration_goal`.
 - The owner professional cannot edit patient personal fields (`gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`).
 - A professional can see a patient list with each patient marked as `owner` or `shared access`.
-- A patient created through a professional invite link is linked to that professional as owner.
+- A patient created through a professional signup link is linked to that professional as owner.
 - On first login, patient access to the rest of the system is blocked until required personal fields are completed and valid.
+- The profile screen shows `profile_last_updated_at`.
 
 ---
 
 ## 10. Decisions for v1 and Future Versions
 
-1. Initial owner assignment in v1: patient onboarding starts from a professional invite link, and the inviting professional is set as owner.
+1. Initial owner assignment in v1: patient onboarding starts from a professional signup link, and the linked professional is set as owner.
 2. Patient revocation of professional access: out of scope for v1, planned for a future version.
 3. Required patient personal fields in v1: `gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`.
 4. Field input rules in v1:
@@ -303,6 +312,14 @@ In v1, the module introduces:
 - Number of distinct patients accessed per professional per week.
 - % of linked patients with at least one professional access event in the last 7 and 30 days.
 - Initial observability implementation: extract events from Rails logs and publish CloudWatch reports/dashboards.
+
+---
+
+## 12. References
+
+- Linear Ticket: [BAL-15 — Professional features](https://linear.app/balansi/issue/BAL-15/professional-features)
+- PRD: [Professional PRD](./prd.md)
+- ERD: [Professional ERD](./erd.md)
 
 ---
 
