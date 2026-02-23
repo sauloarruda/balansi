@@ -61,9 +61,9 @@ Do not continue to Step 2 when Step 0 result is `NO-GO`.
 ### 2. Prepare Branch
 
 Start from latest mainline branch:
-1. `git checkout main`
-2. `git pull`
-3. Create phase branch using ticket and phase
+1. `git checkout <base-branch>`
+2. `git pull origin <base-branch>`
+3. Create phase branch from `<base-branch>` using ticket and phase
 
 Use `BAL-XX.pY` as default naming. If the environment enforces prefixed branch names, use `codex/BAL-XX.pY`.
 
