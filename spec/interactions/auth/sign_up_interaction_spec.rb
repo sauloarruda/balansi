@@ -53,6 +53,23 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         expect(patient.professional_id).to eq(42)
       end
 
+      it "allows authentication without state when patient already exists" do
+        existing_cognito_id = "existing_patient_user_#{SecureRandom.hex(4)}"
+        existing_user = create(:user, cognito_id: existing_cognito_id)
+        existing_patient = create(:patient, user: existing_user, professional: default_professional)
+        allow(CognitoService).to receive(:decode_id_token).and_return(valid_user_info.merge("sub" => existing_cognito_id))
+
+        result = described_class.run(
+          code: valid_code,
+          state: nil
+        )
+
+        expect(result).to be_valid
+        expect(result.result[:user].id).to eq(existing_user.id)
+        expect(result.result[:user].patient.id).to eq(existing_patient.id)
+        expect(result.result[:user].patient.professional_id).to eq(default_professional.id)
+      end
+
       it "uses default timezone and language when not provided" do
         result = described_class.run(
           code: valid_code,
@@ -183,29 +200,50 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         expect(result.errors[:code]).to be_present
       end
 
-      it "uses fallback professional_id when state is missing" do
-        valid_tokens = {
-          "access_token" => "access_token_123",
-          "id_token" => "id_token_123",
-          "refresh_token" => "refresh_token_123"
-        }
-        valid_user_info = {
-          "sub" => "cognito_user_123",
-          "email" => "test@example.com",
-          "name" => "Test User"
-        }
-        allow(CognitoService).to receive(:exchange_code_for_tokens).and_return(valid_tokens)
-        allow(CognitoService).to receive(:decode_id_token).and_return(valid_user_info)
+      context "professional signup context validation" do
+        include_context "cognito stubs"
 
-        result = described_class.run(
-          code: valid_code,
-          state: nil
-        )
+        it "fails when state is missing for new user without patient" do
+          result = described_class.run(
+            code: valid_code,
+            state: nil
+          )
 
-        expect(result).to be_valid
-        created_patient = Patient.find_by(user_id: result.result[:user].id)
-        expect(created_patient).to be_present
-        expect(created_patient.professional_id).to eq(1)
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+        end
+
+        it "fails when professional_id is missing in state for new user" do
+          state_without_professional = URI.encode_www_form("csrf_token" => "any-token")
+
+          result = described_class.run(
+            code: valid_code,
+            state: state_without_professional
+          )
+
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+        end
+
+        it "fails when professional_id is not numeric" do
+          result = described_class.run(
+            code: valid_code,
+            state: URI.encode_www_form("professional_id" => "abc")
+          )
+
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+        end
+
+        it "fails when professional_id does not exist" do
+          result = described_class.run(
+            code: valid_code,
+            state: URI.encode_www_form("professional_id" => "999999")
+          )
+
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+        end
       end
 
       context "token exchange errors" do
@@ -410,7 +448,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
       context "patient creation errors" do
         include_context "cognito stubs"
 
-        it "uses fallback professional_id when parse_professional_id raises ArgumentError" do
+        it "rejects signup context when parse_professional_id raises ArgumentError" do
           # Force ArgumentError by stubbing URI.decode_www_form to raise ArgumentError
           allow(URI).to receive(:decode_www_form).and_raise(ArgumentError.new("invalid byte sequence"))
 
@@ -419,13 +457,11 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
             state: "professional_id=1"
           )
 
-          expect(result).to be_valid
-          created_patient = Patient.find_by(user_id: result.result[:user].id)
-          expect(created_patient).to be_present
-          expect(created_patient.professional_id).to eq(1)
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
         end
 
-        it "uses fallback professional_id when parse_professional_id raises URI::InvalidURIError" do
+        it "rejects signup context when parse_professional_id raises URI::InvalidURIError" do
           # Force URI::InvalidURIError by stubbing URI.decode_www_form to raise it
           allow(URI).to receive(:decode_www_form).and_raise(URI::InvalidURIError.new("invalid URI"))
 
@@ -434,10 +470,8 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
             state: "professional_id=1"
           )
 
-          expect(result).to be_valid
-          created_patient = Patient.find_by(user_id: result.result[:user].id)
-          expect(created_patient).to be_present
-          expect(created_patient.professional_id).to eq(1)
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
         end
 
         it "handles RecordInvalid exception when creating patient" do
