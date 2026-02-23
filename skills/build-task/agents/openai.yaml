@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Task"
+  short_description: "Run readiness, implement phase, review, and open PR"
+  default_prompt: "Use $build-task to run PRD/ERD readiness checks, implement the next incomplete phase, call $code-review, and finish with $create-pr."

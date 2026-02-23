@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create PR"
+  short_description: "Create GitHub PRs with ticket context and template"
+  default_prompt: "Use $create-pr to open a PR from the current branch with title and body aligned to the ticket and template."
