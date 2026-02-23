@@ -328,14 +328,26 @@ Actual files changed (Phase 1):
 - `app/models/patient.rb`
 - `app/models/user.rb`
 
-### Phase 2 — Owner Assignment in Signup Flow
+### Phase 2 — Owner Assignment in Signup Flow ✅ **Completed**
 
 - Support signup link with professional context.
 - On patient signup completion, set owner in `patients.professional_id`.
 
 Exit criteria:
-- patient created from link is linked to expected owner professional
-- invalid/missing professional context is rejected safely
+- [x] patient created from link is linked to expected owner professional
+- [x] invalid/missing professional context is rejected safely
+
+Implementation notes:
+- Removed implicit fallback owner assignment (`professional_id = 1`) from signup context parsing.
+- Enforced strict professional-context validation for new patient creation:
+  - `professional_id` must be present in callback business state,
+  - must parse as a positive integer,
+  - and must resolve to an existing `Professional`.
+- Preserved authentication for existing users who already have a patient profile, even when callback state has no professional context.
+
+Actual files changed (Phase 2):
+- `app/interactions/auth/sign_up_interaction.rb`
+- `spec/interactions/auth/sign_up_interaction_spec.rb`
 
 ### Phase 3 — First Login Mandatory Completion Gate
 

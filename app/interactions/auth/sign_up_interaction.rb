@@ -149,11 +149,13 @@ module Auth
     # Create patient record for user (required - authentication fails if this fails)
     # Returns true on success, false on failure (errors added to errors object)
     def create_patient_record(user)
-      professional_id = resolved_professional_id
-      return false if professional_id.blank?
+      return true if Patient.exists?(user_id: user.id)
+
+      professional = resolved_owner_professional
+      return false if professional.blank?
 
       Patient.find_or_create_by!(user_id: user.id) do |patient|
-        patient.professional_id = professional_id
+        patient.professional_id = professional.id
       end
 
       true
@@ -162,11 +164,18 @@ module Auth
       false
     end
 
-    def resolved_professional_id
+    def resolved_owner_professional
       professional_id = parse_professional_id
-      return professional_id if professional_id.present?
+      if professional_id.blank?
+        errors.add(:base, "Invalid professional signup context")
+        return nil
+      end
 
-      errors.add(:base, "Missing professional identification")
+      professional = Professional.find_by(id: professional_id)
+      return professional if professional.present?
+
+      errors.add(:base, "Invalid professional signup context")
+      Rails.logger.warn("Professional context rejected: professional_id=#{professional_id.inspect} not found")
       nil
     end
 
@@ -225,16 +234,21 @@ module Auth
     end
 
     # Parse professional_id from state parameter
-    # Returns professional_id string or "1" as default if not present or invalid
+    # Returns sanitized positive integer ID as string, or nil when missing/invalid
     def parse_professional_id
-      return "1" if state.blank?
+      return nil if state.blank?
 
       state_params = URI.decode_www_form(state).to_h
       professional_id = state_params["professional_id"]
-      professional_id.present? ? professional_id : "1"
+      return nil if professional_id.blank?
+
+      parsed_professional_id = Integer(professional_id, 10)
+      return nil if parsed_professional_id <= 0
+
+      parsed_professional_id.to_s
     rescue ArgumentError, URI::InvalidURIError => e
       Rails.logger.warn("Failed to parse professional_id from state parameter: #{e.class}: #{e.message}")
-      "1"
+      nil
     end
   end
 end
