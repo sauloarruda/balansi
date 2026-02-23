@@ -1,10 +1,8 @@
 require "rails_helper"
 
-# Factory Usage Pattern:
-# - Use `create` for association and validation tests (requires DB persistence)
 RSpec.describe Patient, type: :model do
   describe "validations" do
-    it "is valid with user and professional_id" do
+    it "is valid with user and professional" do
       patient = build(:patient)
       expect(patient).to be_valid
     end
@@ -15,53 +13,69 @@ RSpec.describe Patient, type: :model do
       expect(patient.errors[:user]).to be_present
     end
 
-    it "has professional_id" do
-      patient = create(:patient, professional_id: 1)
-      expect(patient.professional_id).to eq(1)
+    it "requires professional" do
+      patient = build(:patient, professional: nil)
+      expect(patient).not_to be_valid
+      expect(patient.errors[:professional]).to be_present
     end
 
-    it "validates uniqueness of user_id and professional_id combination" do
+    it "validates one patient profile per user" do
       user = create(:user)
-      create(:patient, user: user, professional_id: 1)
+      create(:patient, user: user)
 
-      duplicate_patient = build(:patient, user: user, professional_id: 1)
+      duplicate_patient = build(:patient, user: user)
       expect(duplicate_patient).not_to be_valid
-      expect(duplicate_patient.errors[:user_id].join(" ")).to include("already has a patient record for this professional")
+      expect(duplicate_patient.errors[:user_id].join(" ")).to include("already has a patient record")
+    end
+
+    it "allows same professional for different users" do
+      professional = create(:professional)
+      patient1 = create(:patient, user: create(:user), professional: professional)
+      patient2 = create(:patient, user: create(:user), professional: professional)
+
+      expect(patient1).to be_valid
+      expect(patient2).to be_valid
+    end
+
+    it "does not allow weight_kg below minimum" do
+      patient = build(:patient, weight_kg: 19.99)
+      expect(patient).not_to be_valid
+      expect(patient.errors[:weight_kg]).to be_present
+    end
+
+    it "does not allow height_cm below minimum" do
+      patient = build(:patient, height_cm: 99.99)
+      expect(patient).not_to be_valid
+      expect(patient.errors[:height_cm]).to be_present
+    end
+
+    it "validates gender enum values" do
+      patient = build(:patient, gender: "invalid")
+      expect(patient).not_to be_valid
+      expect(patient.errors[:gender]).to be_present
     end
   end
 
   describe "associations" do
     it "belongs to user" do
-      user = create(:user)
-      patient = create(:patient, user: user)
-      expect(patient.user.id).to eq(user.id)
-    end
-  end
-
-  describe "scopes and uniqueness" do
-    it "allows same professional_id for different users" do
-      user1 = create(:user)
-      user2 = create(:user)
-
-      patient1 = create(:patient, user: user1, professional_id: 1)
-      patient2 = create(:patient, user: user2, professional_id: 1)
-
-      expect(patient1).to be_valid
-      expect(patient2).to be_valid
-      expect(patient1.professional_id).to eq(1)
-      expect(patient2.professional_id).to eq(1)
+      patient = create(:patient)
+      expect(patient.user).to be_present
     end
 
-    it "allows different professional_ids for same user" do
-      user = create(:user)
+    it "belongs to professional" do
+      patient = create(:patient)
+      expect(patient.professional).to be_present
+    end
 
-      patient1 = create(:patient, user: user, professional_id: 1)
-      patient2 = create(:patient, user: user, professional_id: 2)
+    it "has many shared professionals through accesses" do
+      patient = create(:patient)
+      shared_professional = create(:professional)
+      create(:patient_professional_access,
+        patient: patient,
+        professional: shared_professional,
+        granted_by_patient_user: patient.user)
 
-      expect(patient1).to be_valid
-      expect(patient2).to be_valid
-      expect(patient1.professional_id).to eq(1)
-      expect(patient2.professional_id).to eq(2)
+      expect(patient.shared_professionals).to include(shared_professional)
     end
   end
 end

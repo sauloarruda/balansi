@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_05_110300) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_23_110200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -74,18 +74,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_05_110300) do
     t.index ["journal_id"], name: "index_meals_on_journal_id"
   end
 
+  create_table "patient_professional_accesses", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "granted_by_patient_user_id", null: false
+    t.bigint "patient_id", null: false
+    t.bigint "professional_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["granted_by_patient_user_id"], name: "idx_on_granted_by_patient_user_id_c69b06733a"
+    t.index ["patient_id", "professional_id"], name: "patient_prof_access_unique_idx", unique: true
+    t.index ["patient_id"], name: "index_patient_professional_accesses_on_patient_id"
+    t.index ["professional_id", "patient_id"], name: "patient_prof_access_prof_patient_idx"
+    t.index ["professional_id"], name: "index_patient_professional_accesses_on_professional_id"
+  end
+
   create_table "patients", force: :cascade do |t|
+    t.date "birth_date"
     t.integer "bmr"
     t.datetime "created_at", null: false
     t.integer "daily_calorie_goal"
+    t.string "gender"
+    t.decimal "height_cm", precision: 5, scale: 2
     t.integer "hydration_goal"
-    t.integer "professional_id", null: false
+    t.string "phone_e164", limit: 20
+    t.bigint "professional_id", null: false
+    t.datetime "profile_completed_at"
+    t.datetime "profile_last_updated_at"
     t.integer "steps_goal"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.decimal "weight_kg", precision: 5, scale: 2
     t.index ["professional_id"], name: "index_patients_on_professional_id"
-    t.index ["user_id", "professional_id"], name: "patients_user_professional_unique_idx", unique: true
-    t.index ["user_id"], name: "index_patients_on_user_id"
+    t.index ["user_id"], name: "index_patients_on_user_id", unique: true
+  end
+
+  create_table "professionals", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["user_id"], name: "index_professionals_on_user_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -103,5 +129,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_05_110300) do
   add_foreign_key "exercises", "journals", on_delete: :cascade
   add_foreign_key "journals", "patients", on_delete: :cascade
   add_foreign_key "meals", "journals", on_delete: :cascade
+  add_foreign_key "patient_professional_accesses", "patients", on_delete: :cascade
+  add_foreign_key "patient_professional_accesses", "professionals", on_delete: :cascade
+  add_foreign_key "patient_professional_accesses", "users", column: "granted_by_patient_user_id"
+  add_foreign_key "patients", "professionals"
   add_foreign_key "patients", "users", on_delete: :cascade
+  add_foreign_key "professionals", "users", on_delete: :cascade
 end

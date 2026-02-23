@@ -299,7 +299,7 @@ This ERD defines a practical implementation path from single-professional patien
 
 ## 10. Implementation Plan (BAL-15)
 
-### Phase 1 — Data Model Foundation
+### Phase 1 — Data Model Foundation ✅ **Completed**
 
 - Create `professionals`.
 - Evolve `patients` with:
@@ -310,8 +310,23 @@ This ERD defines a practical implementation path from single-professional patien
 - Keep `patients.professional_id` as owner professional.
 
 Exit criteria:
-- migrations run cleanly
-- associations/validations covered by model specs
+- [x] migrations run cleanly
+- [x] associations/validations covered by model specs
+
+Implementation notes:
+- Added `professionals` and `patient_professional_accesses` tables.
+- Evolved `patients` with personal/profile metadata fields and unique `user_id`.
+- Added `patients.professional_id -> professionals.id` foreign key.
+- Normalized migration path for existing patient records to canonical `professional_id = 1` when records exist.
+
+Actual files changed (Phase 1):
+- `db/migrate/20260223110000_create_professionals.rb`
+- `db/migrate/20260223110100_evolve_patients_for_professional_area.rb`
+- `db/migrate/20260223110200_create_patient_professional_accesses.rb`
+- `app/models/professional.rb`
+- `app/models/patient_professional_access.rb`
+- `app/models/patient.rb`
+- `app/models/user.rb`
 
 ### Phase 2 — Owner Assignment in Signup Flow
 

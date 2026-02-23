@@ -149,32 +149,40 @@ module Auth
     # Create patient record for user (required - authentication fails if this fails)
     # Returns true on success, false on failure (errors added to errors object)
     def create_patient_record(user)
-      professional_id = parse_professional_id
+      professional_id = resolved_professional_id
+      return false if professional_id.blank?
 
-      unless professional_id.present?
-        errors.add(:base, "Missing professional identification")
-        return false
+      Patient.find_or_create_by!(user_id: user.id) do |patient|
+        patient.professional_id = professional_id
       end
 
-      Patient.find_or_create_by!(
-        user_id: user.id,
-        professional_id: professional_id
-      )
-
       true
-    rescue ActiveRecord::RecordInvalid => e
-      errors.add(:base, "Failed to create patient record: #{e.record.errors.full_messages.join(", ")}")
-      Rails.logger.error("Patient creation failed: #{e.class}: #{e.message}. Record errors: #{e.record.errors.full_messages.inspect}")
-      false
-    rescue ActiveRecord::RecordNotUnique => e
-      errors.add(:base, "Patient record already exists for this user and professional")
-      Rails.logger.error("Patient record uniqueness violation: #{e.class}: #{e.message}")
-      false
     rescue => e
-      errors.add(:base, "Failed to create patient record: #{e.class}: #{e.message}")
-      Rails.logger.error("Patient creation exception: #{e.class}: #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
+      handle_patient_creation_error(e)
       false
+    end
+
+    def resolved_professional_id
+      professional_id = parse_professional_id
+      return professional_id if professional_id.present?
+
+      errors.add(:base, "Missing professional identification")
+      nil
+    end
+
+    def handle_patient_creation_error(error)
+      case error
+      when ActiveRecord::RecordInvalid
+        errors.add(:base, "Failed to create patient record: #{error.record.errors.full_messages.join(", ")}")
+        Rails.logger.error("Patient creation failed: #{error.class}: #{error.message}. Record errors: #{error.record.errors.full_messages.inspect}")
+      when ActiveRecord::RecordNotUnique
+        errors.add(:base, "Patient record already exists for this user")
+        Rails.logger.error("Patient record uniqueness violation: #{error.class}: #{error.message}")
+      else
+        errors.add(:base, "Failed to create patient record: #{error.class}: #{error.message}")
+        Rails.logger.error("Patient creation exception: #{error.class}: #{error.message}")
+        Rails.logger.error(error.backtrace.first(10).join("\n"))
+      end
     end
 
     # Find or create user in database based on Cognito user info
