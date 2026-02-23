@@ -19,7 +19,7 @@ class ApplicationController < ActionController::Base
   def current_patient
     return nil unless current_user
 
-    @current_patient ||= current_user.patients.order(:id).first
+    @current_patient ||= current_user.patient
   end
 
   def ensure_current_patient!

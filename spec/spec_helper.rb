@@ -56,7 +56,7 @@ if coverage_enabled && !ruby_lsp_running
 end
 
 module FixtureBootstrap
-  FIXTURE_SET = %w[users patients journals meals exercises].freeze
+  FIXTURE_SET = %w[users professionals patients journals meals exercises].freeze
 
   def ensure_fixtures_are_loaded
     return if fixtures_ready?

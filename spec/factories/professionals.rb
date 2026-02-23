@@ -1,6 +1,5 @@
 FactoryBot.define do
-  factory :patient do
+  factory :professional do
     association :user
-    association :professional
   end
 end

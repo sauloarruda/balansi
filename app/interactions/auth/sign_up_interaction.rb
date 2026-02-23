@@ -156,10 +156,9 @@ module Auth
         return false
       end
 
-      Patient.find_or_create_by!(
-        user_id: user.id,
-        professional_id: professional_id
-      )
+      Patient.find_or_create_by!(user_id: user.id) do |patient|
+        patient.professional_id = professional_id
+      end
 
       true
     rescue ActiveRecord::RecordInvalid => e
@@ -167,7 +166,7 @@ module Auth
       Rails.logger.error("Patient creation failed: #{e.class}: #{e.message}. Record errors: #{e.record.errors.full_messages.inspect}")
       false
     rescue ActiveRecord::RecordNotUnique => e
-      errors.add(:base, "Patient record already exists for this user and professional")
+      errors.add(:base, "Patient record already exists for this user")
       Rails.logger.error("Patient record uniqueness violation: #{e.class}: #{e.message}")
       false
     rescue => e

@@ -1,8 +1,5 @@
 require "rails_helper"
 
-# Factory Usage Pattern:
-# - Use `build` for validation tests (no DB write needed)
-# - Use `create` for association and database constraint tests
 RSpec.describe User, type: :model do
   describe "validations" do
     it "is valid with all required attributes" do
@@ -28,8 +25,6 @@ RSpec.describe User, type: :model do
     end
 
     it "rejects invalid IANA timezone and adds specific error message" do
-      # This test ensures line 20 in user.rb is covered (errors.add in rescue block)
-      # The rescue block catches TZInfo::InvalidTimezoneIdentifier and adds the error
       user = build(:user, timezone: "Invalid/Timezone")
       expect(user).not_to be_valid
       expect(user.errors[:timezone]).to include("is not a valid IANA timezone identifier (e.g., 'America/Sao_Paulo')")
@@ -48,15 +43,21 @@ RSpec.describe User, type: :model do
   end
 
   describe "associations" do
-    it "has many patients" do
+    it "has one patient" do
       user = create(:user)
-      patients = create_list(:patient, 2, user: user)
+      patient = create(:patient, user: user)
 
-      expect(user.patients.count).to eq(2)
-      expect(user.patients).to match_array(patients)
+      expect(user.patient).to eq(patient)
     end
 
-    it "destroys associated patients on destroy" do
+    it "has one professional" do
+      user = create(:user)
+      professional = create(:professional, user: user)
+
+      expect(user.professional).to eq(professional)
+    end
+
+    it "destroys associated patient on destroy" do
       user = create(:user)
       patient = create(:patient, user: user)
       patient_id = patient.id

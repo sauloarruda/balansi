@@ -80,7 +80,7 @@ RSpec.describe JournalsController, type: :controller do
 
     it "does not leak journal data from another user's patient" do
       other_user = create(:user)
-      other_patient = create(:patient, user: other_user, professional_id: 2)
+      other_patient = create(:patient, user: other_user)
       other_journal = Journal.create!(patient: other_patient, date: Date.new(2026, 2, 5))
       Meal.create!(
         journal: other_journal,

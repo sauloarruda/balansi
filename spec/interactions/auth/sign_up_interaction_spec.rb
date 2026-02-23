@@ -3,6 +3,7 @@ require "rails_helper"
 RSpec.describe Auth::SignUpInteraction, type: :interaction do
   let(:valid_code) { "valid_auth_code_123" }
   let(:valid_state) { "professional_id=1" }
+  let!(:default_professional) { Professional.find_by(id: 1) || create(:professional, id: 1) }
 
   describe ".run" do
     context "on success" do
@@ -23,7 +24,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         expect(result.result[:user]).to be_persisted
         expect(result.result[:user].email).to eq("test@example.com")
         expect(result.result[:user].cognito_id).to eq("cognito_user_123")
-        expect(result.result[:user].patients.count).to eq(1)
+        expect(result.result[:user].patient).to be_present
       end
 
       it "finds existing user by cognito_id" do
@@ -39,13 +40,15 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
       end
 
       it "creates patient record with professional_id from state" do
+        Professional.find_by(id: 42) || create(:professional, id: 42)
+
         result = described_class.run(
           code: valid_code,
           state: "professional_id=42"
         )
 
         expect(result).to be_valid
-        patient = result.result[:user].patients.first
+        patient = result.result[:user].patient
         expect(patient).not_to be_nil
         expect(patient.professional_id).to eq(42)
       end
@@ -62,6 +65,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
       end
 
       it "parses professional_id from state parameter correctly" do
+        Professional.find_by(id: 99) || create(:professional, id: 99)
         state = URI.encode_www_form("professional_id" => "99")
         result = described_class.run(
           code: valid_code,
@@ -69,7 +73,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         )
 
         expect(result).to be_valid
-        expect(result.result[:user].patients.first.professional_id).to eq(99)
+        expect(result.result[:user].patient.professional_id).to eq(99)
       end
 
       it "does not update timezone and language for existing user" do
@@ -440,7 +444,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           user = create(:user, cognito_id: "cognito_user_123")
 
           # Stub Patient.find_or_create_by! to raise RecordInvalid
-          invalid_patient = Patient.new(user: user, professional_id: 1)
+          invalid_patient = build(:patient, user: user)
           invalid_patient.errors.add(:base, "Some validation error")
           allow(Patient).to receive(:find_or_create_by!).and_raise(ActiveRecord::RecordInvalid.new(invalid_patient))
 

@@ -1,8 +1,7 @@
 class User < ApplicationRecord
-  # Associations
-  has_many :patients, dependent: :destroy
+  has_one :patient, dependent: :destroy
+  has_one :professional, dependent: :destroy
 
-  # Validations
   validates :timezone, presence: true
   validates :language, presence: true, inclusion: { in: -> { User.valid_languages } }
 
