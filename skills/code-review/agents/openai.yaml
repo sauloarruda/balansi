@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review"
+  short_description: "Review diffs for risk, quality, and missing tests"
+  default_prompt: "Use $code-review to review the current diff and generate an actionable findings document."
