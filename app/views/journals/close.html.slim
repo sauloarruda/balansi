@@ -16,34 +16,34 @@
         h2.text-2xl.font-bold.mb-6 = t(".daily_metrics")
 
         .mb-6
-          = f.label :feeling_today, t(".feeling_label"), class: "block mb-2 text-sm font-medium text-gray-900"
-          = f.select :feeling_today, options_for_select([["", nil], [t(".feeling_options.good"), 3], [t(".feeling_options.ok"), 2], [t(".feeling_options.bad"), 1]], @journal.feeling_today), {}, { class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", required: true }
+          = f.label :feeling_today, t(".feeling_label")
+          = f.select :feeling_today, options_for_select([["", nil], [t(".feeling_options.good"), 3], [t(".feeling_options.ok"), 2], [t(".feeling_options.bad"), 1]], @journal.feeling_today), {}, { required: true }
 
         .mb-6
-          = f.label :sleep_quality, t(".sleep_label"), class: "block mb-2 text-sm font-medium text-gray-900"
-          = f.select :sleep_quality, options_for_select([["", nil], [t(".sleep_options.excellent"), 3], [t(".sleep_options.good"), 2], [t(".sleep_options.poor"), 1]], @journal.sleep_quality), {}, { class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", required: true }
+          = f.label :sleep_quality, t(".sleep_label")
+          = f.select :sleep_quality, options_for_select([["", nil], [t(".sleep_options.excellent"), 3], [t(".sleep_options.good"), 2], [t(".sleep_options.poor"), 1]], @journal.sleep_quality), {}, { required: true }
 
         .mb-6
-          = f.label :hydration_quality, t(".hydration_label"), class: "block mb-2 text-sm font-medium text-gray-900"
+          = f.label :hydration_quality, t(".hydration_label")
           .text-xs.text-gray-500.mb-1
             - if @patient.hydration_goal
               = t(".hydration_goal", goal: @patient.hydration_goal)
             - else
               = t(".hydration_goal_not_set")
-          = f.select :hydration_quality, options_for_select([["", nil], [t(".hydration_options.excellent"), 3], [t(".hydration_options.good"), 2], [t(".hydration_options.poor"), 1]], @journal.hydration_quality), {}, { class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", required: true }
+          = f.select :hydration_quality, options_for_select([["", nil], [t(".hydration_options.excellent"), 3], [t(".hydration_options.good"), 2], [t(".hydration_options.poor"), 1]], @journal.hydration_quality), {}, { required: true }
 
         .mb-6
-          = f.label :steps_count, t(".steps_label"), class: "block mb-2 text-sm font-medium text-gray-900"
+          = f.label :steps_count, t(".steps_label")
           .text-xs.text-gray-500.mb-1
             - if @patient.steps_goal
               = t(".steps_goal", goal: @patient.steps_goal)
             - else
               = t(".steps_goal_not_set")
-          = f.number_field :steps_count, value: @journal.steps_count, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 0, max: 100000, step: 1, placeholder: t(".steps_placeholder"), required: true
+          = f.number_field :steps_count, value: @journal.steps_count, min: 0, max: 100000, step: 1, placeholder: t(".steps_placeholder"), required: true
 
         .mb-6
-          = f.label :daily_note, t(".daily_note_label"), class: "block mb-2 text-sm font-medium text-gray-900"
-          = f.text_area :daily_note, value: @journal.daily_note, class: "block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500", rows: 4, placeholder: t(".daily_note_placeholder")
+          = f.label :daily_note, t(".daily_note_label")
+          = f.text_area :daily_note, value: @journal.daily_note, rows: 4, placeholder: t(".daily_note_placeholder")
 
       .mb-8.p-6.bg-gray-50.border.border-gray-200.rounded-lg
         h2.text-2xl.font-bold.mb-4 = t(".daily_summary_title")
@@ -67,5 +67,5 @@
             .text-lg.font-bold = @journal.confirmed_exercises_count
 
       .flex.gap-4.pt-4.border-t.border-gray-200
-        = f.submit t(".close_day_button"), class: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-bold rounded-lg text-lg px-8 py-3 cursor-pointer"
+        = f.submit t(".close_day_button"), tone: :blue, size: :lg
         = link_to t(".cancel"), journal_path(date: @journal.date.to_s), class: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-lg px-8 py-3"

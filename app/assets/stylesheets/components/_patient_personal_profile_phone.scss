@@ -1,0 +1,12 @@
+.patient-personal-profile-phone {
+  .iti {
+    display: block;
+    width: 100%;
+
+    .iti__selected-dial-code {
+      color: var(--color-gray-900);
+      font-size: var(--text-sm);
+      line-height: var(--text-sm--line-height);
+    }
+  }
+}

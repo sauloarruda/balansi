@@ -5,6 +5,7 @@ class ApplicationController < ActionController::Base
 
   around_action :use_user_timezone
   before_action :ensure_current_patient!
+  before_action :ensure_patient_personal_profile_completed!
 
   helper_method :current_patient
 
@@ -27,6 +28,16 @@ class ApplicationController < ActionController::Base
     return if current_patient
 
     head :forbidden
+  end
+
+  def ensure_patient_personal_profile_completed!
+    return if current_user.nil?
+    return unless current_patient
+    return if controller_path.start_with?("auth/")
+    return if controller_path == "patients/personal_profiles"
+    return if current_patient.personal_profile_completed?
+
+    redirect_to patient_personal_profile_path, alert: t("patient_personal_profile.messages.gate_required")
   end
 
   def use_user_timezone(&block)

@@ -154,4 +154,22 @@ RSpec.describe JournalsController, type: :controller do
       expect(response).to have_http_status(:forbidden)
     end
   end
+
+  describe "profile completion gate" do
+    it "redirects to profile completion when patient profile is incomplete" do
+      patient = Patient.find(2001)
+      patient.update!(
+        gender: nil,
+        birth_date: nil,
+        weight_kg: nil,
+        height_cm: nil,
+        phone_e164: nil,
+        profile_completed_at: nil
+      )
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to redirect_to(patient_personal_profile_path)
+    end
+  end
 end

@@ -43,8 +43,20 @@ RSpec.describe Patient, type: :model do
       expect(patient.errors[:weight_kg]).to be_present
     end
 
+    it "does not allow weight_kg above decimal column range" do
+      patient = build(:patient, weight_kg: 1000)
+      expect(patient).not_to be_valid
+      expect(patient.errors[:weight_kg]).to be_present
+    end
+
     it "does not allow height_cm below minimum" do
       patient = build(:patient, height_cm: 99.99)
+      expect(patient).not_to be_valid
+      expect(patient.errors[:height_cm]).to be_present
+    end
+
+    it "does not allow height_cm above decimal column range" do
+      patient = build(:patient, height_cm: 1000)
       expect(patient).not_to be_valid
       expect(patient.errors[:height_cm]).to be_present
     end
@@ -53,6 +65,12 @@ RSpec.describe Patient, type: :model do
       patient = build(:patient, gender: "invalid")
       expect(patient).not_to be_valid
       expect(patient.errors[:gender]).to be_present
+    end
+
+    it "validates phone_e164 format when present" do
+      patient = build(:patient, phone_e164: "123456")
+      expect(patient).not_to be_valid
+      expect(patient.errors[:phone_e164]).to be_present
     end
   end
 
@@ -76,6 +94,34 @@ RSpec.describe Patient, type: :model do
         granted_by_patient_user: patient.user)
 
       expect(patient.shared_professionals).to include(shared_professional)
+    end
+  end
+
+  describe "personal profile" do
+    it "requires mandatory personal fields in patient_personal_profile context" do
+      patient = build(
+        :patient,
+        gender: nil,
+        birth_date: nil,
+        weight_kg: nil,
+        height_cm: nil,
+        phone_e164: nil
+      )
+
+      expect(patient.valid?(:patient_personal_profile)).to be false
+      expect(patient.errors[:gender]).to be_present
+      expect(patient.errors[:birth_date]).to be_present
+      expect(patient.errors[:weight_kg]).to be_present
+      expect(patient.errors[:height_cm]).to be_present
+      expect(patient.errors[:phone_e164]).to be_present
+    end
+
+    it "is complete only when required fields are present and profile_completed_at is set" do
+      complete_patient = build(:patient)
+      incomplete_patient = build(:patient, :incomplete_profile)
+
+      expect(complete_patient.personal_profile_completed?).to be true
+      expect(incomplete_patient.personal_profile_completed?).to be false
     end
   end
 end

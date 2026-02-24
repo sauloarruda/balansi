@@ -349,15 +349,38 @@ Actual files changed (Phase 2):
 - `app/interactions/auth/sign_up_interaction.rb`
 - `spec/interactions/auth/sign_up_interaction_spec.rb`
 
-### Phase 3 — First Login Mandatory Completion Gate
+### Phase 3 — First Login Mandatory Completion Gate ✅ **Completed**
 
 - Enforce completion gate for patient first login.
 - Required fields: `gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`.
 - Block access to remaining modules until completion succeeds.
 
 Exit criteria:
-- gate blocks access when fields are missing
-- completion unlocks access and sets `profile_completed_at`
+- [x] gate blocks access when fields are missing
+- [x] completion unlocks access and sets `profile_completed_at`
+
+Implementation notes:
+- Added a dedicated completion flow (`/profile_completion`) with required patient personal fields:
+  - `gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`.
+- Implemented phone capture with country selector + national-number input formatting assistance in the UI, while persisting canonical `phone_e164` in backend.
+- Added an application-level access gate:
+  - authenticated patient requests are redirected to profile completion until the profile is complete.
+- Completion save sets:
+  - `profile_completed_at` (on first successful completion),
+  - `profile_last_updated_at` (on completion save).
+- Added `Patient` profile-completion helpers and completion-context validations.
+
+Actual files changed (Phase 3):
+- `app/controllers/application_controller.rb`
+- `app/controllers/profile_completions_controller.rb`
+- `app/models/patient.rb`
+- `app/views/profile_completions/show.html.slim`
+- `config/routes.rb`
+- `spec/controllers/profile_completions_controller_spec.rb`
+- `spec/controllers/journals_controller_spec.rb`
+- `spec/factories/patients.rb`
+- `spec/fixtures/patients.yml`
+- `spec/models/patient_spec.rb`
 
 ### Phase 4 — Split Profile Edit Ownership
 

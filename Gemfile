@@ -24,6 +24,8 @@ gem "heroicon"
 
 # TailwindCSS integration for Rails
 gem "tailwindcss-rails"
+# Sass compilation pipeline for component styles
+gem "dartsass-rails"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
@@ -101,3 +103,5 @@ gem "rack-attack"
 
 # Enum helper with i18n support for model attributes
 gem "enumerize"
+
+gem "phonelib", "~> 0.10.16"

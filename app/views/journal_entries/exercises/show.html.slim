@@ -19,27 +19,23 @@ h1.text-3xl.font-bold.mb-6 = t("exercises.show.heading")
     span.text-gray-600.italic = @exercise.description
 
   = form_with model: @exercise, url: journal_exercise_path(journal_date: @exercise.journal.date.iso8601, id: @exercise.id), method: :patch, local: true, class: "space-y-6" do |f|
+    = render "shared/form_error_alert", form: f
+
     .grid.grid-cols-1.md:grid-cols-2.gap-4
       .mb-4
-        = f.label :duration, t("exercises.show.duration"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.number_field :duration, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 1, max: 1440, step: 1
+        = f.label :duration, t("exercises.show.duration")
+        = f.number_field :duration, min: 1, max: 1440, step: 1
       .mb-4
-        = f.label :calories, t("exercises.show.calories_burned"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.number_field :calories, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 0, max: 10000, step: 1
+        = f.label :calories, t("exercises.show.calories_burned")
+        = f.number_field :calories, min: 0, max: 10000, step: 1
       .mb-4
-        = f.label :neat, t("exercises.show.neat"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.number_field :neat, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", min: 0, max: 5000, step: 1
+        = f.label :neat, t("exercises.show.neat")
+        = f.number_field :neat, min: 0, max: 5000, step: 1
       .mb-4.md:col-span-2
-        = f.label :structured_description, t("exercises.show.structured_description"), class: "block mb-2 text-sm font-medium text-gray-900"
-        = f.text_field :structured_description, class: "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5", maxlength: 255
-
-    - if @exercise.errors.any?
-      .mb-6.p-4.bg-red-50.border.border-red-200.text-red-800.rounded-lg
-        ul.list-disc.list-inside
-          - @exercise.errors.full_messages.each do |message|
-            li = message
+        = f.label :structured_description, t("exercises.show.structured_description")
+        = f.text_field :structured_description, maxlength: 255
 
     div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200"
-      = f.submit t("exercises.show.confirm"), name: "confirm", class: "w-full sm:w-auto text-center whitespace-nowrap text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-base px-5 py-2.5 cursor-pointer"
+      = f.submit t("exercises.show.confirm"), name: "confirm", tone: :blue, size: :md, class: "w-full sm:w-auto text-center whitespace-nowrap"
       = link_to t("exercises.show.edit_description"), edit_journal_exercise_path(journal_date: @exercise.journal.date.iso8601, id: @exercise.id), class: "w-full sm:w-auto text-center text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-base px-5 py-2.5"
       = link_to t("exercises.show.cancel"), journal_path(date: @exercise.journal.date.iso8601), class: "self-center sm:self-auto text-base text-gray-600 hover:text-gray-800 hover:underline px-1 py-1"

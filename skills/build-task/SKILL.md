@@ -75,7 +75,10 @@ Follow project rules in `.cursor/rules/implementation.mdc`.
 Apply these constraints:
 - Reuse existing patterns before adding new abstractions
 - Keep code simple and focused on current requirements
+- Keep controllers thin: when an action accumulates non-trivial business logic, move it to an interaction (`ActiveInteraction`) under `app/interactions` and keep the controller focused on params, flow control, and rendering/redirects
 - Add or update tests alongside implementation
+- For any new or changed user-facing copy, use i18n and add/update keys in both `config/locales/pt.yml` and `config/locales/en.yml` (including controller flash/alert messages and views)
+- For locale-sensitive inputs (especially dates), implement locale-specific display/input formats and server-side parsing rules for `pt` and `en`
 - Respect Rails, security, performance, and migration standards
 
 ### 4. Verify Before Review
