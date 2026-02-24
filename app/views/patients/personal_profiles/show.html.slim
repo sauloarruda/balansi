@@ -1,7 +1,8 @@
 - content_for :title, t("patient_personal_profile.show.title")
 - content_for :head do
-  link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.3/build/css/intlTelInput.css"
-  script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.3/build/js/intlTelInput.min.js"
+  = stylesheet_link_tag "css/intlTelInput", "data-turbo-track": "reload"
+  = javascript_include_tag "js/intlTelInputWithUtils.min", "data-turbo-track": "reload"
+  = javascript_include_tag "imask.min", "data-turbo-track": "reload"
 
 h1.text-3xl.font-bold.mb-2 = t("patient_personal_profile.show.title")
 p.text-gray-600.mb-6
@@ -22,11 +23,11 @@ p.text-gray-600.mb-6
 
       div
         = f.label :weight_kg, t("patient_personal_profile.show.weight_kg")
-        = f.number_field :weight_kg, step: 1.0, min: Patient::WEIGHT_KG_MIN, max: Patient::WEIGHT_KG_MAX, required: true
+        = f.number_field :weight_kg, step: 0.1, min: Patient::WEIGHT_KG_MIN, max: Patient::WEIGHT_KG_MAX, required: true
 
       div
         = f.label :height_cm, t("patient_personal_profile.show.height_cm")
-        = f.number_field :height_cm, step: 1.0, min: Patient::HEIGHT_CM_MIN, max: Patient::HEIGHT_CM_MAX, required: true
+        = f.number_field :height_cm, step: 0.1, min: Patient::HEIGHT_CM_MIN, max: Patient::HEIGHT_CM_MAX, required: true
 
       .md:col-span-2.patient-personal-profile-phone
         = f.label :phone_national_number, t("patient_personal_profile.show.phone_national_number")

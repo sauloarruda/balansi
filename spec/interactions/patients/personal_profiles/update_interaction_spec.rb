@@ -74,7 +74,7 @@ RSpec.describe Patients::PersonalProfiles::UpdateInteraction, type: :interaction
 
       expect(result).not_to be_valid
       expect(result.errors[:phone_national_number]).to include(I18n.t("patient_personal_profile.messages.phone_invalid"))
-      expect(patient.phone_e164).to eq("invalid")
+      expect(patient.phone_e164).to be_nil
     end
 
     it "fails gracefully when weight and height exceed decimal column range" do

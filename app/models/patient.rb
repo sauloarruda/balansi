@@ -50,15 +50,6 @@ class Patient < ApplicationRecord
     PERSONAL_PROFILE_REQUIRED_FIELDS.all? { |field| public_send(field).present? }
   end
 
-  # Backward-compatible aliases during naming transition.
-  def profile_completion_complete?
-    personal_profile_completed?
-  end
-
-  def profile_completion_fields_present?
-    personal_profile_fields_present?
-  end
-
   private
 
   def professional_id_immutable

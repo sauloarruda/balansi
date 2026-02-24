@@ -34,8 +34,7 @@ export default class extends Controller {
       nationalMode: true,
       separateDialCode: true,
       autoPlaceholder: "aggressive",
-      formatAsYouType: true,
-      loadUtils: () => import("https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.3/build/js/utils.js")
+      formatAsYouType: true
     })
 
     this.countryChangeHandler = this.syncHiddenCountryFromPlugin.bind(this)

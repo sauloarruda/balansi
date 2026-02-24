@@ -7,10 +7,10 @@ export default class extends Controller {
     placeholderChar: { type: String, default: "_" }
   }
 
-  async connect() {
+  connect() {
     if (!this.hasPatternValue) return
+    if (typeof IMask === "undefined") return
 
-    const IMask = await this.loadMaskLibrary()
     this.mask = IMask(this.element, {
       mask: this.patternValue,
       lazy: this.lazyValue,
@@ -23,14 +23,5 @@ export default class extends Controller {
     if (this.mask && typeof this.mask.destroy === "function") {
       this.mask.destroy()
     }
-  }
-
-  async loadMaskLibrary() {
-    if (!this.constructor.imaskLibraryPromise) {
-      this.constructor.imaskLibraryPromise = import("https://cdn.jsdelivr.net/npm/imask@7.6.1/+esm")
-        .then((module) => module.default)
-    }
-
-    return this.constructor.imaskLibraryPromise
   }
 }

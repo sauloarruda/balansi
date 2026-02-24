@@ -20,25 +20,27 @@ module Patients
 
         parsed_birth_date = parse_localized_birth_date(birth_date_input)
         if parsed_birth_date == :invalid
-          assign_personal_profile_attributes(except_birth_date: true, except_phone: true)
+          assign_personal_profile_attributes(except_birth_date: true)
           patient.birth_date = nil
           patient.errors.add(:birth_date, I18n.t("patient_personal_profile.messages.birth_date_invalid"))
           copy_patient_errors_to_interaction
           return nil
         end
 
-        assign_personal_profile_attributes(except_birth_date: true, except_phone: true)
+        assign_personal_profile_attributes(except_birth_date: true)
         patient.birth_date = parsed_birth_date
         phone_valid = apply_phone_e164_from_local_input
 
         profile_valid = patient.valid?(:patient_personal_profile)
+
         unless phone_valid
           patient.errors.delete(:phone_e164)
           patient.errors.add(:phone_national_number, I18n.t("patient_personal_profile.messages.phone_invalid"))
+        else
+          remap_phone_errors_to_form_field
         end
 
         unless profile_valid && phone_valid
-          remap_phone_errors_to_form_field
           copy_patient_errors_to_interaction
           return nil
         end
@@ -66,9 +68,11 @@ module Patients
         end
       end
 
-      def assign_personal_profile_attributes(except_birth_date: false, except_phone: false)
-        attributes = except_birth_date ? profile_attributes.except(:birth_date) : profile_attributes
-        attributes = attributes.except(:phone_country, :phone_national_number) if except_phone
+      VIRTUAL_PHONE_FIELDS = %i[phone_country phone_national_number].freeze
+
+      def assign_personal_profile_attributes(except_birth_date: false)
+        attributes = profile_attributes.except(*VIRTUAL_PHONE_FIELDS)
+        attributes = attributes.except(:birth_date) if except_birth_date
         patient.assign_attributes(attributes)
       end
 
@@ -79,7 +83,7 @@ module Patients
       def apply_phone_e164_from_local_input
         if phone_national_number.blank?
           patient.phone_e164 = nil
-          return
+          return true
         end
 
         parsed_phone = Patients::PersonalProfiles::PhoneLocalization.parse_local_input(phone_national_number, phone_country)
@@ -87,7 +91,7 @@ module Patients
           patient.phone_e164 = parsed_phone.full_e164
           true
         else
-          patient.phone_e164 = "invalid"
+          patient.phone_e164 = nil
           false
         end
       end

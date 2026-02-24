@@ -104,14 +104,12 @@ class ApplicationFormBuilder < ActionView::Helpers::FormBuilder
     messages = field_error_messages(method)
     return field_html if messages.empty?
 
-    message_html = @template.content_tag(
-      :p,
-      messages.first,
-      id: error_element_id(method),
-      class: ERROR_TEXT_CLASSES
-    )
+    error_tags = messages.each_with_index.map do |message, index|
+      tag_id = index.zero? ? error_element_id(method) : "#{error_element_id(method)}_#{index}"
+      @template.content_tag(:p, message, id: tag_id, class: ERROR_TEXT_CLASSES)
+    end
 
-    @template.safe_join([ field_html, message_html ])
+    @template.safe_join([ field_html ] + error_tags)
   end
 
   def field_has_errors?(method)

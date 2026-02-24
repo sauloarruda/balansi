@@ -18,7 +18,6 @@ function loadControllerClass() {
 
 function buildController(overrides = {}) {
   const MaskedInputController = loadControllerClass()
-  delete MaskedInputController.imaskLibraryPromise
 
   const controller = new MaskedInputController()
   controller.element = { value: overrides.value || "" }
@@ -30,12 +29,12 @@ function buildController(overrides = {}) {
   return controller
 }
 
-test("connect initializes IMask with configured options", async () => {
+test("connect initializes IMask with configured options", () => {
   const controller = buildController()
   let capturedOptions = null
   let destroyed = false
 
-  controller.loadMaskLibrary = async () => (element, options) => {
+  global.IMask = (element, options) => {
     assert.equal(element, controller.element)
     capturedOptions = options
     return {
@@ -45,7 +44,7 @@ test("connect initializes IMask with configured options", async () => {
     }
   }
 
-  await controller.connect()
+  controller.connect()
   assert.equal(capturedOptions.mask, "00/00/0000")
   assert.equal(capturedOptions.lazy, false)
   assert.equal(capturedOptions.placeholderChar, "_")
@@ -53,17 +52,29 @@ test("connect initializes IMask with configured options", async () => {
 
   controller.disconnect()
   assert.equal(destroyed, true)
+
+  delete global.IMask
 })
 
-test("connect does nothing when no pattern is provided", async () => {
+test("connect does nothing when no pattern is provided", () => {
   const controller = buildController({ hasPattern: false })
-  let libraryLoaded = false
+  let called = false
 
-  controller.loadMaskLibrary = async () => {
-    libraryLoaded = true
-    return () => ({})
+  global.IMask = () => {
+    called = true
+    return {}
   }
 
-  await controller.connect()
-  assert.equal(libraryLoaded, false)
+  controller.connect()
+  assert.equal(called, false)
+
+  delete global.IMask
+})
+
+test("connect does nothing when IMask is not loaded", () => {
+  const controller = buildController()
+  delete global.IMask
+
+  controller.connect()
+  assert.equal(controller.mask, undefined)
 })
