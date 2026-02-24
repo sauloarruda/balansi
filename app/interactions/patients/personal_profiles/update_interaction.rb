@@ -1,6 +1,15 @@
 module Patients
   module PersonalProfiles
     class UpdateInteraction < ActiveInteraction::Base
+      PERMITTED_PROFILE_ATTRIBUTES = %i[
+        gender
+        birth_date
+        weight_kg
+        height_cm
+        phone_country
+        phone_national_number
+      ].freeze
+
       object :patient, class: Patient
       object :profile_params, class: ActionController::Parameters
 
@@ -45,20 +54,13 @@ module Patients
 
       def assign_form_inputs
         @birth_date_input = profile_attributes[:birth_date]
-        @phone_country = normalize_phone_country(profile_attributes[:phone_country])
+        @phone_country = Patients::PersonalProfiles::PhoneLocalization.normalize_country(profile_attributes[:phone_country])
         @phone_national_number = profile_attributes[:phone_national_number].to_s
       end
 
       def profile_attributes
         @profile_attributes ||= begin
-          permitted_params = profile_params.permit(
-            :gender,
-            :birth_date,
-            :weight_kg,
-            :height_cm,
-            :phone_country,
-            :phone_national_number
-          )
+          permitted_params = profile_params.permit(*PERMITTED_PROFILE_ATTRIBUTES)
 
           permitted_params.to_h.symbolize_keys
         end
@@ -80,7 +82,7 @@ module Patients
           return
         end
 
-        parsed_phone = Phonelib.parse(phone_national_number, phone_country)
+        parsed_phone = Patients::PersonalProfiles::PhoneLocalization.parse_local_input(phone_national_number, phone_country)
         if parsed_phone.valid?
           patient.phone_e164 = parsed_phone.full_e164
           true
@@ -88,18 +90,6 @@ module Patients
           patient.phone_e164 = "invalid"
           false
         end
-      end
-
-      def normalize_phone_country(raw_country)
-        country_code = raw_country.to_s.upcase
-        return default_phone_country if country_code.blank?
-        return country_code if country_code.match?(/\A[A-Z]{2}\z/)
-
-        default_phone_country
-      end
-
-      def default_phone_country
-        "BR"
       end
 
       def copy_patient_errors_to_interaction
