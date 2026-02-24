@@ -16,6 +16,11 @@ Rails.application.routes.draw do
   get "/auth/sign_in", to: "auth/sessions#new", as: :auth_login_path
   delete "/auth/sign_out", to: "auth/sessions#destroy"
 
+  scope module: :patients, path: "patient", as: :patient do
+    resource :personal_profile, only: [ :show, :update ]
+    resource :clinical_assessment, only: [ :show, :update ]
+  end
+
   # Journal routes
   resources :journals, param: :date, constraints: { date: /\d{4}-\d{2}-\d{2}/ }, only: [ :index, :show ] do
     collection do

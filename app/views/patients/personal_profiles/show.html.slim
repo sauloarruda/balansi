@@ -1,0 +1,37 @@
+- content_for :title, t("patient_personal_profile.show.title")
+- content_for :head do
+  link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.3/build/css/intlTelInput.css"
+  script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.3/build/js/intlTelInput.min.js"
+
+h1.text-3xl.font-bold.mb-2 = t("patient_personal_profile.show.title")
+p.text-gray-600.mb-6
+  = t("patient_personal_profile.show.description")
+
+.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6 data-controller="phone-input"
+  = form_with model: @patient, url: patient_personal_profile_path, method: :patch, local: true, class: "space-y-6" do |f|
+    = render "shared/form_error_alert", form: f
+
+    .grid.grid-cols-1.md:grid-cols-2.gap-6
+      div
+        = f.label :gender, t("patient_personal_profile.show.gender")
+        = f.select :gender, options_for_select([[t("patient_personal_profile.show.gender_options.male"), "male"], [t("patient_personal_profile.show.gender_options.female"), "female"]], @patient.gender), { include_blank: t("patient_personal_profile.show.gender_select_placeholder") }, { required: true }
+
+      div
+        = f.label :birth_date, t("patient_personal_profile.show.birth_date")
+        = f.text_field :birth_date, value: @birth_date_input, placeholder: t("patient_personal_profile.show.birth_date_placeholder"), pattern: t("patient_personal_profile.show.birth_date_pattern"), required: true, data: { controller: "masked-input", masked_input_pattern_value: t("patient_personal_profile.show.birth_date_mask") }
+
+      div
+        = f.label :weight_kg, t("patient_personal_profile.show.weight_kg")
+        = f.number_field :weight_kg, step: 1.0, min: Patient::WEIGHT_KG_MIN, max: Patient::WEIGHT_KG_MAX, required: true
+
+      div
+        = f.label :height_cm, t("patient_personal_profile.show.height_cm")
+        = f.number_field :height_cm, step: 1.0, min: Patient::HEIGHT_CM_MIN, max: Patient::HEIGHT_CM_MAX, required: true
+
+      .md:col-span-2.patient-personal-profile-phone
+        = f.label :phone_national_number, t("patient_personal_profile.show.phone_national_number")
+        = f.hidden_field :phone_country, value: @phone_country, data: { phone_input_target: "country" }
+        = f.telephone_field :phone_national_number, value: @phone_national_number, placeholder: t("patient_personal_profile.show.phone_national_number_placeholder"), required: true, data: { phone_input_target: "number", action: "input->phone-input#numberChanged blur->phone-input#numberChanged" }
+
+    .pt-4.border-t.border-gray-200
+      = f.submit t("patient_personal_profile.show.submit"), tone: :pink, size: :sm, class: "w-full sm:w-auto"

@@ -205,6 +205,32 @@ pt:
       daily_feedback: "Feedback Diário"
       what_went_well: "O que foi bem:"
       what_to_improve: "O que melhorar:"
+  patient_personal_profile:
+    show:
+      title: "Complete seu perfil"
+      description: "Você precisa completar seus dados pessoais antes de acessar o restante do sistema."
+      gender: "Gênero"
+      gender_select_placeholder: "Selecione o gênero"
+      gender_options:
+        male: "Masculino"
+        female: "Feminino"
+      birth_date: "Data de nascimento (DD/MM/AAAA)"
+      birth_date_order: "DMY"
+      birth_date_format: "%d/%m/%Y"
+      birth_date_mask: "00/00/0000"
+      birth_date_placeholder: "31/01/1990"
+      birth_date_pattern: "[0-9]{2}/[0-9]{2}/[0-9]{4}"
+      weight_kg: "Peso (kg)"
+      height_cm: "Altura (cm)"
+      phone_country: "País"
+      phone_national_number: "Número do WhatsApp"
+      phone_national_number_placeholder: "(11) 99999-9999"
+      submit: "Salvar e continuar"
+    messages:
+      gate_required: "Complete seu perfil antes de continuar."
+      completed_success: "Perfil concluído com sucesso."
+      birth_date_invalid: "A data de nascimento deve seguir o formato do idioma selecionado."
+      phone_invalid: "Número de telefone inválido para o país selecionado."
 
   exercises:
     show:
@@ -317,11 +343,24 @@ pt:
       llm_unavailable: "Não foi possível analisar sua refeição agora. Tente novamente."
       exercise_llm_unavailable: "Não foi possível analisar seu exercício agora. Tente novamente."
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
+  forms:
+    errors:
+      alert: "Existem erros no preenchimento."
   activerecord:
     models:
+      patient:
+        one: "Paciente"
+        other: "Pacientes"
       meal:
         one: "Refeição"
         other: "Refeições"
       exercise:
         one: "Exercício"
         other: "Exercícios"
+    attributes:
+      patient:
+        gender: "Gênero"
+        birth_date: "Data de nascimento"
+        weight_kg: "Peso (kg)"
+        height_cm: "Altura (cm)"
+        phone_e164: "Número do WhatsApp"

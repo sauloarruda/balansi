@@ -13,4 +13,10 @@ export PORT="${PORT:-3000}"
 export RUBY_DEBUG_OPEN="true"
 export RUBY_DEBUG_LAZY="true"
 
+# Prevent stale precompiled assets from overriding watched builds in development.
+if [ -f public/assets/.manifest.json ]; then
+  echo "Removing stale public/assets/.manifest.json..."
+  rm -f public/assets/.manifest.json
+fi
+
 exec foreman start -f Procfile.dev "$@"
