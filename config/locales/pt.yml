@@ -420,3 +420,6 @@ pt:
         bmr: "TMB (kcal)"
         steps_goal: "Meta de passos"
         hydration_goal: "Meta de hidratação (ml)"
+    errors:
+      messages:
+        not_in_future: "não pode ser no futuro"

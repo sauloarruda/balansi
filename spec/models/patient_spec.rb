@@ -140,6 +140,17 @@ RSpec.describe Patient, type: :model do
       expect(patient.age_in_years_and_months).to be_nil
     end
 
+    it "returns nil for age when birth_date is in the future" do
+      patient = build(:patient, birth_date: Date.current + 1)
+      expect(patient.age_in_years_and_months).to be_nil
+    end
+
+    it "is invalid when birth_date is in the future" do
+      patient = build(:patient, birth_date: Date.current + 1)
+      expect(patient).to be_invalid
+      expect(patient.errors[:birth_date]).to be_present
+    end
+
     it "computes BMI from weight and height" do
       patient = build(:patient, weight_kg: 70, height_cm: 170)
       expect(patient.bmi).to eq(24.2)
@@ -155,6 +166,8 @@ RSpec.describe Patient, type: :model do
       expect(build(:patient, weight_kg: 70, height_cm: 170).bmi_category).to eq(:normal)
       expect(build(:patient, weight_kg: 80, height_cm: 170).bmi_category).to eq(:overweight)
       expect(build(:patient, weight_kg: 95, height_cm: 170).bmi_category).to eq(:obesity_1)
+      expect(build(:patient, weight_kg: 115, height_cm: 170).bmi_category).to eq(:obesity_2)
+      expect(build(:patient, weight_kg: 130, height_cm: 170).bmi_category).to eq(:obesity_3)
     end
 
     it "returns normal_bmi_weight_range for height" do

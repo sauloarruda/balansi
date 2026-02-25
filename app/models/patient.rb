@@ -34,6 +34,9 @@ class Patient < ApplicationRecord
   validates :height_cm,
     numericality: { greater_than_or_equal_to: HEIGHT_CM_MIN, less_than_or_equal_to: HEIGHT_CM_MAX },
     allow_nil: true
+  validates :birth_date,
+    comparison: { less_than_or_equal_to: -> { Date.current }, message: :not_in_future },
+    allow_nil: true
   validates :daily_calorie_goal, numericality: { greater_than: 0, less_than: 50_000 }, allow_nil: true
   validates :bmr, numericality: { greater_than: 0, less_than: 10_000 }, allow_nil: true
   validates :steps_goal, numericality: { greater_than: 0, less_than: 100_000 }, allow_nil: true
@@ -52,12 +55,12 @@ class Patient < ApplicationRecord
     PERSONAL_PROFILE_REQUIRED_FIELDS.all? { |field| public_send(field).present? }
   end
 
-  # Returns { years: N, months: N } or nil if birth_date is blank.
+  # Returns { years: N, months: N } or nil if birth_date is blank or in the future.
   def age_in_years_and_months
-    return nil unless birth_date.present?
+    return nil if birth_date.blank?
 
     today = Time.zone.today
-    return { years: 0, months: 0 } if birth_date >= today
+    return nil if birth_date > today
 
     months = (today.year * 12 + today.month) - (birth_date.year * 12 + birth_date.month)
     months -= 1 if today.day < birth_date.day

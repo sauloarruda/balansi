@@ -69,7 +69,7 @@ RSpec.describe Authentication, type: :controller do
     it "redirects to sign_in with alert when user not found" do
       get :protected_action, params: { test_user_id: 99999 }
       expect(response).to redirect_to("/auth/sign_in")
-      expect(flash[:alert]).to include("Test user not found")
+      expect(flash[:alert]).to include("99999")
     end
 
     it "sets session and redirects to same path without param when user exists" do

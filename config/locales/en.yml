@@ -372,3 +372,6 @@ en:
         bmr: "BMR (kcal)"
         steps_goal: "Steps goal"
         hydration_goal: "Hydration goal (ml)"
+    errors:
+      messages:
+        not_in_future: "cannot be in the future"
