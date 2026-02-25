@@ -22,15 +22,23 @@ module Authentication
   private
 
   # In development, allow signing in via ?test_user_id=ID without Cognito.
-  # Sets session and redirects to the same path without the param.
-  # Only called when development_test_user_login_enabled? returns true.
+  # When the user is not found, sets a flash alert and redirects back to the
+  # sign-in page (without the param) so the error is shown there instead of
+  # bouncing the user to Cognito.
   def development_test_user_login!
-    session[:user_id] = development_test_user.id
+    user = development_test_user
+
+    if user.nil?
+      flash[:alert] = "Test user #{params[:test_user_id]} not found"
+      redirect_to "/auth/sign_in" and return
+    end
+
+    session[:user_id] = user.id
     session.delete(:refresh_token)
 
     target_url = if request.path.match?(%r{/auth/(sign_in|sign_up)})
       # Avoid staying on auth page (which would redirect to Cognito)
-      development_test_user.professional.present? ? professional_patients_path : root_path
+      user.professional.present? ? professional_patients_path : root_path
     elsif request.query_parameters.except("test_user_id").any?
       "#{request.path}?#{request.query_parameters.except("test_user_id").to_query}"
     else
@@ -40,11 +48,13 @@ module Authentication
   end
 
   def development_test_user_login_enabled?
-    Rails.env.development? && request.get? && development_test_user.present?
+    Rails.env.development? && request.get? && params[:test_user_id].present?
   end
 
   def development_test_user
-    @development_test_user ||= params[:test_user_id].present? && User.find_by(id: params[:test_user_id])
+    return @development_test_user if defined?(@development_test_user)
+
+    @development_test_user = params[:test_user_id].present? ? User.find_by(id: params[:test_user_id]) : nil
   end
 
   # Get the currently authenticated user from session

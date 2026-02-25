@@ -14,7 +14,7 @@ Rails.application.routes.draw do
   get "/auth/callback", to: "auth/callbacks#show"
   get "/auth/sign_up", to: "auth/sessions#new"
   get "/auth/sign_in", to: "auth/sessions#new", as: :auth_login_path
-  get "/auth/sign_out", to: "auth/sessions#destroy"
+  delete "/auth/sign_out", to: "auth/sessions#destroy", as: :auth_sign_out
 
   scope module: :patients, path: "patient", as: :patient do
     resource :personal_profile, only: [ :show, :update ]
