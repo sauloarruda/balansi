@@ -62,3 +62,7 @@ Wait for user decision on which findings to apply.
 - Prefer specific, actionable recommendations over generic comments
 - Reference concrete files and code locations for each issue
 - Keep tone factual and concise
+
+### Local auth bypass for verification
+
+When reproducing or testing auth-protected flows locally, start the dev server and append `?test_user_id=<id>` to the target GET path. The [Development test users](README.md#development-test-users-ai-testing) section explains how to obtain a development user ID and how the [Authentication concern](app/controllers/concerns/authentication.rb#L1-L60) honors the parameter in Rails only during development.
