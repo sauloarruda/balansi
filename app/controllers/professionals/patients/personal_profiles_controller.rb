@@ -1,10 +1,6 @@
 module Professionals
   module Patients
-    class PersonalProfilesController < Professionals::BaseController
-      before_action :set_patient
-      before_action :authorize_access!
-      before_action :authorize_owner!
-
+    class PersonalProfilesController < Professionals::Patients::BaseController
       def edit
         assign_form_inputs_from_patient
       end
@@ -27,22 +23,6 @@ module Professionals
       end
 
       private
-
-      def set_patient
-        @patient = Patient.find(params[:patient_id])
-      end
-
-      def authorize_access!
-        return if current_professional.can_access?(@patient)
-
-        head :forbidden
-      end
-
-      def authorize_owner!
-        return if current_professional.owner_of?(@patient)
-
-        head :forbidden
-      end
 
       def personal_profile_params
         params.require(:patient).permit(*::Patients::PersonalProfiles::UpdateInteraction::PERMITTED_PROFILE_ATTRIBUTES)

@@ -1,10 +1,6 @@
 module Professionals
   module Patients
-    class ClinicalAssessmentsController < Professionals::BaseController
-      before_action :set_patient
-      before_action :authorize_access!
-      before_action :authorize_owner!
-
+    class ClinicalAssessmentsController < Professionals::Patients::BaseController
       def edit
       end
 
@@ -25,26 +21,10 @@ module Professionals
 
       private
 
-      def set_patient
-        @patient = Patient.find(params[:patient_id])
-      end
-
-      def authorize_access!
-        return if current_professional.can_access?(@patient)
-
-        head :forbidden
-      end
-
-      def authorize_owner!
-        return if current_professional.owner_of?(@patient)
-
-        head :forbidden
-      end
-
       def assessment_params
         params.require(:patient).permit(
           *Professionals::Patients::ClinicalAssessments::UpdateInteraction::PERMITTED_ATTRIBUTES
-        )
+        ).to_h
       end
     end
   end
