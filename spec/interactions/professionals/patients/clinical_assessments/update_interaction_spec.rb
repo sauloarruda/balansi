@@ -7,7 +7,7 @@ RSpec.describe Professionals::Patients::ClinicalAssessments::UpdateInteraction, 
   let(:patient) { create(:patient, professional: professional) }
 
   def assessment_params(attrs)
-    ActionController::Parameters.new(attrs)
+    attrs.stringify_keys
   end
 
   it "updates clinical assessment and clinical_assessment_last_updated_at when professional is owner" do
