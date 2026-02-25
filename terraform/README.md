@@ -171,7 +171,7 @@ This will output:
      client_secret: xxxxxxxxxxxxxxxxxxxxxx  # From terraform output (cognito_client_secret)
      domain: balansi-dev-xxxxx  # From terraform output (cognito_domain) - just the domain name
      region: sa-east-1  # From terraform output (cognito_region)
-     redirect_uri: http://localhost:3000/auth/callback
+   redirect_uri: http://localhost:4000/auth/callback
      logout_uri: http://localhost:3000
    ```
    
