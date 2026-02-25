@@ -29,6 +29,11 @@
 
 en:
   hello: "Hello world"
+  number:
+    format:
+      separator: "."
+      delimiter: ","
+      precision: 1
   defaults:
     confirm_delete: "Are you sure?"
     protein: "protein"
@@ -72,6 +77,9 @@ en:
   date:
     formats:
       long: "%B %d, %Y"
+  time:
+    formats:
+      long: "%B %d, %Y %H:%M"
   journals:
     navigation:
       title: "Daily Journal"
@@ -183,6 +191,51 @@ en:
       completed_success: "Profile completed successfully."
       birth_date_invalid: "Birth date must follow the selected language format."
       phone_invalid: "Phone number is invalid for the selected country."
+  professional:
+    patients:
+      index:
+        title: "Patients"
+        empty: "No patients linked yet."
+        owner_badge: "Owner"
+        shared_badge: "Shared access"
+      show:
+        title: "Patient profile"
+        personal_profile: "Personal profile"
+        clinical_assessment: "Clinical assessment"
+        profile_updated_at: "Profile updated on %{date}"
+        assessment_updated_at: "Assessment updated on %{date}"
+        edit_personal_profile: "Edit profile"
+        edit_clinical_assessment: "Edit clinical assessment"
+        bmi: "BMI"
+        bmi_current_range: "Current range"
+        weight_to_lose: "Weight to lose to reach normal range: %{kg} kg"
+        weight_to_gain: "Weight to gain to reach normal range: %{kg} kg"
+        bmi_chart_title: "Position in BMI range"
+        bmi_ideal_range_label: "Weight ranges for your height"
+        bmi_table_faixa: "Range"
+        bmi_table_peso_kg: "Weight (kg)"
+        bmi_you_are_here: "You are here"
+        bmi_kg: "kg"
+        bmi_category:
+          underweight: "Underweight"
+          normal: "Normal"
+          overweight: "Overweight"
+          obesity_1: "Obesity 1"
+          obesity_2: "Obesity 2"
+          obesity_3: "Obesity 3"
+        age_years_months: "%{years} years and %{months} months"
+      personal_profile:
+        edit:
+          title: "Edit personal profile"
+          submit: "Save profile"
+        update:
+          success: "Personal profile updated successfully."
+      clinical_assessment:
+        edit:
+          title: "Edit clinical assessment"
+          submit: "Save clinical assessment"
+        update:
+          success: "Clinical assessment updated successfully."
   exercises:
     show:
       title: "Review Exercise"
@@ -315,3 +368,7 @@ en:
         weight_kg: "Weight (kg)"
         height_cm: "Height (cm)"
         phone_e164: "WhatsApp number"
+        daily_calorie_goal: "Daily calorie goal (kcal)"
+        bmr: "BMR (kcal)"
+        steps_goal: "Steps goal"
+        hydration_goal: "Hydration goal (ml)"

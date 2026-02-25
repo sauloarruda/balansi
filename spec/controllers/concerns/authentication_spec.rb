@@ -55,4 +55,28 @@ RSpec.describe Authentication, type: :controller do
       expect(response).to have_http_status(:success)
     end
   end
+
+  describe "development test user login (?test_user_id=)" do
+    before do
+      allow(Rails.env).to receive(:development?).and_return(true)
+    end
+
+    it "does not run when test_user_id is blank" do
+      get :protected_action
+      expect(response).to redirect_to("/auth/sign_in")
+    end
+
+    it "redirects to sign_in with alert when user not found" do
+      get :protected_action, params: { test_user_id: 99999 }
+      expect(response).to redirect_to("/auth/sign_in")
+      expect(flash[:alert]).to include("Test user not found")
+    end
+
+    it "sets session and redirects to same path without param when user exists" do
+      create(:patient, user: user)
+      get :protected_action, params: { test_user_id: user.id }
+      expect(response).to redirect_to("/protected_action")
+      expect(session[:user_id]).to eq(user.id)
+    end
+  end
 end

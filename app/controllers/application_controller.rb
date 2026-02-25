@@ -27,6 +27,10 @@ class ApplicationController < ActionController::Base
     return if current_user.nil?
     return if current_patient
 
+    if current_user.professional.present?
+      redirect_to professional_patients_path and return
+    end
+
     head :forbidden
   end
 

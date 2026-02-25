@@ -1,0 +1,38 @@
+- content_for :title, t("professional.patients.clinical_assessment.edit.title")
+
+nav.rounded-lg.mb-4 aria-label="Breadcrumb"
+  ol.flex.flex-wrap.items-center.gap-2.text-sm.text-gray-500
+    li.flex.items-center
+      = link_to t("professional.patients.index.title"), professional_patients_path, class: "hover:text-blue-600"
+      svg.mx-1.w-4.h-4 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+        path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"
+    li.flex.items-center
+      = link_to @patient.user.name, professional_patient_path(@patient), class: "hover:text-blue-600"
+      svg.mx-1.w-4.h-4 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+        path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"
+    li
+      span.font-medium.text-gray-900 = t("professional.patients.clinical_assessment.edit.title")
+
+h1.text-3xl.font-bold.mb-2 = t("professional.patients.clinical_assessment.edit.title")
+p.text-gray-600.mb-6 = @patient.user.name
+
+.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
+  = form_with model: @patient, url: professional_patient_clinical_assessment_path(@patient), method: :patch, local: true, class: "space-y-6" do |f|
+    = render "shared/form_error_alert", form: f
+
+    .grid.grid-cols-1.md:grid-cols-2.gap-6
+      div
+        = f.label :daily_calorie_goal, Patient.human_attribute_name(:daily_calorie_goal)
+        = f.number_field :daily_calorie_goal, min: 1, max: 49999, step: 1, class: "mt-1"
+      div
+        = f.label :bmr, Patient.human_attribute_name(:bmr)
+        = f.number_field :bmr, min: 1, max: 9999, step: 1, class: "mt-1"
+      div
+        = f.label :steps_goal, Patient.human_attribute_name(:steps_goal)
+        = f.number_field :steps_goal, min: 1, max: 99999, step: 1, class: "mt-1"
+      div
+        = f.label :hydration_goal, Patient.human_attribute_name(:hydration_goal)
+        = f.number_field :hydration_goal, min: 1, max: 19999, step: 1, class: "mt-1"
+
+    .pt-4.border-t.border-gray-200
+      = f.submit t("professional.patients.clinical_assessment.edit.submit"), tone: :blue, size: :sm, class: "w-full sm:w-auto"
