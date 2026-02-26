@@ -42,7 +42,25 @@ RSpec.describe Patients::PersonalProfilesController, type: :controller do
       get :show
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(patient.user.name)
+      # should *not* include the professionals-only clinical assessment section
+      expect(response.body).not_to include(I18n.t("professional.patients.show.clinical_assessment"))
+      expect(response.body).to include(I18n.t("professional.patients.show.personal_profile"))
+    end
+    it "renders edit form when profile complete but edit param present" do
+      patient.update!(
+        gender: "female",
+        birth_date: Date.new(1990, 1, 1),
+        weight_kg: 70.0,
+        height_cm: 170.0,
+        phone_e164: "+5511999999999",
+        profile_completed_at: Time.zone.local(2026, 2, 5, 10, 0, 0),
+        profile_last_updated_at: Time.zone.local(2026, 2, 5, 10, 0, 0)
+      )
+
+      get :show, params: { edit: "true" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(I18n.t("patient_personal_profile.show.title"))
     end
   end
 
