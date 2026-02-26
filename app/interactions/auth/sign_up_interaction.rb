@@ -177,9 +177,9 @@ module Auth
       return professional if professional.present?
 
       if defaulted
-        errors.add(:base, "No professionals available for patient assignment")
+        errors.add(:base, I18n.t("auth.sign_up.errors.no_professionals_available_for_patient_assignment"))
       else
-        errors.add(:base, "Invalid professional signup context")
+        errors.add(:base, I18n.t("auth.sign_up.errors.invalid_professional_signup_context"))
       end
 
       log_missing_professional_context(professional_id, defaulted)

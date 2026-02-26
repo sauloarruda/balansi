@@ -223,7 +223,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("No professionals available for patient assignment")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.no_professionals_available_for_patient_assignment")
+          )
         end
 
         it "fails when professional_id is not numeric" do
@@ -233,7 +235,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
 
         it "fails when professional_id does not exist" do
@@ -243,7 +247,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
       end
 
@@ -459,7 +465,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
 
         it "rejects signup context when parse_professional_id raises URI::InvalidURIError" do
@@ -472,7 +480,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
 
         it "handles RecordInvalid exception when creating patient" do

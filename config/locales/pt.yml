@@ -397,6 +397,11 @@ pt:
       llm_unavailable: "Não foi possível analisar sua refeição agora. Tente novamente."
       exercise_llm_unavailable: "Não foi possível analisar seu exercício agora. Tente novamente."
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
+  auth:
+    sign_up:
+      errors:
+        invalid_professional_signup_context: "Contexto de cadastro profissional inválido"
+        no_professionals_available_for_patient_assignment: "Nenhum profissional disponível para vincular o paciente"
   forms:
     errors:
       alert: "Existem erros no preenchimento."
