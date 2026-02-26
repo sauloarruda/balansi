@@ -2,11 +2,11 @@
 
 ## 1. Architecture Overview
 
-The Professional Area introduces ownership-aware access control for patient data, professional-led onboarding, and mandatory patient personal data completion on first login.
+The Professional Area introduces ownership-aware access control for patient data, signup-based onboarding with temporary default owner assignment, and mandatory patient personal data completion on first login.
 
 **Key Components:**
 - **Frontend**: Rails views for professional patient list, patient profile, sharing, and first-login completion gate.
-- **Backend**: Ruby on Rails (authorization, onboarding link context, field-level update rules).
+- **Backend**: Ruby on Rails (authorization, onboarding owner assignment, field-level update rules).
 - **Database**: PostgreSQL (`professionals`, evolved `patients`, `patient_professional_accesses`).
 - **Observability**: Structured Rails logs aggregated in CloudWatch reports/dashboards.
 
@@ -291,9 +291,10 @@ These events back PRD success metrics for:
 
 This ERD defines a practical implementation path from single-professional patient linkage to:
 - owner + shared professional access,
-- onboarding by signup link context,
+- onboarding by signup with owner assignment,
 - patient-first completion gate,
-- and clear field-level ownership between patient and owner professional.
+- clear field-level ownership between patient and owner professional,
+- and a future phase for professional personal signup links.
 
 ---
 
@@ -330,19 +331,17 @@ Actual files changed (Phase 1):
 
 ### Phase 2 — Owner Assignment in Signup Flow ✅ **Completed**
 
-- Support signup link with professional context.
+- Support signup onboarding with optional professional context.
 - On patient signup completion, set owner in `patients.professional_id`.
 
 Exit criteria:
-- [x] patient created from link is linked to expected owner professional
-- [x] invalid/missing professional context is rejected safely
+- [x] patient created from signup is linked to expected owner professional when context is present
+- [x] missing professional context defaults owner assignment to first professional
 
 Implementation notes:
-- Removed implicit fallback owner assignment (`professional_id = 1`) from signup context parsing.
-- Enforced strict professional-context validation for new patient creation:
-  - `professional_id` must be present in callback business state,
-  - must parse as a positive integer,
-  - and must resolve to an existing `Professional`.
+- For this phase, owner assignment accepts optional signup context:
+  - when `professional_id` is present and valid, that professional becomes owner,
+  - when context is missing, owner defaults to the first professional.
 - Preserved authentication for existing users who already have a patient profile, even when callback state has no professional context.
 
 Actual files changed (Phase 2):
@@ -421,6 +420,15 @@ Exit criteria:
 Exit criteria:
 - critical flows pass and acceptance criteria are met
 
+### Phase 8 — Professional Personal Signup Link (Planned)
+
+- Add a professional personal signup link that always carries professional ownership context.
+- Keep backward compatibility with current signup flow while rolling out personal links.
+
+Exit criteria:
+- professionals can generate and share their own personal signup link
+- patients created through personal link are assigned to the link professional
+
 ---
 
 ## 11. References
@@ -431,6 +439,6 @@ Exit criteria:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2026-02-20  
+**Document Version**: 1.1  
+**Last Updated**: 2026-02-26  
 **Status**: Draft - Pending Review

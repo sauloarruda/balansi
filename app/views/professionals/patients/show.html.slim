@@ -19,7 +19,7 @@ h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
       - if current_professional&.owner_of?(@patient)
         = link_to edit_professional_patient_personal_profile_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
           = t("professional.patients.show.edit_personal_profile")
-      - if current_patient == @patient
+      - if current_patient == @patient && !current_professional&.owner_of?(@patient)
         = link_to patient_personal_profile_path(edit: true), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
           = t("professional.patients.show.edit_personal_profile")
   .grid.grid-cols-1.md:grid-cols-2.gap-6

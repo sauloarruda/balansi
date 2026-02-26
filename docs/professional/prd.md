@@ -6,11 +6,12 @@ The **Professional Area** enables healthcare professionals to manage patient pro
 
 In v1, the module introduces:
 - read-only access to patient records for authorized professionals,
-- split profile ownership:
+- split profile ownership with temporary owner flexibility:
   - patient-managed personal fields,
   - owner professional-managed clinical goal fields,
+  - owner professional can also edit personal fields in this phase,
 - support for sharing patient access with additional professionals,
-- professional-context patient onboarding via signup link,
+- patient onboarding via signup link (professional context optional in this phase),
 - a professional patient list with ownership visibility (owner vs shared),
 - profile metadata showing the latest profile update timestamp,
 - and mandatory profile completion by the patient on first login before accessing the system.
@@ -23,9 +24,9 @@ In v1, the module introduces:
 
 - Allow an authorized professional to view all records of their patient in read-only mode.
 - Allow a patient to grant access to an additional professional without removing access from the existing one.
-- Allow professionals to share a signup link for initial patient account creation (name, email, password) with professional context.
+- Allow professionals to share a signup link for initial patient account creation (name, email, password).
 - Provide a patient list for professionals with clear ownership status (owner vs shared access).
-- Allow the owner professional to create and maintain only professional-managed profile fields.
+- Allow the owner professional to create and maintain professional-managed profile fields and, temporarily in this phase, patient-managed personal fields.
 - Allow the patient to edit only patient-managed personal fields.
 - Enforce a first-login completion gate until required patient-managed fields are filled.
 - Track and display the latest profile update timestamp.
@@ -47,6 +48,7 @@ In v1, the module introduces:
 - Wants: full control over patient profile setup and updates.
 - Needs:
   - edit permission for professional-managed clinical goal fields,
+  - temporary edit permission for patient-managed personal fields in this phase,
   - read-only access to all patient records.
 
 ### 3.2 Additional Professional (Shared Access)
@@ -74,9 +76,10 @@ In v1, the module introduces:
 - Professional read-only access to patient records.
 - Split profile edit ownership:
   - patient edits patient-managed personal fields,
-  - owner professional edits professional-managed clinical goal fields.
+  - owner professional edits professional-managed clinical goal fields,
+  - owner professional can also edit patient-managed personal fields (temporary v1 phase decision).
 - Patient profile read-only access for additional professionals.
-- Professional-context signup link for patient initial signup (without invite lifecycle table).
+- Signup link for patient initial signup (without invite lifecycle table), with owner assignment defaulting to the first professional when context is not provided.
 - Patient action to grant access to a new professional without revoking prior grants.
 - Professional patient list showing relationship type:
   - owner patients
@@ -127,7 +130,7 @@ In v1, the module introduces:
 
 ### 5.3 Patient Profile Management
 
-- **FR-PM-01**: The owner professional can create and edit only professional-managed clinical goal fields:
+- **FR-PM-01**: The owner professional can create and edit professional-managed clinical goal fields:
   - `daily_calorie_goal`
   - `bmr`
   - `steps_goal`
@@ -141,7 +144,7 @@ In v1, the module introduces:
   - `height_cm` (cm, minimum and maximum enforced)
   - `phone_e164` (single international number including country code, validated and normalized)
 - **FR-PM-05**: The patient cannot edit professional-managed clinical goal fields.
-- **FR-PM-06**: The owner professional cannot edit patient-managed personal fields.
+- **FR-PM-06**: In this phase, the owner professional can also edit patient-managed personal fields (`gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`).
 - **FR-PM-07**: Profile updates must be visible immediately to all users with profile read access.
 - **FR-PM-08**: The system must track the latest profile update timestamp in `profile_last_updated_at`.
 - **FR-PM-09**: The profile screen must display `profile_last_updated_at` to users with profile read access.
@@ -150,7 +153,7 @@ In v1, the module introduces:
 
 - **FR-OW-01**: Each patient has exactly one owner professional.
 - **FR-OW-02**: Edit permission for professional-managed clinical goal fields is granted only to the owner professional.
-- **FR-OW-03**: Edit permission for patient-managed personal fields is granted only to the patient.
+- **FR-OW-03**: Edit permission for patient-managed personal fields is granted to the patient and, temporarily in this phase, to the owner professional.
 - **FR-OW-04**: Read permission for patient profile is granted to:
   - owner professional
   - additional linked professionals
@@ -168,8 +171,8 @@ In v1, the module introduces:
 
 - **FR-ON-01**: A professional must be able to share a signup link for patient onboarding.
 - **FR-ON-02**: The signup flow must collect at least name, email, and password.
-- **FR-ON-03**: When signup is completed through this link, the linked professional becomes the owner professional for that patient.
-- **FR-ON-04**: In v1, no invite token lifecycle is required; onboarding can rely on a direct signup link with professional context.
+- **FR-ON-03**: In this phase, when signup is completed, owner assignment defaults to the first professional when no professional context is provided in the link.
+- **FR-ON-04**: In v1, no invite token lifecycle is required; onboarding can rely on a direct signup link.
 
 ### 5.7 First-Login Mandatory Profile Completion
 
@@ -190,7 +193,7 @@ In v1, the module introduces:
 ### 6.1 Flow: Owner Professional Updates Patient Profile
 
 1. Owner professional opens patient profile.
-2. System shows editable form only for professional-managed clinical goal fields.
+2. System shows editable form for professional-managed clinical goal fields and, in this phase, patient-managed personal fields.
 3. Professional updates one or more profile fields.
 4. Professional saves changes.
 5. System validates, persists, updates `profile_last_updated_at`, and confirms update.
@@ -220,9 +223,9 @@ In v1, the module introduces:
 
 ### 6.5 Flow: Patient Initial Signup via Professional Signup Link
 
-1. Professional shares signup link with professional context.
+1. Professional shares signup link (professional context optional in this phase).
 2. Patient opens link and fills name, email, and password.
-3. System creates patient account and links ownership to the professional from link context.
+3. System creates patient account and links ownership to the professional from link context when present; otherwise, links to the first professional.
 4. On first login, patient is sent to mandatory profile completion.
 5. Professional sees the new patient in the list as `owner`.
 
@@ -245,7 +248,7 @@ In v1, the module introduces:
 
 | Actor | Patient Records | Patient Profile (Read) | Edit Personal Fields (`gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`) | Edit Clinical Goal Fields (`daily_calorie_goal`, `bmr`, `steps_goal`, `hydration_goal`) | Share Access |
 |---|---|---|---|---|---|
-| Owner Professional | Yes (Read-only) | Yes | No | Yes | No |
+| Owner Professional | Yes (Read-only) | Yes | Yes (temporary in this phase) | Yes | No |
 | Additional Professional | Yes (Read-only) | Yes | No | No | No |
 | Patient | Own records (as defined in Journal/Auth modules) | Yes | Yes | No | Yes |
 
@@ -280,9 +283,9 @@ In v1, the module introduces:
 - After granting new access, previously linked professionals still retain access.
 - A patient can edit `gender`, `birth_date`, `weight_kg`, `height_cm`, and `phone_e164`.
 - A patient cannot edit `daily_calorie_goal`, `bmr`, `steps_goal`, or `hydration_goal`.
-- The owner professional cannot edit patient personal fields (`gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`).
+- The owner professional can edit patient personal fields (`gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`) in this phase.
 - A professional can see a patient list with each patient marked as `owner` or `shared access`.
-- A patient created through a professional signup link is linked to that professional as owner.
+- A patient created through signup is linked to the professional from link context when provided; otherwise linked to the first professional.
 - On first login, patient access to the rest of the system is blocked until required personal fields are completed and valid.
 - The profile screen shows `profile_last_updated_at`.
 
@@ -290,7 +293,7 @@ In v1, the module introduces:
 
 ## 10. Decisions for v1 and Future Versions
 
-1. Initial owner assignment in v1: patient onboarding starts from a professional signup link, and the linked professional is set as owner.
+1. Initial owner assignment in this phase: patient onboarding can use signup link context when available; otherwise ownership defaults to the first professional.
 2. Patient revocation of professional access: out of scope for v1, planned for a future version.
 3. Required patient personal fields in v1: `gender`, `birth_date`, `weight_kg`, `height_cm`, `phone_e164`.
 4. Field input rules in v1:
@@ -323,6 +326,6 @@ In v1, the module introduces:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2026-02-20  
+**Document Version**: 1.1  
+**Last Updated**: 2026-02-26  
 **Status**: Reviewed
