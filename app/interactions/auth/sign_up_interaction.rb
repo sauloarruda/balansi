@@ -166,7 +166,9 @@ module Auth
 
     def resolved_owner_professional
       professional_id = parse_professional_id
-      professional = if state.blank?
+      defaulted = state.blank?
+
+      professional = if defaulted
         Professional.order(:id).first
       else
         professional_from_id(professional_id)
@@ -174,8 +176,13 @@ module Auth
 
       return professional if professional.present?
 
-      errors.add(:base, "Invalid professional signup context")
-      log_missing_professional_context(professional_id, state.blank?)
+      if defaulted
+        errors.add(:base, "No professionals available for patient assignment")
+      else
+        errors.add(:base, "Invalid professional signup context")
+      end
+
+      log_missing_professional_context(professional_id, defaulted)
       nil
     end
 

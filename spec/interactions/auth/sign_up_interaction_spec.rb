@@ -214,6 +214,18 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
       context "professional signup context validation" do
         include_context "cognito stubs"
 
+        it "fails with specific error when no professionals exist and state is blank" do
+          Professional.delete_all
+
+          result = described_class.run(
+            code: valid_code,
+            state: nil
+          )
+
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include("No professionals available for patient assignment")
+        end
+
         it "fails when professional_id is not numeric" do
           result = described_class.run(
             code: valid_code,
