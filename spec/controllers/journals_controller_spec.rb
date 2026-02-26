@@ -155,6 +155,18 @@ RSpec.describe JournalsController, type: :controller do
     end
   end
 
+  describe "professional redirect" do
+    it "redirects to professional patients when user has professional and no patient" do
+      user = create(:user)
+      create(:professional, user: user)
+      session[:user_id] = user.id
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to redirect_to(professional_patients_path)
+    end
+  end
+
   describe "profile completion gate" do
     it "redirects to profile completion when patient profile is incomplete" do
       patient = Patient.find(2001)

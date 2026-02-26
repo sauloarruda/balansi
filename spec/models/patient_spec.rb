@@ -124,4 +124,72 @@ RSpec.describe Patient, type: :model do
       expect(incomplete_patient.personal_profile_completed?).to be false
     end
   end
+
+  describe "age and BMI helpers" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    it "returns age in years and months from birth_date" do
+      travel_to(Date.new(2026, 6, 15)) do
+        patient = build(:patient, birth_date: Date.new(1990, 1, 1))
+        expect(patient.age_in_years_and_months).to eq({ years: 36, months: 5 })
+      end
+    end
+
+    it "returns nil for age when birth_date is blank" do
+      patient = build(:patient, birth_date: nil)
+      expect(patient.age_in_years_and_months).to be_nil
+    end
+
+    it "returns nil for age when birth_date is in the future" do
+      patient = build(:patient, birth_date: Date.current + 1)
+      expect(patient.age_in_years_and_months).to be_nil
+    end
+
+    it "is invalid when birth_date is in the future" do
+      patient = build(:patient, birth_date: Date.current + 1)
+      expect(patient).to be_invalid
+      expect(patient.errors[:birth_date]).to be_present
+    end
+
+    it "computes BMI from weight and height" do
+      patient = build(:patient, weight_kg: 70, height_cm: 170)
+      expect(patient.bmi).to eq(24.2)
+    end
+
+    it "returns nil for BMI when weight or height missing" do
+      expect(build(:patient, weight_kg: nil, height_cm: 170).bmi).to be_nil
+      expect(build(:patient, weight_kg: 70, height_cm: nil).bmi).to be_nil
+    end
+
+    it "returns correct bmi_category" do
+      expect(build(:patient, weight_kg: 50, height_cm: 170).bmi_category).to eq(:underweight)
+      expect(build(:patient, weight_kg: 70, height_cm: 170).bmi_category).to eq(:normal)
+      expect(build(:patient, weight_kg: 80, height_cm: 170).bmi_category).to eq(:overweight)
+      expect(build(:patient, weight_kg: 95, height_cm: 170).bmi_category).to eq(:obesity_1)
+      expect(build(:patient, weight_kg: 115, height_cm: 170).bmi_category).to eq(:obesity_2)
+      expect(build(:patient, weight_kg: 130, height_cm: 170).bmi_category).to eq(:obesity_3)
+    end
+
+    it "returns normal_bmi_weight_range for height" do
+      patient = build(:patient, height_cm: 170)
+      min, max = patient.normal_bmi_weight_range
+      expect(min).to eq(53.5)
+      expect(max).to eq(72.0)
+    end
+
+    it "returns weight_difference_to_normal_kg (positive = to lose)" do
+      patient = build(:patient, weight_kg: 85, height_cm: 170)
+      expect(patient.weight_difference_to_normal_kg).to eq(13.0)
+    end
+
+    it "returns weight_difference_to_normal_kg (negative = to gain)" do
+      patient = build(:patient, weight_kg: 50, height_cm: 170)
+      expect(patient.weight_difference_to_normal_kg).to eq(-3.5)
+    end
+
+    it "returns nil for weight_difference when in normal range" do
+      patient = build(:patient, weight_kg: 65, height_cm: 170)
+      expect(patient.weight_difference_to_normal_kg).to be_nil
+    end
+  end
 end

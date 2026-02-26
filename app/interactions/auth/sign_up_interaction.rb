@@ -166,17 +166,31 @@ module Auth
 
     def resolved_owner_professional
       professional_id = parse_professional_id
-      if professional_id.blank?
-        errors.add(:base, "Invalid professional signup context")
-        return nil
+      professional = if state.blank?
+        Professional.order(:id).first
+      else
+        professional_from_id(professional_id)
       end
 
-      professional = Professional.find_by(id: professional_id)
       return professional if professional.present?
 
       errors.add(:base, "Invalid professional signup context")
-      Rails.logger.warn("Professional context rejected: professional_id=#{professional_id.inspect} not found")
+      log_missing_professional_context(professional_id, state.blank?)
       nil
+    end
+
+    def professional_from_id(professional_id)
+      return nil if professional_id.blank?
+
+      Professional.find_by(id: professional_id)
+    end
+
+    def log_missing_professional_context(professional_id, defaulted)
+      if defaulted
+        Rails.logger.warn("Professional context rejected: no professionals available for new signup")
+      else
+        Rails.logger.warn("Professional context rejected: professional_id=#{professional_id.inspect} not found")
+      end
     end
 
     def handle_patient_creation_error(error)

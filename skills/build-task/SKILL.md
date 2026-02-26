@@ -91,6 +91,8 @@ Run all relevant checks before requesting review:
 
 If any check fails, fix issues before moving forward.
 
+When verification touches authenticated routes, run the server locally and append `?test_user_id=<id>` to the target GET URL instead of navigating Cognito. The [Development test users](README.md#development-test-users-ai-testing) section explains how to locate a development user ID and how this bypass works in `app/controllers/concerns/authentication.rb` before code review.
+
 ### 5. Produce Review Artifact
 
 Invoke `$code-review` to review the current implementation diff and produce the review artifact.

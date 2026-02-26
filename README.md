@@ -110,3 +110,15 @@ COV=1 bundle exec rspec
 ```
 
 See the current README for detailed testing instructions.
+
+### Development test users (AI testing)
+
+When an AI-powered run or manual exploration needs to exercise authenticated routes without navigating the Cognito hosted UI, start the app locally (`bin/dev`). Append `?test_user_id=<id>` to any GET URL and the [Authentication concern](app/controllers/concerns/authentication.rb#L1-L60) intercepts that parameter in development, loads the matching user, clears the query parameter, and redirects back so the rest of your session runs against that account.
+
+Steps to use it safely:
+1. Find a user ID from the development database (for example, `bin/rails runner "puts User.first.id"` or inspect `db/seeds/development.rb`).
+2. Visit `http://localhost:3000/<protected_path>?test_user_id=<id>`; the user will be signed in for that request and redirected without the parameter.
+3. If the ID does not exist the concern redirects to `/auth/sign_in` with an alert that includes the missing ID.
+4. The bypass runs only when `Rails.env.development?` and on GET requests. It also clears `session[:refresh_token]` so you start with a clean session.
+
+Use this shortcut for AI or automation tests that need authenticated context; do not expose `test_user_id` in staging/production.

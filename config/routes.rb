@@ -14,11 +14,18 @@ Rails.application.routes.draw do
   get "/auth/callback", to: "auth/callbacks#show"
   get "/auth/sign_up", to: "auth/sessions#new"
   get "/auth/sign_in", to: "auth/sessions#new", as: :auth_login_path
-  delete "/auth/sign_out", to: "auth/sessions#destroy"
+  delete "/auth/sign_out", to: "auth/sessions#destroy", as: :auth_sign_out
 
   scope module: :patients, path: "patient", as: :patient do
     resource :personal_profile, only: [ :show, :update ]
     resource :clinical_assessment, only: [ :show, :update ]
+  end
+
+  scope path: "professional", module: "professionals", as: "professional" do
+    resources :patients, only: [ :index, :show ] do
+      resource :personal_profile, only: [ :edit, :update ], controller: "patients/personal_profiles"
+      resource :clinical_assessment, only: [ :edit, :update ], controller: "patients/clinical_assessments"
+    end
   end
 
   # Journal routes

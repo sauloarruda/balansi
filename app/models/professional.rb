@@ -6,4 +6,16 @@ class Professional < ApplicationRecord
   has_many :shared_patients, through: :patient_professional_accesses, source: :patient
 
   validates :user_id, uniqueness: true
+
+  def linked_patients
+    Patient.where(professional_id: id).or(Patient.where(id: patient_professional_accesses.select(:patient_id)))
+  end
+
+  def owner_of?(patient)
+    patient.professional_id == id
+  end
+
+  def can_access?(patient)
+    owner_of?(patient) || shared_patients.exists?(id: patient.id)
+  end
 end

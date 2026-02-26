@@ -1,0 +1,21 @@
+- content_for :title, t("professional.patients.index.title")
+
+nav.rounded-lg.mb-4 aria-label="Breadcrumb"
+  ol.flex.flex-wrap.items-center.gap-2.text-sm.text-gray-500
+    li.flex.items-center
+      span.font-medium.text-gray-900 = t("professional.patients.index.title")
+
+h1.text-3xl.font-bold.mb-6 = t("professional.patients.index.title")
+
+- if @patients.empty?
+  p.text-gray-600 = t("professional.patients.index.empty")
+- else
+  .bg-white.border.border-gray-200.rounded-lg.shadow-sm.overflow-hidden
+    ul.divide-y.divide-gray-200
+      - @patients.each do |patient|
+        li
+          = link_to professional_patient_path(patient), class: "block px-6 py-4 hover:bg-gray-50" do
+            .flex.items-center.justify-between
+              .font-medium.text-gray-900 = patient.user.name
+              span.inline-flex.items-center.rounded-full.px-2.5.py-0.5.text-xs.font-medium class=(current_professional.owner_of?(patient) ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800")
+                = current_professional.owner_of?(patient) ? t("professional.patients.index.owner_badge") : t("professional.patients.index.shared_badge")

@@ -23,7 +23,7 @@ html
 
     = javascript_importmap_tags
 
-  body.bg-gray-50
+  body.bg-gray-50 data-controller="drawer"
     / Navbar with Logo and Hamburger Menu
     nav.bg-white.border-b.border-gray-200.px-4.py-3
       .max-w-7xl.mx-auto.flex.items-center.justify-between
@@ -39,20 +39,26 @@ html
           - if respond_to?(:today_journals_path)
             = link_to today_journals_path, class: "inline-flex items-center justify-center text-sm font-medium text-pink-800 bg-pink-50 border border-pink-200 hover:bg-pink-100 focus:ring-4 focus:ring-pink-200 rounded-lg px-3 py-2" do
               = t("journals.navigation.title")
+          - if current_patient.present? && current_user&.professional.blank?
+            = link_to patient_personal_profile_path, class: "inline-flex items-center justify-center text-sm font-medium text-pink-800 bg-pink-50 border border-pink-200 hover:bg-pink-100 focus:ring-4 focus:ring-pink-200 rounded-lg px-3 py-2" do
+              = t("patient_personal_profile.navigation.title")
+          - if current_user&.professional.present?
+            = link_to professional_patients_path, class: "inline-flex items-center justify-center text-sm font-medium text-blue-800 bg-blue-50 border border-blue-200 hover:bg-blue-100 focus:ring-4 focus:ring-blue-200 rounded-lg px-3 py-2" do
+              = t("professional.patients.index.title")
 
           / Hamburger Menu Button
-          button.inline-flex.items-center.p-2.text-sm.text-gray-500.rounded-lg.hover:bg-gray-100.focus:outline-none.focus:ring-2.focus:ring-gray-200 data-drawer-target="drawer-navigation" data-drawer-show="drawer-navigation" aria-controls="drawer-navigation" type="button"
+          button.inline-flex.items-center.p-2.text-sm.text-gray-500.rounded-lg.hover:bg-gray-100.focus:outline-none.focus:ring-2.focus:ring-gray-200 data-action="drawer#toggle" aria-controls="drawer-navigation" type="button"
             span.sr-only Open sidebar
             svg.w-6.h-6 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
               path fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" clip-rule="evenodd"
 
     / Drawer Backdrop
-    div.drawer-backdrop.fixed.inset-0.bg-gray-900.bg-opacity-50.hidden.z-30 data-drawer-backdrop="drawer-navigation"
+    div.drawer-backdrop.fixed.inset-0.bg-gray-900.bg-opacity-50.hidden.z-30 data-drawer-target="backdrop" data-action="click->drawer#close"
 
     / Drawer Menu
-    div#drawer-navigation.fixed.top-0.left-0.z-40.h-screen.p-4.overflow-y-auto.transition-transform.-translate-x-full.bg-white.w-64.shadow-xl data-drawer="drawer-navigation" tabindex="-1" aria-labelledby="drawer-navigation-label"
+    div#drawer-navigation.fixed.top-0.left-0.z-40.h-screen.p-4.overflow-y-auto.transition-transform.-translate-x-full.bg-white.w-64.shadow-xl data-drawer-target="drawer" tabindex="-1" aria-labelledby="drawer-navigation-label" aria-hidden="true"
       h5#drawer-navigation-label.text-base.font-semibold.text-gray-500.uppercase.mb-4 Menu
-      button.text-gray-400.bg-transparent.hover:bg-gray-200.hover:text-gray-900.rounded-lg.text-sm.p-1.5.absolute.top-2.5.right-2.5.inline-flex.items-center data-drawer-hide="drawer-navigation" aria-controls="drawer-navigation" type="button"
+      button.text-gray-400.bg-transparent.hover:bg-gray-200.hover:text-gray-900.rounded-lg.text-sm.p-1.5.absolute.top-2.5.right-2.5.inline-flex.items-center aria-controls="drawer-navigation" data-action="drawer#close" type="button"
         svg.w-5.h-5 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
           path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"
         span.sr-only Close menu
@@ -66,11 +72,23 @@ html
                   path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"
                 span.ml-3 = t("journals.navigation.title")
           li
-            - if respond_to?(:auth_sign_out_path)
-              = link_to auth_sign_out_path, method: :delete, class: "flex items-center p-2 text-red-600 rounded-lg hover:bg-red-50 group" do
-                svg.w-5.h-5.text-red-500.transition.duration-75.group-hover:text-red-600 aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-                  path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                span.ml-3 Logout
+            - if current_patient.present? && current_user&.professional.blank?
+              = link_to patient_personal_profile_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
+                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+                  path(fill-rule="evenodd" d="M10 12a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd")
+                  path(d="M3 18a6 6 0 0114 0v1H3v-1z")
+                span.ml-3 = t("patient_personal_profile.navigation.title")
+          li
+            - if current_user&.professional.present?
+              = link_to professional_patients_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
+                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+                  path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+                span.ml-3 = t("professional.patients.index.title")
+          li
+            = button_to auth_sign_out_path, method: :delete, class: "w-full flex items-center p-2 text-red-600 rounded-lg hover:bg-red-50 group", form: { data: { turbo: false } } do
+              svg.w-5.h-5.text-red-500.transition.duration-75.group-hover:text-red-600 aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              span.ml-3 Logout
 
     / Flash messages
     - if notice
