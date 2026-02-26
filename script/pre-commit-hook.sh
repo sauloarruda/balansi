@@ -13,8 +13,23 @@ fi
 
 # Run RuboCop with autocorrect on staged files
 echo "Running RuboCop with autocorrect on staged Ruby files..."
-bin/rubocop --autocorrect-all $STAGED_FILES || true
+# Explicit error handling for RuboCop autocorrect
+if ! bin/rubocop --autocorrect-all $STAGED_FILES; then
+  AUTOCORRECT_EXIT_CODE=$?
+  echo "⚠️  RuboCop autocorrect failed with exit code $AUTOCORRECT_EXIT_CODE."
+  # If the error is not a standard lint violation (e.g., syntax error, file permission), exit with error
+  # RuboCop returns 1 for offenses, 2 for errors (see: https://docs.rubocop.org/rubocop/usage/basic_usage.html#exit-codes)
+  if [ $AUTOCORRECT_EXIT_CODE -eq 2 ]; then
+    echo "❌ RuboCop encountered an error (syntax, file permissions, etc.). Aborting commit."
+    exit 1
+  else
+    echo "Rubocop found and autocorrected offenses, continuing..."
+  fi
+fi
 
+# WARNING: The following commands use $STAGED_FILES unquoted, which is unsafe if file names contain spaces or shell metacharacters.
+# This can lead to command injection vulnerabilities. Consider quoting ("$STAGED_FILES") or using an array to safely handle file names.
+# See: https://github.com/koalaman/shellcheck/wiki/SC2046
 # Re-stage the corrected files
 git add $STAGED_FILES
 
