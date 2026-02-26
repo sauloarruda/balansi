@@ -20,6 +20,17 @@ FileUtils.chdir APP_ROOT do
   #   FileUtils.cp "config/database.yml.sample", "config/database.yml"
   # end
 
+  puts "\n== Setting up git hooks =="
+  hooks_dir = File.join(APP_ROOT, ".git", "hooks")
+  pre_commit_hook = File.join(hooks_dir, "pre-commit")
+  
+  if File.directory?(hooks_dir)
+    pre_commit_content = File.read(File.join(APP_ROOT, "script", "pre-commit-hook.sh"))
+    File.write(pre_commit_hook, pre_commit_content)
+    File.chmod(0o755, pre_commit_hook)
+    puts "✅ Pre-commit hook installed"
+  end
+
   puts "\n== Preparing database =="
   system! "bin/rails db:prepare"
   system! "bin/rails db:reset" if ARGV.include?("--reset")
