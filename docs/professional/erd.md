@@ -381,16 +381,22 @@ Actual files changed (Phase 3):
 - `spec/fixtures/patients.yml`
 - `spec/models/patient_spec.rb`
 
-### Phase 4 — Split Profile Edit Ownership
+### Phase 4 — Split Profile Edit Ownership ✅ Completed (PR #33)
 
 - Patient edits only personal fields.
 - Owner professional edits only clinical goal fields.
 - Shared professional remains read-only.
-- Update `profile_last_updated_at` on profile edits.
+- `profile_last_updated_at` on personal-profile edits; `clinical_assessment_last_updated_at` (new column) on clinical goal edits.
 
 Exit criteria:
-- unauthorized edits are blocked
-- allowed edits persist correctly
+- [x] unauthorized edits are blocked (`authorize_owner!` returns 403 for non-owners)
+- [x] allowed edits persist correctly (owner can update both personal profile and clinical assessment)
+
+Implementation notes:
+- Added `clinical_assessment_last_updated_at` datetime column (not in original ERD — more granular than `profile_last_updated_at`; both timestamps surfaced in the professional patient show view).
+- Fixed ordering-dependent test failure in `sign_up_interaction_spec.rb` (FactoryBot sequence collision with cognito stub sub at n=123; changed to `cognito_stub_fixed_sub`).
+- All 361 specs pass; 0 RuboCop offenses.
+- Code review: `doc/reviews/CR-BAL-15-p4.md`; readiness: `doc/reviews/READINESS-BAL-15-p4.md`.
 
 ### Phase 5 — Sharing + Professional Patient List
 
