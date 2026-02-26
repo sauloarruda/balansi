@@ -8,7 +8,11 @@ class Professional < ApplicationRecord
   validates :user_id, uniqueness: true
 
   def linked_patients
-    Patient.where(professional_id: id).or(Patient.where(id: patient_professional_accesses.select(:patient_id)))
+    # include user by default to avoid n+1 when callers iterate over patient.user
+    base = Patient.includes(:user)
+    base.where(professional_id: id).or(
+      base.where(id: patient_professional_accesses.select(:patient_id))
+    )
   end
 
   def owner_of?(patient)

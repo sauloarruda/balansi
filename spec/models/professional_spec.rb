@@ -55,6 +55,14 @@ RSpec.describe Professional, type: :model do
 
       expect(professional.linked_patients).to be_empty
     end
+
+    it "preloads the associated user to avoid n+1 queries" do
+      professional = create(:professional)
+      # creating a patient ensures there is something to load
+      create(:patient, professional: professional)
+
+      expect(professional.linked_patients.includes_values).to include(:user)
+    end
   end
 
   describe "#owner_of?" do
