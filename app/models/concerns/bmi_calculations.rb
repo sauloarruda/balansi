@@ -42,7 +42,7 @@ module BmiCalculations
     height_m = height_cm.to_d / 100
     min_kg = (18.5 * height_m * height_m).round(1)
     max_kg = (24.9 * height_m * height_m).round(1)
-    [min_kg, max_kg]
+    [ min_kg, max_kg ]
   end
 
   # Positive = kg to lose to reach normal max; negative = kg to gain to reach normal min; nil if normal or data missing.
@@ -87,7 +87,7 @@ module BmiCalculations
     return nil unless scale_max&.positive?
 
     pct = (weight_kg.to_f / scale_max) * 100
-    [[pct, 0].max, 100].min
+    [ [ pct, 0 ].max, 100 ].min
   end
 
   # Hex colors for each BMI category (for bar and legend).

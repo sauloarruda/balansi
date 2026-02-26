@@ -59,5 +59,4 @@ RSpec.describe Professionals::PatientsController, type: :controller do
       expect(response).to have_http_status(:forbidden)
     end
   end
-
 end
