@@ -28,7 +28,7 @@ RSpec.describe Patients::PersonalProfilesController, type: :controller do
       expect(response.body).to include(I18n.t("patient_personal_profile.show.title"))
     end
 
-    it "redirects to root when profile is already complete" do
+    it "renders profile page when profile is already complete" do
       patient.update!(
         gender: "female",
         birth_date: Date.new(1990, 1, 1),
@@ -41,7 +41,8 @@ RSpec.describe Patients::PersonalProfilesController, type: :controller do
 
       get :show
 
-      expect(response).to redirect_to(root_path)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(patient.user.name)
     end
   end
 
