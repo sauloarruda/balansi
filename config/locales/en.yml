@@ -166,6 +166,8 @@ en:
       what_went_well: "What went well:"
       what_to_improve: "What to improve:"
   patient_personal_profile:
+    navigation:
+      title: "Profile"
     show:
       title: "Complete your profile"
       description: "You need to complete your personal details before accessing the rest of the system."

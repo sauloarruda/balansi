@@ -26,6 +26,7 @@ module Authentication
   # sign-in page (without the param) so the error is shown there instead of
   # bouncing the user to Cognito.
   def development_test_user_login!
+    reset_session
     user = development_test_user
 
     if user.nil?

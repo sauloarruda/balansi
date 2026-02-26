@@ -214,6 +214,8 @@ pt:
       what_went_well: "O que foi bem:"
       what_to_improve: "O que melhorar:"
   patient_personal_profile:
+    navigation:
+      title: "Perfil"
     show:
       title: "Complete seu perfil"
       description: "Você precisa completar seus dados pessoais antes de acessar o restante do sistema."

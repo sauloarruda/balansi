@@ -15,9 +15,13 @@ h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
 .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6.mb-6
   .flex.items-center.justify-between.mb-4
     h3.text-lg.font-semibold.text-gray-900 = t("professional.patients.show.personal_profile")
-    - if current_professional.owner_of?(@patient)
-      = link_to edit_professional_patient_personal_profile_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
-        = t("professional.patients.show.edit_personal_profile")
+    .flex.gap-2
+      - if current_professional&.owner_of?(@patient)
+        = link_to edit_professional_patient_personal_profile_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
+          = t("professional.patients.show.edit_personal_profile")
+      - if current_patient == @patient
+        = link_to patient_personal_profile_path(edit: true), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
+          = t("professional.patients.show.edit_personal_profile")
   .grid.grid-cols-1.md:grid-cols-2.gap-6
     .mb-4
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:gender)
@@ -37,10 +41,10 @@ h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
           | —
     .mb-4
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:weight_kg)
-      .text-gray-900 = @patient.weight_kg.present? ? @patient.weight_kg : "—"
+      .text-gray-900 = localized_decimal(@patient.weight_kg, precision: 1)
     .mb-4
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:height_cm)
-      .text-gray-900 = @patient.height_cm.present? ? @patient.height_cm : "—"
+      .text-gray-900 = localized_decimal(@patient.height_cm, precision: 0)
     .mb-4.md:col-span-2
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:phone_e164)
       .text-gray-900 = @patient.phone_e164.present? ? @patient.phone_e164 : "—"
@@ -104,7 +108,7 @@ h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
 .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
   .flex.items-center.justify-between.mb-4
     h3.text-lg.font-semibold.text-gray-900 = t("professional.patients.show.clinical_assessment")
-    - if current_professional.owner_of?(@patient)
+    - if current_professional&.owner_of?(@patient)
       = link_to edit_professional_patient_clinical_assessment_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
         = t("professional.patients.show.edit_clinical_assessment")
   .grid.grid-cols-1.md:grid-cols-2.gap-6

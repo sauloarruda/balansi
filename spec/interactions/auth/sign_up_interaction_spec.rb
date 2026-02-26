@@ -70,6 +70,17 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         expect(result.result[:user].patient.professional_id).to eq(default_professional.id)
       end
 
+      it "associates new users without state to the first professional" do
+        result = described_class.run(
+          code: valid_code,
+          state: nil
+        )
+
+        expect(result).to be_valid
+        expect(result.result[:user].patient).to be_present
+        expect(result.result[:user].patient.professional_id).to eq(default_professional.id)
+      end
+
       it "uses default timezone and language when not provided" do
         result = described_class.run(
           code: valid_code,
@@ -202,28 +213,6 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
       context "professional signup context validation" do
         include_context "cognito stubs"
-
-        it "fails when state is missing for new user without patient" do
-          result = described_class.run(
-            code: valid_code,
-            state: nil
-          )
-
-          expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
-        end
-
-        it "fails when professional_id is missing in state for new user" do
-          state_without_professional = URI.encode_www_form("csrf_token" => "any-token")
-
-          result = described_class.run(
-            code: valid_code,
-            state: state_without_professional
-          )
-
-          expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
-        end
 
         it "fails when professional_id is not numeric" do
           result = described_class.run(

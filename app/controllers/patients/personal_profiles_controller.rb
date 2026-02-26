@@ -4,8 +4,8 @@ module Patients
     before_action :set_patient
 
     def show
-      if @patient.personal_profile_completed?
-        redirect_to root_path
+      if @patient.personal_profile_completed? && params[:edit].blank?
+        render "professionals/patients/show"
         return
       end
 
