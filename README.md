@@ -117,7 +117,7 @@ When an AI-powered run or manual exploration needs to exercise authenticated rou
 
 Steps to use it safely:
 1. Find a user ID from the development database (for example, `bin/rails runner "puts User.first.id"` or inspect `db/seeds/development.rb`).
-2. Visit `http://localhost:3000/<protected_path>?test_user_id=<id>`; the user will be signed in for that request and redirected without the parameter.
+2. Visit `http://localhost:4000/<protected_path>?test_user_id=<id>`; the user will be signed in for that request and redirected without the parameter.
 3. If the ID does not exist the concern redirects to `/auth/sign_in` with an alert that includes the missing ID.
 4. The bypass runs only when `Rails.env.development?` and on GET requests. It also clears `session[:refresh_token]` so you start with a clean session.
 
