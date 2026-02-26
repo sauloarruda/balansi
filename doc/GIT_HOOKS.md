@@ -12,10 +12,10 @@ A git pre-commit hook is configured to automatically run RuboCop with autocorrec
 
 When you attempt to commit, the hook:
 
-1. Identifies all staged Ruby (.rb) and Slim (.slim) files
-2. Runs `rubocop --autocorrect-all` on those files
+1. Identifies all staged Ruby (.rb) files
+2. Runs `bin/rubocop --autocorrect-all` on those files
 3. Re-adds the corrected files to the index
-4. Runs `rubocop` again to validate there are no remaining offenses
+4. Runs `bin/rubocop` again to validate there are no remaining offenses
 5. If offenses still exist, the commit is blocked with a clear error message
 
 ## Manual Installation
@@ -49,13 +49,13 @@ To manually check and fix lint issues:
 
 ```bash
 # Show all offenses
-bundle exec rubocop
+bin/rubocop
 
 # Auto-correct offenses
-bundle exec rubocop --autocorrect-all
+bin/rubocop --autocorrect-all
 
 # Check a single file
-bundle exec rubocop app/models/user.rb
+bin/rubocop app/models/user.rb
 ```
 
 ## Troubleshooting
