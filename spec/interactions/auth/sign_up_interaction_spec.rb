@@ -23,12 +23,12 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         expect(result.result[:refresh_token]).to eq("refresh_token_123")
         expect(result.result[:user]).to be_persisted
         expect(result.result[:user].email).to eq("test@example.com")
-        expect(result.result[:user].cognito_id).to eq("cognito_user_123")
+        expect(result.result[:user].cognito_id).to eq("cognito_stub_fixed_sub")
         expect(result.result[:user].patient).to be_present
       end
 
       it "finds existing user by cognito_id" do
-        existing_user = create(:user, cognito_id: "cognito_user_123")
+        existing_user = create(:user, cognito_id: "cognito_stub_fixed_sub")
 
         result = described_class.run(
           code: valid_code,
@@ -106,7 +106,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
       it "does not update timezone and language for existing user" do
         existing_user = create(:user,
-          cognito_id: "cognito_user_123",
+          cognito_id: "cognito_stub_fixed_sub",
           timezone: "America/New_York",
           language: "en")
 
@@ -124,7 +124,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
       it "uses name when present in decoded token" do
         user_info_with_name = {
-          "sub" => "cognito_user_123",
+          "sub" => "cognito_stub_fixed_sub",
           "email" => "test@example.com",
           "name" => "Full Name"
         }
@@ -141,7 +141,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
       it "uses given_name when name is not present" do
         user_info_with_given_name = {
-          "sub" => "cognito_user_123",
+          "sub" => "cognito_stub_fixed_sub",
           "email" => "test@example.com",
           "given_name" => "Given Name"
         }
@@ -158,7 +158,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
       it "uses email as name when name and given_name are not present" do
         user_info_email_only = {
-          "sub" => "cognito_user_123",
+          "sub" => "cognito_stub_fixed_sub",
           "email" => "test@example.com"
         }
         allow(CognitoService).to receive(:decode_id_token).and_return(user_info_email_only)
@@ -187,7 +187,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
       it "uses name from userinfo endpoint when ID token decode fails" do
         userinfo_with_name = {
-          "sub" => "cognito_user_123",
+          "sub" => "cognito_stub_fixed_sub",
           "email" => "test@example.com",
           "name" => "UserInfo Name"
         }
@@ -214,6 +214,20 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
       context "professional signup context validation" do
         include_context "cognito stubs"
 
+        it "fails with specific error when no professionals exist and state is blank" do
+          Professional.delete_all
+
+          result = described_class.run(
+            code: valid_code,
+            state: nil
+          )
+
+          expect(result).not_to be_valid
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.no_professionals_available_for_patient_assignment")
+          )
+        end
+
         it "fails when professional_id is not numeric" do
           result = described_class.run(
             code: valid_code,
@@ -221,7 +235,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
 
         it "fails when professional_id does not exist" do
@@ -231,7 +247,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
       end
 
@@ -347,7 +365,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
         it "fails when user info email is missing" do
           incomplete_user_info = {
-            "sub" => "cognito_user_123"
+            "sub" => "cognito_stub_fixed_sub"
           }
 
           allow(CognitoService).to receive(:decode_id_token).and_return(incomplete_user_info)
@@ -412,13 +430,13 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
 
           # Stub User.find_or_initialize_by to return a user that fails validation
           invalid_user = User.new(
-            cognito_id: "cognito_user_123",
+            cognito_id: "cognito_stub_fixed_sub",
             email: "test@example.com",
             name: "Test User",
             timezone: "Invalid/Timezone",
             language: "pt"
           )
-          allow(User).to receive(:find_or_initialize_by).with(cognito_id: "cognito_user_123").and_return(invalid_user)
+          allow(User).to receive(:find_or_initialize_by).with(cognito_id: "cognito_stub_fixed_sub").and_return(invalid_user)
           allow(invalid_user).to receive(:new_record?).and_return(true)
           allow(invalid_user).to receive(:save).and_return(false)
           invalid_user.errors.add(:timezone, "is not a valid IANA timezone identifier")
@@ -447,7 +465,9 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
 
         it "rejects signup context when parse_professional_id raises URI::InvalidURIError" do
@@ -460,11 +480,13 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
           )
 
           expect(result).not_to be_valid
-          expect(result.errors.full_messages.join(" ")).to include("Invalid professional signup context")
+          expect(result.errors.full_messages.join(" ")).to include(
+            I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
+          )
         end
 
         it "handles RecordInvalid exception when creating patient" do
-          user = create(:user, cognito_id: "cognito_user_123")
+          user = create(:user, cognito_id: "cognito_stub_fixed_sub")
 
           # Stub Patient.find_or_create_by! to raise RecordInvalid
           invalid_patient = build(:patient, user: user)
@@ -481,7 +503,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         end
 
         it "handles RecordNotUnique exception when creating patient" do
-          user = create(:user, cognito_id: "cognito_user_123")
+          user = create(:user, cognito_id: "cognito_stub_fixed_sub")
 
           # Stub Patient.find_or_create_by! to raise RecordNotUnique
           allow(Patient).to receive(:find_or_create_by!).and_raise(ActiveRecord::RecordNotUnique.new("Duplicate key"))
@@ -496,7 +518,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         end
 
         it "handles generic exception when creating patient" do
-          user = create(:user, cognito_id: "cognito_user_123")
+          user = create(:user, cognito_id: "cognito_stub_fixed_sub")
 
           # Stub Patient.find_or_create_by! to raise a generic exception
           allow(Patient).to receive(:find_or_create_by!).and_raise(StandardError.new("Database connection failed"))
@@ -531,7 +553,7 @@ RSpec.describe Auth::SignUpInteraction, type: :interaction do
         it "handles exception when user.save raises unexpected error" do
           # Create a user that will raise an exception on save
           user = User.new(
-            cognito_id: "cognito_user_123",
+            cognito_id: "cognito_stub_fixed_sub",
             email: "test@example.com",
             name: "Test",
             timezone: "America/Sao_Paulo",

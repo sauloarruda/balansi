@@ -11,98 +11,7 @@ nav.rounded-lg.mb-4 aria-label="Breadcrumb"
 
 h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
 
-/ Personal profile card
-.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6.mb-6
-  .flex.items-center.justify-between.mb-4
-    h3.text-lg.font-semibold.text-gray-900 = t("professional.patients.show.personal_profile")
-    .flex.gap-2
-      - if current_professional&.owner_of?(@patient)
-        = link_to edit_professional_patient_personal_profile_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
-          = t("professional.patients.show.edit_personal_profile")
-      - if current_patient == @patient && !current_professional&.owner_of?(@patient)
-        = link_to patient_personal_profile_path(edit: true), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
-          = t("professional.patients.show.edit_personal_profile")
-  .grid.grid-cols-1.md:grid-cols-2.gap-6
-    .mb-4
-      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:gender)
-      .text-gray-900 = @patient.gender.present? ? t("patient_personal_profile.show.gender_options.#{@patient.gender}") : "—"
-    .mb-4
-      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:birth_date)
-      .text-gray-900
-        - if @patient.birth_date.present?
-          = l(@patient.birth_date, format: :long)
-          - age = @patient.age_in_years_and_months
-          - if age
-            span.text-gray-500.ml-1
-              | (
-              = t("professional.patients.show.age_years_months", years: age[:years], months: age[:months])
-              | )
-        - else
-          | —
-    .mb-4
-      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:weight_kg)
-      .text-gray-900 = localized_decimal(@patient.weight_kg, precision: 1)
-    .mb-4
-      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:height_cm)
-      .text-gray-900 = localized_decimal(@patient.height_cm, precision: 0)
-    .mb-4.md:col-span-2
-      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:phone_e164)
-      .text-gray-900 = @patient.phone_e164.present? ? @patient.phone_e164 : "—"
-
-  - if @patient.weight_kg.present? && @patient.height_cm.present?
-    .mt-4
-      .mb-3
-        .flex.items-baseline.gap-2.mb-1
-          span.text-sm.font-medium.text-gray-500 = t("professional.patients.show.bmi")
-          strong.text-2xl.text-gray-900 = number_with_precision(@patient.bmi, precision: 1)
-        p.text-sm.text-gray-600.mb-0.5
-          = t("professional.patients.show.bmi_current_range")
-          | : 
-          = t("professional.patients.show.bmi_category.#{@patient.bmi_category}")
-        - diff = @patient.weight_difference_to_normal_kg
-        - if diff.present?
-          p.text-sm.mb-0 class=(diff.positive? ? "text-amber-700" : "text-sky-700")
-            - if diff.positive?
-              = t("professional.patients.show.weight_to_lose", kg: number_with_precision(diff, precision: 1))
-            - else
-              = t("professional.patients.show.weight_to_gain", kg: number_with_precision(-diff, precision: 1))
-      - ranges = @patient.bmi_category_weight_ranges
-      - scale_max = @patient.bmi_chart_scale_max_kg
-      - marker_pct = @patient.bmi_chart_marker_position_percent
-      - bar_gradient = @patient.bmi_chart_bar_gradient_css
-      - if ranges.present? && scale_max.present? && bar_gradient.present?
-        .bg-gray-50.rounded-xl.p-4.sm:p-5.border.border-gray-200
-          p.text-sm.font-medium.text-gray-800.mb-3 = t("professional.patients.show.bmi_chart_title")
-          .relative.w-full style="min-height: 56px"
-            div.w-full.rounded-lg.overflow-hidden.h-8 style="background: #{bar_gradient}; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);"
-            - if marker_pct.present?
-              .absolute.pointer-events-none style="left: #{marker_pct}%; top: 0; transform: translateX(-50%); z-index: 10"
-                .absolute.whitespace-nowrap.text-xs.font-semibold.text-gray-800.px-1.5.py-0.5.rounded.bg-white.border.border-gray-300.shadow-sm style="left: 50%; bottom: 100%; margin-bottom: 4px; transform: translateX(-50%)"
-                  = t("professional.patients.show.bmi_you_are_here")
-                  |  · #{number_with_precision(@patient.weight_kg, precision: 1)} #{t("professional.patients.show.bmi_kg")}
-                .absolute style="left: 50%; top: 0; transform: translateX(-50%); width: 2px; height: 32px; background: #1f2937; border-radius: 1px"
-          .flex.justify-between.mt-2.text-xs.text-gray-500.font-medium
-            span 0 #{t("professional.patients.show.bmi_kg")}
-            span = "#{number_with_precision(scale_max, precision: 0)} #{t('professional.patients.show.bmi_kg')}"
-          .mt-4.pt-4.border-t.border-gray-200
-            p.text-xs.font-medium.text-gray-600.mb-2 = t("professional.patients.show.bmi_ideal_range_label")
-            table.w-full.text-sm.border-collapse
-              thead
-                tr.text-left.text-gray-600
-                  th.px-3.py-2.border.border-gray-200.bg-gray-100.rounded-tl.font-medium = t("professional.patients.show.bmi_table_faixa")
-                  th.px-3.py-2.border.border-gray-200.bg-gray-100.rounded-tr.font-medium = t("professional.patients.show.bmi_table_peso_kg")
-              tbody
-                - ranges.each do |cat, (lo, hi)|
-                  tr
-                    td.px-3.py-2.border.border-gray-200.align-middle
-                      span.inline-flex.items-center.gap-2
-                        span.w-4.h-4.inline-block.rounded.shrink-0 style="background-color: #{BmiCalculations::BMI_CATEGORY_HEX[cat]}"
-                        = t("professional.patients.show.bmi_category.#{cat}")
-                    td.px-3.py-2.border.border-gray-200 = "#{number_with_precision(lo, precision: 1)} – #{number_with_precision(hi, precision: 1)} #{t('professional.patients.show.bmi_kg')}"
-
-  - if @patient.profile_last_updated_at.present?
-    .mt-6.pt-6.border-t.border-gray-200.text-sm.text-gray-500
-      = t("professional.patients.show.profile_updated_at", date: l(@patient.profile_last_updated_at, format: :long))
+= render "patients/personal_profiles/personal_profile_card"
 
 / Clinical assessment card
 .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
@@ -125,5 +34,6 @@ h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:hydration_goal)
       .text-gray-900 = @patient.hydration_goal.present? ? @patient.hydration_goal : "—"
   - if @patient.clinical_assessment_last_updated_at.present?
-    .mt-6.pt-6.border-t.border-gray-200.text-sm.text-gray-500
+    .mt-2.text-xs.text-gray-500
       = t("professional.patients.show.assessment_updated_at", date: l(@patient.clinical_assessment_last_updated_at, format: :long))
+

@@ -2,89 +2,89 @@
 
 ## Overview
 
-Um git pre-commit hook foi configurado para executar automaticamente o RuboCop com autocorrect antes de cada commit. Isso garante que:
+A git pre-commit hook is configured to automatically run RuboCop with autocorrect before each commit. This ensures:
 
-1. **Autocorrect**: Erros de lint são automaticamente corrigidos pelo RuboCop
-2. **Re-staging**: Os arquivos corrigidos são automaticamente adicionados ao stage
-3. **Validação**: Se erros forem encontrados após o autocorrect, o commit é bloqueado
+1. **Autocorrect**: Lint issues are automatically fixed by RuboCop
+2. **Re-staging**: Files corrected by RuboCop are re-added to the Git index
+3. **Validation**: If issues remain after autocorrect, the commit is blocked
 
-## Como Funciona
+## How It Works
 
-Quando você tenta fazer commit, o hook:
+When you attempt to commit, the hook:
 
-1. Identifica todos os arquivos Ruby (.rb) e Slim (.slim) em stage
-2. Executa `rubocop --autocorrect-all` nesses arquivos
-3. Re-adiciona os arquivos corrigidos ao stage
-4. Executa `rubocop` novamente para validar que não há mais erros
-5. Se ainda houver erros, o commit é bloqueado com uma mensagem de erro clara
+1. Identifies all staged Ruby (.rb) files
+2. Runs `bin/rubocop --autocorrect-all` on those files
+3. Re-adds the corrected files to the index
+4. Runs `bin/rubocop` again to validate there are no remaining offenses
+5. If offenses still exist, the commit is blocked with a clear error message
 
-## Instalação Manual
+## Manual Installation
 
-Se por algum motivo o hook não estiver instalado, você pode instalá-lo manualmente:
+If the hook is not installed for any reason, you can install it manually:
 
 ```bash
 chmod +x script/pre-commit-hook.sh
 cp script/pre-commit-hook.sh .git/hooks/pre-commit
 ```
 
-Ou execute o script de setup:
+Or run the setup script:
 
 ```bash
 bin/setup
 ```
 
-## Desvio do Hook (Bypass)
+## Bypassing the Hook
 
-Se necessário, você pode fazer bypass do hook usando a flag `--no-verify`:
+If necessary, you can bypass the hook using the `--no-verify` flag:
 
 ```bash
 git commit --no-verify
 ```
 
-⚠️ **Use com cautela!** Isso pode permitir que erros de lint sejam commitados.
+⚠️ Use with caution — this may allow lint issues to be committed.
 
-## Verificação Manual
+## Manual Checks
 
-Para verificar erros de lint manualmente:
+To manually check and fix lint issues:
 
 ```bash
-# Ver todos os erros
-bundle exec rubocop
+# Show all offenses
+bin/rubocop
 
-# Autocorrigir erros automaticamente
-bundle exec rubocop --autocorrect-all
+# Auto-correct offenses
+bin/rubocop --autocorrect-all
 
-# Verificar apenas um arquivo
-bundle exec rubocop app/models/user.rb
+# Check a single file
+bin/rubocop app/models/user.rb
 ```
 
 ## Troubleshooting
 
-### Hook não está sendo executado
+### Hook is not running
 
-Verifique se o arquivo é executável:
+Check whether the hook file is executable:
 
 ```bash
 ls -la .git/hooks/pre-commit
 ```
 
-Se não for, corrija as permissões:
+If it is not executable, fix the permissions:
 
 ```bash
 chmod +x .git/hooks/pre-commit
 ```
 
-### RuboCop não está encontrado
+### RuboCop not found
 
-Certifique-se de que todas as dependências estão instaladas:
+Make sure project dependencies are installed:
 
 ```bash
 bundle install
 ```
 
-### Arquivos não estão sendo adicionados
+### Files are not being re-added
 
-O hook assumira que o `git` está disponível e o repositório está inicializado. Verifique o status do repositório:
+The hook assumes `git` is available and the repository is initialized. Verify the repository status:
 
 ```bash
 git status

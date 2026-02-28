@@ -10,7 +10,7 @@ RSpec.shared_context "cognito stubs" do
 
   let(:valid_user_info) do
     {
-      "sub" => "cognito_user_123",
+      "sub" => "cognito_stub_fixed_sub",
       "email" => "test@example.com",
       "name" => "Test User"
     }

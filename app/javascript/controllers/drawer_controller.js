@@ -8,6 +8,14 @@ export default class extends Controller {
     this.handleEscape = this.handleEscape.bind(this)
   }
 
+  disconnect() {
+    document.removeEventListener("keydown", this.handleEscape)
+
+    if (this.isOpen) {
+      this.close()
+    }
+  }
+
   toggle(event) {
     event?.preventDefault()
     this.isOpen ? this.close() : this.open()

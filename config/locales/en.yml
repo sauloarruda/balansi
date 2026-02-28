@@ -349,6 +349,11 @@ en:
       llm_unavailable: "We could not analyze your meal right now. Please try again."
       exercise_llm_unavailable: "We could not analyze your exercise right now. Please try again."
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
+  auth:
+    sign_up:
+      errors:
+        invalid_professional_signup_context: "Invalid professional signup context"
+        no_professionals_available_for_patient_assignment: "No professionals available for patient assignment"
   forms:
     errors:
       alert: "There are form validation errors."

@@ -4,12 +4,17 @@ module Patients
     before_action :set_patient
 
     def show
+      # Previously we rendered the professionals view when the profile was
+      # already complete. That mixed contexts and relied on a professional
+      # being present. Now we render our own patient-facing page and share
+      # the personal‑profile card markup via a partial.
+      #
+      # Only assign form inputs if we need to render the completion/edit form.
       if @patient.personal_profile_completed? && params[:edit].blank?
-        render "professionals/patients/show"
-        return
+        # nothing to prepare for the read‑only card
+      else
+        assign_form_inputs_from_patient
       end
-
-      assign_form_inputs_from_patient
     end
 
     def update

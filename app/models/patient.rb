@@ -59,7 +59,7 @@ class Patient < ApplicationRecord
   def age_in_years_and_months
     return nil if birth_date.blank?
 
-    today = Time.zone.today
+    today = Date.current
     return nil if birth_date > today
 
     months = (today.year * 12 + today.month) - (birth_date.year * 12 + birth_date.month)
