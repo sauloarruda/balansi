@@ -147,6 +147,12 @@ en:
       exercises: "Exercises"
       close_day_button: "Close Day & Get Score"
       cancel: "Cancel"
+      flash:
+        success: "Day closed successfully! Your score and feedback are ready."
+        success_no_score: "Day closed successfully! We could not calculate the score right now."
+        already_closed: "This day has already been closed."
+        read_only: "This day can no longer be edited."
+        journal_not_found: "Journal not found for this date."
     daily_summary:
       title: "Summary"
       meals: "Meals"
@@ -348,6 +354,7 @@ en:
     errors:
       llm_unavailable: "We could not analyze your meal right now. Please try again."
       exercise_llm_unavailable: "We could not analyze your exercise right now. Please try again."
+      scoring_unavailable: "We could not calculate your score right now. Your day has been closed, but the score may appear later."
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
   auth:
     sign_up:

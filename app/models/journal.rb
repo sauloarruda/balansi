@@ -104,4 +104,32 @@ class Journal < ApplicationRecord
 
     "balanced"
   end
+
+  def weekly_context
+    week_start = date - date.wday.days
+    week_journals = patient.journals
+      .where(date: week_start..date)
+      .includes(:meals, :exercises)
+
+    closed_journals = week_journals.select(&:closed?)
+    days_with_entries = week_journals.count
+    day_of_week = date.wday + 1
+
+    {
+      day_of_week: day_of_week,
+      days_with_entries: days_with_entries,
+      days_with_alcohol: 0,
+      days_with_red_meat: 0,
+      days_with_candy: 0,
+      days_with_soda: 0,
+      days_with_processed: 0,
+      days_meeting_protein: 0,
+      days_with_exercise: closed_journals.count { |j| j.confirmed_exercises.any? },
+      days_meeting_steps: closed_journals.count { |j| patient.steps_goal && j.steps_count.to_i >= patient.steps_goal },
+      days_score_low: closed_journals.count { |j| j.score && j.score <= 3 },
+      days_quality_sleep: closed_journals.count { |j| j.sleep_quality.to_s == "excellent" },
+      days_adequate_hydration: closed_journals.count { |j| %w[good excellent].include?(j.hydration_quality.to_s) },
+      days_feeling_bad: closed_journals.count { |j| j.feeling_today.to_s == "bad" }
+    }
+  end
 end

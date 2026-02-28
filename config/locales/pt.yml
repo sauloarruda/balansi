@@ -195,6 +195,12 @@ pt:
       exercises: "Exercícios"
       close_day_button: "Fechar Dia e Obter Pontuação"
       cancel: "Cancelar"
+      flash:
+        success: "Dia fechado com sucesso! Sua pontuação e feedback estão prontos."
+        success_no_score: "Dia fechado com sucesso! Não foi possível calcular a pontuação agora."
+        already_closed: "Este dia já foi fechado."
+        read_only: "Este dia não pode mais ser editado."
+        journal_not_found: "Diário não encontrado para esta data."
     daily_summary:
       title: "Resumo"
       meals: "Refeições"
@@ -396,6 +402,7 @@ pt:
     errors:
       llm_unavailable: "Não foi possível analisar sua refeição agora. Tente novamente."
       exercise_llm_unavailable: "Não foi possível analisar seu exercício agora. Tente novamente."
+      scoring_unavailable: "Não foi possível calcular sua pontuação agora. Seu dia foi fechado, mas a pontuação pode aparecer mais tarde."
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
   auth:
     sign_up:

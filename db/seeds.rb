@@ -8,4 +8,5 @@
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
 
+load Rails.root.join("db/seeds/scoring_criteria.rb")
 load Rails.root.join("db/seeds/todays_journal_pt.rb")
