@@ -142,8 +142,7 @@ RSpec.describe Journal::ScoreDailyJournalInteraction, type: :interaction do
         user_language: user.language
       )
 
-      expect(result).to be_valid
-      expect(result.result).to be_nil
+      expect(result).not_to be_valid
       expect(result.errors.full_messages.to_sentence).to include("excedeu")
     end
   end
