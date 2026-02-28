@@ -393,7 +393,7 @@ Exit criteria:
 - [x] allowed edits persist correctly (owner can update both personal profile and clinical assessment)
 
 Implementation notes:
-- Added `clinical_assessment_last_updated_at` datetime column (not in original ERD — more granular than `profile_last_updated_at`; both timestamps surfaced in the professional patient show view).
+- Added `clinical_assessment_last_updated_at` datetime column (not in original ERD — more granular than `profile_last_updated_at`; both timestamps surfaced in the professional patient show view: `profile_last_updated_at` in the personal profile card, `clinical_assessment_last_updated_at` in the clinical assessment card).
 - Fixed ordering-dependent test failure in `sign_up_interaction_spec.rb` (FactoryBot sequence collision with cognito stub sub at n=123; changed to `cognito_stub_fixed_sub`).
 - All 361 specs pass; 0 RuboCop offenses.
 - Code review: `doc/reviews/CR-BAL-15-p4.md`; readiness: `doc/reviews/READINESS-BAL-15-p4.md`.
