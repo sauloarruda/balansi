@@ -27,4 +27,13 @@ h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
     .mb-4
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:bmr)
       .text-gray-900 = @patient.bmr.present? ? @patient.bmr : "—"
+    .mb-4
+      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:steps_goal)
+      .text-gray-900 = @patient.steps_goal.present? ? @patient.steps_goal : "—"
+    .mb-4
+      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:hydration_goal)
+      .text-gray-900 = @patient.hydration_goal.present? ? @patient.hydration_goal : "—"
+  - if @patient.clinical_assessment_last_updated_at.present?
+    .mt-2.text-xs.text-gray-500
+      = t("professional.patients.show.assessment_updated_at", date: l(@patient.clinical_assessment_last_updated_at, format: :long))
 
