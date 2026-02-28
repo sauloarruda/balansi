@@ -1493,7 +1493,7 @@ This implementation plan breaks down the Journal module development into 5 phase
 
 ### Phase 4: Exercise Entry Backend & Frontend Integration
 
-**Status**: ⏳ **Pending**
+**Status**: ✅ **Completed**
 
 **Objective**: Implement exercise entry flow with LLM integration. Similar to meal flow but for exercises.
 
@@ -1507,18 +1507,18 @@ This implementation plan breaks down the Journal module development into 5 phase
 - Error handling for LLM failures
 
 **Acceptance Criteria**:
-- [ ] Users can create exercises with description
-- [ ] Journal is auto-created when first exercise is logged (if no journal exists)
-- [ ] LLM interaction analyzes exercise and updates status to pending_patient
-- [ ] Exercise review screen shows LLM analysis results
-- [ ] Users can confirm exercises (status → confirmed)
-- [ ] Users can edit exercise values before confirming
-- [ ] Users can reprocess with AI (status → pending_llm)
-- [ ] Rate limiting is shared with meals (total 50/day, 10/hour)
-- [ ] LLM errors are handled gracefully with retry option
-- [ ] All interaction tests pass
-- [ ] All controller tests pass
-- [ ] Integration tests for exercise flow pass
+- [x] Users can create exercises with description
+- [x] Journal is auto-created when first exercise is logged (if no journal exists)
+- [x] LLM interaction analyzes exercise and updates status to pending_patient
+- [x] Exercise review screen shows LLM analysis results
+- [x] Users can confirm exercises (status → confirmed)
+- [x] Users can edit exercise values before confirming
+- [x] Users can reprocess with AI (status → pending_llm)
+- [x] Rate limiting is shared with meals (total 50/day, 10/hour)
+- [x] LLM errors are handled gracefully with retry option
+- [x] All interaction tests pass
+- [x] All controller tests pass
+- [x] Integration tests for exercise flow pass
 
 **Estimated Files**:
 - Interactions: 1 file
@@ -1538,7 +1538,7 @@ This implementation plan breaks down the Journal module development into 5 phase
 
 ### Phase 5: Daily Closure Backend & Frontend Integration
 
-**Status**: ⏳ **Pending**
+**Status**: ✅ **Completed**
 
 **Objective**: Implement daily closure flow with metrics collection and LLM scoring.
 
@@ -1554,18 +1554,18 @@ This implementation plan breaks down the Journal module development into 5 phase
 - Read-only closed days (after 2 days)
 
 **Acceptance Criteria**:
-- [ ] Users can answer daily metrics questions before closure
-- [ ] Daily closure deletes all pending_llm and pending_patient entries
-- [ ] Daily totals are calculated from confirmed entries only
-- [ ] LLM interaction generates score (1-5) and feedback
-- [ ] Score and feedback are displayed on closed journal
-- [ ] Closed days can be edited up to 2 days after journal date
-- [ ] Closed days become read-only after 2 days
-- [ ] Editing closed day doesn't reset closed_at
-- [ ] All interaction tests pass
-- [ ] All controller tests pass
-- [ ] Integration tests for closure flow pass
-- [ ] Edge cases are tested (no meals, no exercises, etc.)
+- [x] Users can answer daily metrics questions before closure
+- [x] Daily closure deletes all pending_llm and pending_patient entries
+- [x] Daily totals are calculated from confirmed entries only
+- [x] LLM interaction generates score (1-5) and feedback
+- [x] Score and feedback are displayed on closed journal
+- [x] Closed days can be edited up to 2 days after journal date
+- [x] Closed days become read-only after 2 days
+- [x] Editing closed day doesn't reset closed_at
+- [x] All interaction tests pass
+- [x] All controller tests pass
+- [x] Integration tests for closure flow pass
+- [x] Edge cases are tested (no meals, no exercises, etc.)
 
 **Estimated Files**:
 - Interactions: 1 file
@@ -1592,8 +1592,8 @@ This implementation plan breaks down the Journal module development into 5 phase
 | 1 | UI Prototyping | ✅ Complete | None |
 | 2 | Daily Journal Backend | ✅ Complete | Phase 1 |
 | 3 | Meal Entry | ✅ Complete | Phase 2 |
-| 4 | Exercise Entry | ⏳ Pending | Phase 3 |
-| 5 | Daily Closure | ⏳ Pending | Phase 4 |
+| 4 | Exercise Entry | ✅ Complete | Phase 3 |
+| 5 | Daily Closure | ✅ Complete | Phase 4 |
 
 **Total Estimated Files**: ~80 files
 **Total Estimated Lines**: ~12,000 lines

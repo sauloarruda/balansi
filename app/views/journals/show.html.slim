@@ -22,3 +22,8 @@
 
 / Exercises Section
 = render partial: "section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal_entries/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }
+
+/ Close Day Action
+- if @journal.persisted? && (!@journal.closed? || @journal.editable?)
+  .mt-8.text-center
+    = link_to t(".close_day"), close_journal_path(date: @journal.date.iso8601), class: "inline-flex items-center justify-center text-white bg-brand hover:bg-brand-strong focus:ring-4 focus:ring-brand-soft font-medium rounded-base text-base px-8 py-3"

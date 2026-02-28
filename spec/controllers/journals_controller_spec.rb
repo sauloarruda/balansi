@@ -136,11 +136,30 @@ RSpec.describe JournalsController, type: :controller do
       expect(response.body).to include(journal.effective_calories_burned.to_s)
     end
 
-    it "does not render close day button in daily summary" do
+    it "renders close day button for open journal" do
+      create(:journal)
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(close_journal_path(date: "2026-02-05"))
+    end
+
+    it "does not render close day button for journal closed more than 2 days ago" do
+      journal = create(:journal)
+      journal.update!(closed_at: 3.days.ago)
+
       get :show, params: { date: "2026-02-05" }
 
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include(close_journal_path(date: "2026-02-05"))
+    end
+
+    it "does not render close day button for unsaved (new) journal" do
+      get :show, params: { date: "2026-02-06" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(close_journal_path(date: "2026-02-06"))
     end
   end
 
@@ -182,6 +201,119 @@ RSpec.describe JournalsController, type: :controller do
       get :show, params: { date: "2026-02-05" }
 
       expect(response).to redirect_to(patient_personal_profile_path)
+    end
+  end
+
+  describe "PATCH #close" do
+    let(:journal) { create(:journal) }
+
+    before { journal }
+
+    def mock_scoring_success
+      errors = ActiveModel::Errors.new(Journal.new)
+      result = instance_double(ActiveInteraction::Base, valid?: true, errors: errors, result: journal)
+      allow(Journal::ScoreDailyJournalInteraction).to receive(:run).and_return(result)
+    end
+
+    def mock_scoring_failure
+      errors = double(full_messages: [ "Não foi possível calcular sua pontuação agora" ])
+      result = instance_double(ActiveInteraction::Base, valid?: false, errors: errors, result: nil)
+      allow(Journal::ScoreDailyJournalInteraction).to receive(:run).and_return(result)
+    end
+
+    it "closes the journal and redirects with success notice when scoring succeeds" do
+      mock_scoring_success
+
+      patch :close, params: {
+        date: "2026-02-05",
+        feeling_today: "good",
+        sleep_quality: "excellent",
+        hydration_quality: "good",
+        steps_count: 8000,
+        daily_note: "Great day"
+      }
+
+      journal.reload
+      expect(journal.closed_at).not_to be_nil
+      expect(journal.feeling_today.to_s).to eq("good")
+      expect(journal.sleep_quality.to_s).to eq("excellent")
+      expect(journal.hydration_quality.to_s).to eq("good")
+      expect(journal.steps_count).to eq(8000)
+      expect(journal.daily_note).to eq("Great day")
+      expect(response).to redirect_to(journal_path(date: "2026-02-05"))
+      expect(flash[:notice]).to include("fechado com sucesso")
+    end
+
+    it "closes the journal with alert when scoring fails" do
+      mock_scoring_failure
+
+      patch :close, params: {
+        date: "2026-02-05",
+        feeling_today: "ok",
+        sleep_quality: "good",
+        hydration_quality: "poor",
+        steps_count: 4000
+      }
+
+      journal.reload
+      expect(journal.closed_at).not_to be_nil
+      expect(response).to redirect_to(journal_path(date: "2026-02-05"))
+      expect(flash[:alert]).to include("pontuação")
+    end
+
+    it "deletes pending entries on closure" do
+      mock_scoring_success
+      pending_meal = Meal.create!(journal: journal, meal_type: "snack", description: "Pending snack", status: "pending_patient")
+      pending_exercise = Exercise.create!(journal: journal, description: "Pending run", status: "pending_llm")
+      confirmed_meal = Meal.create!(journal: journal, meal_type: "lunch", description: "Confirmed lunch", calories: 500, status: "confirmed")
+
+      patch :close, params: { date: "2026-02-05", feeling_today: "good", sleep_quality: "good", hydration_quality: "good", steps_count: 5000 }
+
+      expect(Meal.exists?(pending_meal.id)).to be false
+      expect(Exercise.exists?(pending_exercise.id)).to be false
+      expect(Meal.exists?(confirmed_meal.id)).to be true
+    end
+
+    it "calculates and stores totals on closure" do
+      mock_scoring_success
+      Meal.create!(journal: journal, meal_type: "breakfast", description: "Oats", calories: 400, status: "confirmed")
+      Meal.create!(journal: journal, meal_type: "lunch", description: "Chicken", calories: 600, status: "confirmed")
+      patient = Patient.find(2001)
+      patient.update!(bmr: 1800)
+
+      patch :close, params: { date: "2026-02-05", feeling_today: "good", sleep_quality: "good", hydration_quality: "good", steps_count: 6000 }
+
+      journal.reload
+      expect(journal.calories_consumed).to eq(1000)
+      expect(journal.calories_burned).to eq(1800)
+    end
+
+    it "redirects with not_found when journal does not exist" do
+      patch :close, params: {
+        date: "2026-01-01",
+        feeling_today: "good",
+        sleep_quality: "good",
+        hydration_quality: "good",
+        steps_count: 5000
+      }
+
+      expect(response).to redirect_to(journal_path(date: "2026-01-01"))
+      expect(flash[:alert]).to be_present
+    end
+
+    it "redirects with read_only alert when journal is closed and past editable window" do
+      journal.update!(closed_at: 3.days.ago)
+
+      patch :close, params: {
+        date: "2026-02-05",
+        feeling_today: "good",
+        sleep_quality: "good",
+        hydration_quality: "good",
+        steps_count: 5000
+      }
+
+      expect(response).to redirect_to(journal_path(date: "2026-02-05"))
+      expect(flash[:alert]).to include("editado")
     end
   end
 end
