@@ -399,6 +399,8 @@ pt:
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
   patient:
     professional_accesses:
+      navigation:
+        title: "Compartilhamento"
       index:
         title: "Compartilhamento"
         current_accesses_heading: "Profissionais com acesso"

@@ -351,6 +351,8 @@ en:
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
   patient:
     professional_accesses:
+      navigation:
+        title: "Sharing"
       index:
         title: "Sharing"
         current_accesses_heading: "Professionals with access"
