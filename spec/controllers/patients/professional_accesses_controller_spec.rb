@@ -87,4 +87,37 @@ RSpec.describe Patients::ProfessionalAccessesController, type: :controller do
       end
     end
   end
+
+  describe "DELETE #destroy" do
+    let(:other_pro) { create(:professional) }
+    let!(:access) do
+      create(:patient_professional_access, patient: patient, professional: other_pro, granted_by_patient_user: patient_user)
+    end
+
+    context "when the access belongs to the current patient" do
+      it "destroys the access and redirects with success notice" do
+        delete :destroy, params: { id: access.id }
+
+        expect(response).to redirect_to(patient_professional_accesses_path)
+        expect(flash[:notice]).to eq(I18n.t("patient.professional_accesses.messages.revoke_success"))
+        expect(PatientProfessionalAccess.exists?(access.id)).to be false
+      end
+    end
+
+    context "when the access does not belong to the current patient" do
+      let(:other_patient_user) { create(:user) }
+      let!(:other_patient) { create(:patient, user: other_patient_user, professional: professional) }
+      let!(:other_access) do
+        create(:patient_professional_access, patient: other_patient, professional: other_pro, granted_by_patient_user: other_patient_user)
+      end
+
+      it "does not destroy the access and redirects with alert" do
+        delete :destroy, params: { id: other_access.id }
+
+        expect(response).to redirect_to(patient_professional_accesses_path)
+        expect(flash[:alert]).to eq(I18n.t("patient.professional_accesses.errors.revoke_not_found"))
+        expect(PatientProfessionalAccess.exists?(other_access.id)).to be true
+      end
+    end
+  end
 end

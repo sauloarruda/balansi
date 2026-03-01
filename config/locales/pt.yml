@@ -409,12 +409,15 @@ pt:
         professional_email_label: "E-mail do profissional"
         professional_email_placeholder: "profissional@exemplo.com"
         submit: "Conceder acesso"
+        revoke: "Revogar acesso"
       messages:
         shared_success: "Acesso concedido com sucesso."
+        revoke_success: "Acesso revogado com sucesso."
       errors:
         professional_not_found: "Nenhum profissional encontrado com este e-mail."
         already_owner: "Este profissional já é o responsável pelo seu cadastro."
         already_shared: "O acesso já foi concedido a este profissional."
+        revoke_not_found: "Acesso não encontrado."
   auth:
     sign_up:
       errors:

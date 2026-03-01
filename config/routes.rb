@@ -19,7 +19,7 @@ Rails.application.routes.draw do
   scope module: :patients, path: "patient", as: :patient do
     resource :personal_profile, only: [ :show, :update ]
     resource :clinical_assessment, only: [ :show, :update ]
-    resources :professional_accesses, only: [ :index, :create ]
+    resources :professional_accesses, only: [ :index, :create, :destroy ]
   end
 
   scope path: "professional", module: "professionals", as: "professional" do

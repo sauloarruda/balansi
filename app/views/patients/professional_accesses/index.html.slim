@@ -19,6 +19,8 @@ h1.text-3xl.font-bold.mb-6 = t("patient.professional_accesses.index.title")
           div
             .font-medium.text-gray-900 = access.professional.user.name
             .text-sm.text-gray-500 = access.professional.user.email
+          = button_to patient_professional_access_path(access), method: :delete, class: "inline-flex items-center justify-center text-sm font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 focus:ring-4 focus:ring-red-200 rounded-lg px-3 py-2" do
+            = t("patient.professional_accesses.index.revoke")
 
 / Add new professional form
 .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6

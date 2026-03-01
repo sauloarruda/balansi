@@ -361,12 +361,15 @@ en:
         professional_email_label: "Professional email"
         professional_email_placeholder: "professional@example.com"
         submit: "Grant access"
+        revoke: "Revoke access"
       messages:
         shared_success: "Access granted successfully."
+        revoke_success: "Access revoked successfully."
       errors:
         professional_not_found: "No professional found with this email address."
         already_owner: "This professional is already the owner of your record."
         already_shared: "Access has already been granted to this professional."
+        revoke_not_found: "Access not found."
   auth:
     sign_up:
       errors:
