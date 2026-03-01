@@ -398,14 +398,34 @@ Implementation notes:
 - All 361 specs pass; 0 RuboCop offenses.
 - Code review: `doc/reviews/CR-BAL-15-p4.md`; readiness: `doc/reviews/READINESS-BAL-15-p4.md`.
 
-### Phase 5 — Sharing + Professional Patient List
+### Phase 5 — Sharing + Professional Patient List ✅ **Completed**
 
 - Patient shares access with a professional by creating row in `patient_professional_accesses`.
-- Build professional patient list with `owner` vs `shared` label.
+- Professional patient list with `owner` vs `shared` label (implemented in Phase 4, confirmed complete here).
 
 Exit criteria:
-- sharing preserves owner and adds collaborator access
-- patient list labels are accurate
+- [x] sharing preserves owner and adds collaborator access
+- [x] patient list labels are accurate
+
+Implementation notes:
+- Added a patient-facing sharing UI at `/patient/professional_accesses`.
+- Professional lookup by user email — simplest v1 approach, no invite token lifecycle needed.
+- Interaction `Patients::ProfessionalAccesses::CreateInteraction` blocks:
+  - sharing with the owner professional (already has owner access),
+  - duplicate shares (unique index + model validation),
+  - non-existent professionals.
+- `granted_by_patient_user_id` set to current patient user for audit trail.
+- All 391 specs pass; 0 RuboCop offenses.
+
+Actual files changed (Phase 5):
+- `app/controllers/patients/professional_accesses_controller.rb`
+- `app/interactions/patients/professional_accesses/create_interaction.rb`
+- `app/views/patients/professional_accesses/index.html.slim`
+- `config/routes.rb`
+- `config/locales/en.yml`
+- `config/locales/pt.yml`
+- `spec/controllers/patients/professional_accesses_controller_spec.rb`
+- `spec/interactions/patients/professional_accesses/create_interaction_spec.rb`
 
 ### Phase 6 — Observability and Metrics
 

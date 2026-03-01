@@ -1,0 +1,38 @@
+- content_for :title, t("patient.professional_accesses.index.title")
+
+nav.rounded-lg.mb-4 aria-label="Breadcrumb"
+  ol.flex.flex-wrap.items-center.gap-2.text-sm.text-gray-500
+    li.flex.items-center
+      span.font-medium.text-gray-900 = t("patient.professional_accesses.index.title")
+
+h1.text-3xl.font-bold.mb-6 = t("patient.professional_accesses.index.title")
+
+/ Current shared accesses
+.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6.mb-6
+  h2.text-lg.font-semibold.text-gray-900.mb-4 = t("patient.professional_accesses.index.current_accesses_heading")
+  - if @accesses.empty?
+    p.text-gray-500 = t("patient.professional_accesses.index.no_accesses")
+  - else
+    ul.divide-y.divide-gray-200
+      - @accesses.each do |access|
+        li.py-3.flex.items-center.justify-between
+          div
+            .font-medium.text-gray-900 = access.professional.user.name
+            .text-sm.text-gray-500 = access.professional.user.email
+
+/ Add new professional form
+.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
+  h2.text-lg.font-semibold.text-gray-900.mb-4 = t("patient.professional_accesses.index.add_heading")
+  - if @errors&.any?
+    .mb-4.rounded-lg.border.border-red-300.bg-red-50.p-4
+      p.text-sm.font-medium.text-red-800 = t("forms.errors.alert")
+      ul.mt-2.list-disc.list-inside.text-sm.text-red-700
+        - @errors.full_messages.each do |msg|
+          li = msg
+
+  = form_with url: patient_professional_accesses_path, method: :post, local: true do |f|
+    div
+      = f.label :professional_email, t("patient.professional_accesses.index.professional_email_label"), class: "block mb-1 text-sm font-medium text-gray-700"
+      = f.email_field :professional_email, value: @professional_email, name: "professional_access[professional_email]", placeholder: t("patient.professional_accesses.index.professional_email_placeholder"), class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm", required: true
+    .mt-4
+      = f.submit t("patient.professional_accesses.index.submit"), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"

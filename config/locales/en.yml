@@ -349,6 +349,22 @@ en:
       llm_unavailable: "We could not analyze your meal right now. Please try again."
       exercise_llm_unavailable: "We could not analyze your exercise right now. Please try again."
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
+  patient:
+    professional_accesses:
+      index:
+        title: "Sharing"
+        current_accesses_heading: "Professionals with access"
+        no_accesses: "No additional professionals have been granted access yet."
+        add_heading: "Share access with a professional"
+        professional_email_label: "Professional email"
+        professional_email_placeholder: "professional@example.com"
+        submit: "Grant access"
+      messages:
+        shared_success: "Access granted successfully."
+      errors:
+        professional_not_found: "No professional found with this email address."
+        already_owner: "This professional is already the owner of your record."
+        already_shared: "Access has already been granted to this professional."
   auth:
     sign_up:
       errors:

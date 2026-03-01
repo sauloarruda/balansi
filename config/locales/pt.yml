@@ -397,6 +397,22 @@ pt:
       llm_unavailable: "Não foi possível analisar sua refeição agora. Tente novamente."
       exercise_llm_unavailable: "Não foi possível analisar seu exercício agora. Tente novamente."
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
+  patient:
+    professional_accesses:
+      index:
+        title: "Compartilhamento"
+        current_accesses_heading: "Profissionais com acesso"
+        no_accesses: "Nenhum profissional adicional recebeu acesso ainda."
+        add_heading: "Compartilhar acesso com um profissional"
+        professional_email_label: "E-mail do profissional"
+        professional_email_placeholder: "profissional@exemplo.com"
+        submit: "Conceder acesso"
+      messages:
+        shared_success: "Acesso concedido com sucesso."
+      errors:
+        professional_not_found: "Nenhum profissional encontrado com este e-mail."
+        already_owner: "Este profissional já é o responsável pelo seu cadastro."
+        already_shared: "O acesso já foi concedido a este profissional."
   auth:
     sign_up:
       errors:
