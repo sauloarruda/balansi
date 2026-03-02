@@ -3,6 +3,8 @@ class ApplicationController < ActionController::Base
   include BrowserLanguage
   include BrowserTimezone
 
+  rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+
   around_action :use_user_timezone
   before_action :ensure_current_patient!
   before_action :ensure_patient_personal_profile_completed!
@@ -36,7 +38,7 @@ class ApplicationController < ActionController::Base
       redirect_to professional_patients_path and return
     end
 
-    head :forbidden
+    render_forbidden
   end
 
   def ensure_patient_personal_profile_completed!
@@ -53,5 +55,13 @@ class ApplicationController < ActionController::Base
     return yield unless current_user&.timezone.present?
 
     Time.use_zone(current_user.timezone, &block)
+  end
+
+  def render_forbidden
+    render "errors/forbidden", status: :forbidden
+  end
+
+  def render_not_found
+    render "errors/not_found", status: :not_found
   end
 end

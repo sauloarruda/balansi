@@ -49,6 +49,8 @@ RSpec.describe Professionals::PatientsController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(patient.user.name)
+      expect(response.body).to include(I18n.t("professional.patients.show.breadcrumb_profile"))
+      expect(response.body).to include(I18n.t("journals.navigation.title"))
     end
 
     it "returns forbidden when professional cannot access patient" do

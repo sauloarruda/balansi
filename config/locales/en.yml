@@ -29,6 +29,29 @@
 
 en:
   hello: "Hello world"
+  errors:
+    forbidden:
+      title: "403 Access denied"
+      heading: "You don't have permission to access this page"
+      description: "Access was denied. If you believe you should have access, check permissions or ask the account owner."
+      support_hint: "If you need help, please contact support."
+      actions:
+        back_to_patients: "Back to patients list"
+        go_home: "Go to home"
+    not_found:
+      title: "404 Page not found"
+      heading: "Page not found"
+      description: "The page you tried to access does not exist or has moved."
+      support_hint: "If you think this is a mistake, please contact support."
+      actions:
+        go_home: "Go to home"
+    internal_server_error:
+      title: "500 Internal server error"
+      heading: "Something went wrong"
+      description: "An unexpected error occurred while processing your request."
+      support_hint: "Please try again in a moment. If the issue continues, contact support."
+      actions:
+        go_home: "Go to home"
   number:
     format:
       separator: "."
@@ -89,6 +112,8 @@ en:
       next_day: "Next day"
     show:
       title: "Daily Journal - %{date}"
+      breadcrumb_daily_journal: "Daily Journal"
+      patient_banner_label: "%{journal_title} for patient"
       warning: "Warning:"
       today: "Today"
       meals: "Meals"
@@ -202,6 +227,7 @@ en:
         shared_badge: "Shared access"
       show:
         title: "Patient profile"
+        breadcrumb_profile: "Profile"
         personal_profile: "Personal profile"
         clinical_assessment: "Clinical assessment"
         profile_updated_at: "Profile updated on %{date}"
@@ -349,6 +375,27 @@ en:
       llm_unavailable: "We could not analyze your meal right now. Please try again."
       exercise_llm_unavailable: "We could not analyze your exercise right now. Please try again."
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
+  patient:
+    professional_accesses:
+      navigation:
+        title: "Sharing"
+      index:
+        title: "Sharing"
+        current_accesses_heading: "Professionals with access"
+        no_accesses: "No additional professionals have been granted access yet."
+        add_heading: "Share access with a professional"
+        professional_email_label: "Professional email"
+        professional_email_placeholder: "professional@example.com"
+        submit: "Grant access"
+        revoke: "Revoke access"
+      messages:
+        shared_success: "Access granted successfully."
+        revoke_success: "Access revoked successfully."
+      errors:
+        professional_not_found: "No professional found with this email address."
+        already_owner: "This professional is already the owner of your record."
+        already_shared: "Access has already been granted to this professional."
+        revoke_not_found: "Access not found."
   auth:
     sign_up:
       errors:

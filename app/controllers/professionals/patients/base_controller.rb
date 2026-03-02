@@ -8,19 +8,20 @@ module Professionals
       private
 
       def set_patient
-        @patient = Patient.find(params[:patient_id])
+        id = params[:patient_id] || params[:id]
+        @patient = Patient.find(id)
       end
 
       def authorize_access!
         return if current_professional.can_access?(@patient)
 
-        head :forbidden
+        render_forbidden
       end
 
       def authorize_owner!
         return if current_professional.owner_of?(@patient)
 
-        head :forbidden
+        render_forbidden
       end
     end
   end

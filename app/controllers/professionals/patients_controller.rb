@@ -21,7 +21,7 @@ module Professionals
     def authorize_access!
       return if current_professional.can_access?(@patient)
 
-      head :forbidden
+      render_forbidden
     end
   end
 end
