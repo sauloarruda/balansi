@@ -18,7 +18,7 @@ module Professionals
       return if current_user.nil?
       return if current_professional.present?
 
-      head :forbidden
+      render_forbidden
     end
   end
 end

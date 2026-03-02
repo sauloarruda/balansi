@@ -29,6 +29,29 @@
 
 pt:
   hello: "Olá mundo"
+  errors:
+    forbidden:
+      title: "403 Acesso negado"
+      heading: "Você não tem permissão para acessar esta página"
+      description: "O acesso foi negado. Se você acredita que deveria ter acesso, verifique as permissões ou peça acesso ao responsável."
+      support_hint: "Se precisar de ajuda, entre em contato com a equipe de suporte."
+      actions:
+        back_to_patients: "Voltar à lista de pacientes"
+        go_home: "Ir para o início"
+    not_found:
+      title: "404 Página não encontrada"
+      heading: "Página não encontrada"
+      description: "A página que você tentou acessar não existe ou foi movida."
+      support_hint: "Se você acredita que isso é um erro, entre em contato com o suporte."
+      actions:
+        go_home: "Ir para o início"
+    internal_server_error:
+      title: "500 Erro interno"
+      heading: "Algo deu errado"
+      description: "Ocorreu um erro inesperado ao processar sua solicitação."
+      support_hint: "Tente novamente em alguns instantes. Se o problema continuar, fale com o suporte."
+      actions:
+        go_home: "Ir para o início"
   number:
     format:
       separator: ","

@@ -42,5 +42,8 @@ module Balansi
     # Add rack-attack middleware for rate limiting (disabled in test environment)
     # This should be early in the middleware stack
     config.middleware.use Rack::Attack unless Rails.env.test?
+
+    # Use Rails routes to render custom error pages (403/404/500)
+    config.exceptions_app = routes
   end
 end

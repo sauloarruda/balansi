@@ -1,0 +1,15 @@
+- content_for :title, t("errors.forbidden.title")
+
+.max-w-3xl.mx-auto.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-8.mt-6
+  h1.text-2xl.font-bold.text-gray-900.mb-2 = t("errors.forbidden.heading")
+  p.text-gray-600.mb-6 = t("errors.forbidden.description")
+
+  .flex.flex-wrap.items-center.gap-3
+    - if current_professional.present?
+      = link_to professional_patients_path, class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700" do
+        = t("errors.forbidden.actions.back_to_patients")
+
+    = link_to root_path, class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 hover:bg-gray-200" do
+      = t("errors.forbidden.actions.go_home")
+
+  p.text-sm.text-gray-500.mt-5 = t("errors.forbidden.support_hint")

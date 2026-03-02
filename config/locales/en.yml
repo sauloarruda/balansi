@@ -29,6 +29,29 @@
 
 en:
   hello: "Hello world"
+  errors:
+    forbidden:
+      title: "403 Access denied"
+      heading: "You don't have permission to access this page"
+      description: "Access was denied. If you believe you should have access, check permissions or ask the account owner."
+      support_hint: "If you need help, please contact support."
+      actions:
+        back_to_patients: "Back to patients list"
+        go_home: "Go to home"
+    not_found:
+      title: "404 Page not found"
+      heading: "Page not found"
+      description: "The page you tried to access does not exist or has moved."
+      support_hint: "If you think this is a mistake, please contact support."
+      actions:
+        go_home: "Go to home"
+    internal_server_error:
+      title: "500 Internal server error"
+      heading: "Something went wrong"
+      description: "An unexpected error occurred while processing your request."
+      support_hint: "Please try again in a moment. If the issue continues, contact support."
+      actions:
+        go_home: "Go to home"
   number:
     format:
       separator: "."

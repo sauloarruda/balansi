@@ -1,4 +1,8 @@
-Rails.application.routes.draw do
+Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
+  match "/403", to: "errors#forbidden", via: :all
+  match "/404", to: "errors#not_found", via: :all
+  match "/500", to: "errors#internal_server_error", via: :all
+
   get "home/index"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
@@ -24,6 +28,10 @@ Rails.application.routes.draw do
 
   scope path: "professional", module: "professionals", as: "professional" do
     resources :patients, only: [ :index, :show ] do
+      member do
+        get :journal, to: "patients/journals#show"
+        get :journal_today, to: "patients/journals#today"
+      end
       resource :personal_profile, only: [ :edit, :update ], controller: "patients/personal_profiles"
       resource :clinical_assessment, only: [ :edit, :update ], controller: "patients/clinical_assessments"
     end
