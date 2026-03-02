@@ -36,7 +36,7 @@ html
             = image_tag "balansi-logo.svg", alt: "Balansi", class: "h-6"
 
         .flex.items-center.gap-2
-          - if respond_to?(:today_journals_path)
+          - if current_patient.present?
             = link_to today_journals_path, class: "inline-flex items-center justify-center text-sm font-medium text-pink-800 bg-pink-50 border border-pink-200 hover:bg-pink-100 focus:ring-4 focus:ring-pink-200 rounded-lg px-3 py-2" do
               = t("journals.navigation.title")
           - if current_patient.present? && current_user&.professional.blank?
@@ -67,7 +67,7 @@ html
       .py-4.overflow-y-auto
         ul.space-y-2.font-medium
           li
-            - if respond_to?(:today_journals_path)
+            - if current_patient.present?
               = link_to today_journals_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
                 svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
                   path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"
