@@ -6,10 +6,17 @@ nav.rounded-lg.mb-4 aria-label="Breadcrumb"
       = link_to t("professional.patients.index.title"), professional_patients_path, class: "hover:text-blue-600"
       svg.mx-1.w-4.h-4 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
         path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"
+    li.flex.items-center
+      span = @patient.user.name
+      svg.mx-1.w-4.h-4 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+        path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"
     li
-      span.font-medium.text-gray-900 = @patient.user.name
+      span.font-medium.text-gray-900 = t("professional.patients.show.breadcrumb_profile")
 
-h2.text-2xl.font-bold.text-gray-900.mb-6 = @patient.user.name
+.flex.items-center.justify-between.mb-6.gap-3
+  h2.text-2xl.font-bold.text-gray-900 = @patient.user.name
+  = link_to journal_professional_patient_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2 whitespace-nowrap" do
+    = t("journals.navigation.title")
 
 = render "patients/personal_profiles/personal_profile_card"
 

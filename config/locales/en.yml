@@ -112,6 +112,8 @@ en:
       next_day: "Next day"
     show:
       title: "Daily Journal - %{date}"
+      breadcrumb_daily_journal: "Daily Journal"
+      patient_banner_label: "%{journal_title} for patient"
       warning: "Warning:"
       today: "Today"
       meals: "Meals"
@@ -225,6 +227,7 @@ en:
         shared_badge: "Shared access"
       show:
         title: "Patient profile"
+        breadcrumb_profile: "Profile"
         personal_profile: "Personal profile"
         clinical_assessment: "Clinical assessment"
         profile_updated_at: "Profile updated on %{date}"

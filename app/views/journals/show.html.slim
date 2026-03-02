@@ -1,11 +1,32 @@
 - content_for :title, t(".title", date: format_date(@journal.date))
 
+/
+- if defined?(current_professional) && current_professional.present? && @patient.present?
+  nav.rounded-lg.mb-4 aria-label="Breadcrumb"
+    ol.flex.flex-wrap.items-center.gap-2.text-sm.text-gray-500
+      li.flex.items-center
+        = link_to t("professional.patients.index.title"), professional_patients_path, class: "hover:text-blue-600"
+        svg.mx-1.w-4.h-4 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+          path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"
+      li.flex.items-center
+        = link_to @patient.user.name, professional_patient_path(@patient), class: "hover:text-blue-600"
+        svg.mx-1.w-4.h-4 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
+          path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"
+      li
+        span.font-medium.text-gray-900 = t("journals.show.breadcrumb_daily_journal")
+
+  .mb-6.p-4.bg-blue-50.border.border-blue-200.text-blue-800.rounded-base.flex.items-center.justify-between
+    .text-sm
+      = t("journals.show.patient_banner_label", journal_title: t("journals.navigation.title"))
+      strong.ms-1= " "+@patient.user.name
+    = link_to professional_patient_path(@patient), class: "text-sm text-blue-700 bg-blue-100 px-3 py-1 rounded" do
+      = t("professional.patients.index.profile", default: "Ver perfil")
 
 / Date Navigator
-= render partial: "date_navigator", locals: { journal_date: @journal.date }
+= render partial: "journals/date_navigator", locals: { journal_date: @journal.date }
 
 / Daily Summary Section
-= render partial: "daily_summary", locals: { journal: @journal, patient: @patient, meals: @meals, exercises: @exercises }
+= render partial: "journals/daily_summary", locals: { journal: @journal, patient: @patient, meals: @meals, exercises: @exercises }
 
 / Pending Entries Alert
 - pending_count = @journal.pending_entries_count
@@ -18,7 +39,7 @@
         = t(".pending_items_warning", count: pending_count, items: t("defaults.item", count: pending_count))
 
 / Meals Section
-= render partial: "section", locals: { model: Meal, items: @meals, journal_date: @journal.date, journal: @journal, new_path: :new_journal_meal_path, item_partial: "journal_entries/meals/meal", item_local_name: :meal, icon: "🍽️", color_scheme: { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" } }
+= render partial: "journals/section", locals: { model: Meal, items: @meals, journal_date: @journal.date, journal: @journal, new_path: :new_journal_meal_path, item_partial: "journal_entries/meals/meal", item_local_name: :meal, icon: "🍽️", color_scheme: { bg: "pink", border: "pink", text: "pink", hover: "pink", focus_ring: "pink" } }
 
 / Exercises Section
-= render partial: "section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal_entries/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }
+= render partial: "journals/section", locals: { model: Exercise, items: @exercises, journal_date: @journal.date, journal: @journal, new_path: :new_journal_exercise_path, item_partial: "journal_entries/exercises/exercise", item_local_name: :exercise, icon: "🏃", color_scheme: { bg: "sky", border: "sky", text: "sky", hover: "sky", focus_ring: "sky" } }

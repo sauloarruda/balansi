@@ -156,6 +156,8 @@ pt:
       next_day: "Próximo dia"
     show:
       title: "Diário Diário - %{date}"
+      breadcrumb_daily_journal: "Daily Journal"
+      patient_banner_label: "%{journal_title} do paciente"
       warning: "Aviso:"
       today: "Hoje"
       meals: "Refeições"
@@ -273,6 +275,7 @@ pt:
         shared_badge: "Acesso compartilhado"
       show:
         title: "Perfil do paciente"
+        breadcrumb_profile: "Profile"
         personal_profile: "Perfil pessoal"
         clinical_assessment: "Avaliação técnica"
         profile_updated_at: "Perfil atualizado em %{date}"
