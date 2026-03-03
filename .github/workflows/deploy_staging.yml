@@ -166,7 +166,46 @@ jobs:
           chmod 600 .kamal/secrets.staging
 
       - name: Deploy to staging
-        run: bin/kamal deploy -d staging
+        run: |
+          set -euo pipefail
+
+          deploy_once() {
+            local log_file
+            local deploy_exit
+            log_file="$(mktemp)"
+
+            set +e
+            bin/kamal deploy -d staging 2>&1 \
+              | tee "${log_file}" \
+              | grep -E "(^\s*INFO\b|^\s*WARN\b|^\s*ERROR\b|Finished all in|Exception while executing on host|Kamal deployment ended)" || true
+            deploy_exit=${PIPESTATUS[0]}
+            set -e
+
+            if [ "${deploy_exit}" -eq 0 ]; then
+              return 0
+            fi
+
+            if grep -q "Errno::ECONNRESET" "${log_file}"; then
+              echo "Kamal deployment ended with ECONNRESET."
+              return 85
+            fi
+
+            return 1
+          }
+
+          if deploy_once; then
+            exit 0
+          fi
+
+          deploy_status=$?
+          if [ "${deploy_status}" -eq 85 ]; then
+            echo "Retrying deploy once after transient SSH reset..."
+            sleep 5
+            deploy_once
+            exit $?
+          fi
+
+          exit "${deploy_status}"
 
       - name: Revoke runner SSH access
         if: always()
