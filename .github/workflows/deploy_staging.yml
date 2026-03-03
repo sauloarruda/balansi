@@ -90,6 +90,30 @@ jobs:
             fi
           fi
 
+      - name: Diagnose SSH reachability
+        run: |
+          set -euo pipefail
+
+          targets=("staging.balansi.me" "${STAGING_INSTANCE_PUBLIC_IP}")
+          reachable=false
+
+          for target in "${targets[@]}"; do
+            echo "Testing TCP/22 reachability for ${target}..."
+            if timeout 8 bash -c "</dev/tcp/${target}/22" 2>/dev/null; then
+              echo "TCP/22 is reachable on ${target}."
+              reachable=true
+            else
+              echo "TCP/22 is NOT reachable on ${target}."
+            fi
+          done
+
+          if [ "${reachable}" != "true" ]; then
+            echo "SSH port 22 is unreachable from this GitHub runner."
+            echo "Check: subnet route to Internet Gateway, NACL rules, instance firewall (ufw/iptables), and sshd status."
+            echo "If the instance is private, use a self-hosted runner inside the VPC."
+            exit 1
+          fi
+
       - name: Prepare SSH key
         run: |
           set -euo pipefail
@@ -120,7 +144,8 @@ jobs:
           done
 
           if [ "${HOST_KEY_FETCHED}" != "true" ]; then
-            echo "Failed to fetch host key via ssh-keyscan from both staging.balansi.me and ${STAGING_INSTANCE_PUBLIC_IP}. Verify instance connectivity and inbound SSH rules."
+            echo "Failed to fetch host key via ssh-keyscan from both staging.balansi.me and ${STAGING_INSTANCE_PUBLIC_IP}."
+            echo "TCP/22 may still be blocked intermittently or sshd may not be serving host keys."
             exit 1
           fi
 
