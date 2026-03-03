@@ -123,34 +123,6 @@ jobs:
           printf '%s\n' "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/balansi-staging-key.pem
           chmod 600 ~/.ssh/balansi-staging-key.pem
 
-          ssh-keygen -y -f ~/.ssh/balansi-staging-key.pem > /dev/null
-
-          touch ~/.ssh/known_hosts
-
-          # HOST_CANDIDATES=("staging.balansi.me" "${STAGING_INSTANCE_PUBLIC_IP}")
-          # HOST_KEY_FETCHED=false
-
-          # for host in "${HOST_CANDIDATES[@]}"; do
-          #   for attempt in 1 2 3 4 5 6; do
-          #     if ssh-keyscan -T 10 -H "${host}" >> ~/.ssh/known_hosts 2>/dev/null; then
-          #       echo "Fetched SSH host key from ${host}."
-          #       HOST_KEY_FETCHED=true
-          #       break 2
-          #     fi
-
-          #     echo "ssh-keyscan failed for ${host} (attempt ${attempt}/6). Retrying in 5s..."
-          #     sleep 5
-          #   done
-          # done
-
-          # if [ "${HOST_KEY_FETCHED}" != "true" ]; then
-          #   echo "Failed to fetch host key via ssh-keyscan from both staging.balansi.me and ${STAGING_INSTANCE_PUBLIC_IP}."
-          #   echo "TCP/22 may still be blocked intermittently or sshd may not be serving host keys."
-          #   exit 1
-          # fi
-
-          chmod 644 ~/.ssh/known_hosts
-
       - name: Build Kamal secrets file
         run: |
           KAMAL_REGISTRY_PASSWORD="$(aws ecr get-login-password --region "$AWS_REGION")"
@@ -175,14 +147,17 @@ jobs:
             log_file="$(mktemp)"
 
             set +e
-            bin/kamal deploy -d staging 2>&1 \
-              | tee "${log_file}" \
-              | grep -E "(^\s*INFO\b|^\s*WARN\b|^\s*ERROR\b|Finished all in|Exception while executing on host|Kamal deployment ended)" || true
+            timeout 10m bin/kamal deploy -d staging 2>&1
             deploy_exit=${PIPESTATUS[0]}
             set -e
 
             if [ "${deploy_exit}" -eq 0 ]; then
               return 0
+            fi
+
+            if [ "${deploy_exit}" -eq 124 ]; then
+              echo "Kamal deploy timed out after 10 minutes."
+              return 124
             fi
 
             if grep -q "Errno::ECONNRESET" "${log_file}"; then
@@ -203,6 +178,11 @@ jobs:
             sleep 5
             deploy_once
             exit $?
+          fi
+
+          if [ "${deploy_status}" -eq 124 ]; then
+            echo "Deploy aborted due to timeout. Check the full Kamal output above to identify the hanging phase."
+            exit 124
           fi
 
           exit "${deploy_status}"
