@@ -155,7 +155,7 @@ jobs:
         run: |
           KAMAL_REGISTRY_PASSWORD="$(aws ecr get-login-password --region "$AWS_REGION")"
           mkdir -p .kamal
-          cat > .kamal/secrets <<EOF
+          cat > .kamal/secrets.staging <<EOF
           RAILS_MASTER_KEY=${{ secrets.STAGING_RAILS_MASTER_KEY }}
           KAMAL_REGISTRY_PASSWORD=${{ secrets.KAMAL_REGISTRY_PASSWORD }}
           DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
@@ -163,7 +163,7 @@ jobs:
           QUEUE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
           CABLE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
           EOF
-          chmod 600 .kamal/secrets
+          chmod 600 .kamal/secrets.staging
 
       - name: Deploy to staging
         run: bin/kamal deploy -d staging
