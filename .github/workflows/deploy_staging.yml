@@ -1,0 +1,137 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy_staging:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: staging-deploy
+      cancel-in-progress: false
+    environment: staging
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve staging SSH security group
+        run: |
+          set -euo pipefail
+
+          INSTANCE_ID="$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=balansi-staging-app" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)"
+
+          if [ -z "${INSTANCE_ID}" ] || [ "${INSTANCE_ID}" = "None" ]; then
+            echo "Instance 'balansi-staging-app' not found in running state."
+            exit 1
+          fi
+
+          STAGING_SSH_SECURITY_GROUP_ID="$(aws ec2 describe-instances \
+            --instance-ids "${INSTANCE_ID}" \
+            --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' \
+            --output text)"
+
+          if [ -z "${STAGING_SSH_SECURITY_GROUP_ID}" ] || [ "${STAGING_SSH_SECURITY_GROUP_ID}" = "None" ]; then
+            echo "Could not resolve Security Group for instance ${INSTANCE_ID}."
+            exit 1
+          fi
+
+          echo "STAGING_SSH_SECURITY_GROUP_ID=${STAGING_SSH_SECURITY_GROUP_ID}" >> "$GITHUB_ENV"
+
+      - name: Temporarily allow runner SSH access
+        run: |
+          set -euo pipefail
+
+          RUNNER_IP="$(curl -fsSL https://api.ipify.org)"
+          RUNNER_SSH_CIDR="${RUNNER_IP}/32"
+          echo "RUNNER_SSH_CIDR=${RUNNER_SSH_CIDR}" >> "$GITHUB_ENV"
+
+          AUTHORIZE_ERROR="$(mktemp)"
+          if ! aws ec2 authorize-security-group-ingress \
+            --group-id "${STAGING_SSH_SECURITY_GROUP_ID}" \
+            --ip-permissions "[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"${RUNNER_SSH_CIDR}\",\"Description\":\"gha-run-${GITHUB_RUN_ID}\"}]}]" \
+            2>"${AUTHORIZE_ERROR}"; then
+            if grep -q "InvalidPermission.Duplicate" "${AUTHORIZE_ERROR}"; then
+              echo "SSH rule already exists for ${RUNNER_SSH_CIDR}."
+            else
+              cat "${AUTHORIZE_ERROR}"
+              exit 1
+            fi
+          fi
+
+      - name: Prepare SSH key
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+
+          printf '%s\n' "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/balansi-staging-key.pem
+          chmod 600 ~/.ssh/balansi-staging-key.pem
+
+          ssh-keygen -y -f ~/.ssh/balansi-staging-key.pem > /dev/null
+
+          ssh-keyscan -T 10 -H staging.balansi.me >> ~/.ssh/known_hosts || {
+            echo "Failed to fetch host key via ssh-keyscan. Verify the instance is online and port 22 is reachable from GitHub Actions runners."
+            exit 1
+          }
+
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Build Kamal secrets file
+        run: |
+          KAMAL_REGISTRY_PASSWORD="$(aws ecr get-login-password --region "$AWS_REGION")"
+          mkdir -p .kamal
+          cat > .kamal/secrets <<EOF
+          RAILS_MASTER_KEY=${{ secrets.STAGING_RAILS_MASTER_KEY }}
+          KAMAL_REGISTRY_PASSWORD=${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          CACHE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          QUEUE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          CABLE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          EOF
+          chmod 600 .kamal/secrets
+
+      - name: Deploy to staging
+        run: bin/kamal deploy -d staging
+
+      - name: Revoke runner SSH access
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RUNNER_SSH_CIDR:-}" ]; then
+            echo "RUNNER_SSH_CIDR is not set; nothing to revoke."
+            exit 0
+          fi
+
+          REVOKE_ERROR="$(mktemp)"
+          if ! aws ec2 revoke-security-group-ingress \
+            --group-id "${STAGING_SSH_SECURITY_GROUP_ID}" \
+            --ip-permissions "[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"${RUNNER_SSH_CIDR}\"}]}]" \
+            2>"${REVOKE_ERROR}"; then
+            if grep -q "InvalidPermission.NotFound" "${REVOKE_ERROR}"; then
+              echo "SSH rule for ${RUNNER_SSH_CIDR} no longer exists."
+            else
+              cat "${REVOKE_ERROR}"
+              exit 1
+            fi
+          fi
