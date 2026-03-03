@@ -176,7 +176,7 @@ jobs:
       - test
     if: |
       (vars.STAGING_DEPLOY_ENABLED == 'true') &&
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+ #     (github.event_name == 'push' && github.ref == 'refs/heads/main')
     concurrency:
       group: staging-deploy
       cancel-in-progress: false
