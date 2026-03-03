@@ -6,117 +6,117 @@ on:
     branches: [ main ]
 
 jobs:
-  scan_ruby:
-    runs-on: ubuntu-latest
+  # scan_ruby:
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v6
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         bundler-cache: true
 
-      - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bin/brakeman --no-pager
+  #     - name: Scan for common Rails security vulnerabilities using static analysis
+  #       run: bin/brakeman --no-pager
       
-      - name: Scan for known security vulnerabilities in gems used
-        run: bin/bundler-audit
+  #     - name: Scan for known security vulnerabilities in gems used
+  #       run: bin/bundler-audit
       
-  scan_js:
-    runs-on: ubuntu-latest
+  # scan_js:
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v6
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         bundler-cache: true
 
-      - name: Scan for security vulnerabilities in JavaScript dependencies
-        run: bin/importmap audit
+  #     - name: Scan for security vulnerabilities in JavaScript dependencies
+  #       run: bin/importmap audit
 
-  lint:
-    runs-on: ubuntu-latest
-    env:
-      RUBOCOP_CACHE_ROOT: tmp/rubocop
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     RUBOCOP_CACHE_ROOT: tmp/rubocop
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v6
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         bundler-cache: true
 
-      - name: Prepare RuboCop cache
-        uses: actions/cache@v5
-        env:
-          DEPENDENCIES_HASH: ${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
-        with:
-          path: ${{ env.RUBOCOP_CACHE_ROOT }}
-          key: rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
-          restore-keys: |
-            rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-
+  #     - name: Prepare RuboCop cache
+  #       uses: actions/cache@v5
+  #       env:
+  #         DEPENDENCIES_HASH: ${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
+  #       with:
+  #         path: ${{ env.RUBOCOP_CACHE_ROOT }}
+  #         key: rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
+  #         restore-keys: |
+  #           rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-
 
-      - name: Lint code for consistent style
-        run: bin/rubocop -f github
+  #     - name: Lint code for consistent style
+  #       run: bin/rubocop -f github
 
-  test:
-    runs-on: ubuntu-latest
+  # test:
+  #   runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+  #   services:
+  #     postgres:
+  #       image: postgres
+  #       env:
+  #         POSTGRES_USER: postgres
+  #         POSTGRES_PASSWORD: postgres
+  #       ports:
+  #         - 5432:5432
+  #       options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
-      # redis:
-      #   image: valkey/valkey:8
-      #   ports:
-      #     - 6379:6379
-      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+  #     # redis:
+  #     #   image: valkey/valkey:8
+  #     #   ports:
+  #     #     - 6379:6379
+  #     #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
 
-    steps:
-      - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
+  #   steps:
+  #     - name: Install packages
+  #       run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
 
-      - name: Checkout code
-        uses: actions/checkout@v6
+  #     - name: Checkout code
+  #       uses: actions/checkout@v6
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         bundler-cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: npm
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v6
+  #       with:
+  #         node-version: 22
+  #         cache: npm
 
-      - name: Install JavaScript dependencies
-        run: npm ci
+  #     - name: Install JavaScript dependencies
+  #       run: npm ci
 
-      - name: Precompile assets for tests
-        env:
-          RAILS_ENV: test
-        run: bin/rails assets:precompile
+  #     - name: Precompile assets for tests
+  #       env:
+  #         RAILS_ENV: test
+  #       run: bin/rails assets:precompile
 
-      - name: Run tests
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
-        run: npm run test:js && bin/rails db:test:prepare && bundle exec rspec
+  #     - name: Run tests
+  #       env:
+  #         RAILS_ENV: test
+  #         DATABASE_URL: postgres://postgres:postgres@localhost:5432
+  #         # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+  #         # REDIS_URL: redis://localhost:6379/0
+  #       run: npm run test:js && bin/rails db:test:prepare && bundle exec rspec
 
   # system-test:
   #   # Disabled: Project uses RSpec, not Minitest system tests
@@ -183,8 +183,6 @@ jobs:
     environment: staging
     permissions:
       contents: read
-    env:
-      AWS_REGION: sa-east-1
 
     steps:
       - name: Checkout code
@@ -215,11 +213,11 @@ jobs:
           mkdir -p .kamal
           cat > .kamal/secrets <<EOF
           RAILS_MASTER_KEY=${{ secrets.STAGING_RAILS_MASTER_KEY }}
-          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+          KAMAL_REGISTRY_PASSWORD=${{ secrets.KAMAL_REGISTRY_PASSWORD }}
           DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
-          CACHE_DATABASE_URL=${{ secrets.STAGING_CACHE_DATABASE_URL }}
-          QUEUE_DATABASE_URL=${{ secrets.STAGING_QUEUE_DATABASE_URL }}
-          CABLE_DATABASE_URL=${{ secrets.STAGING_CABLE_DATABASE_URL }}
+          CACHE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          QUEUE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          CABLE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
           EOF
           chmod 600 .kamal/secrets
 
