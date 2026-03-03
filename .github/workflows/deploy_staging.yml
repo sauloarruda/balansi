@@ -157,7 +157,7 @@ jobs:
           mkdir -p .kamal
           cat > .kamal/secrets.staging <<EOF
           RAILS_MASTER_KEY=${{ secrets.STAGING_RAILS_MASTER_KEY }}
-          # KAMAL_REGISTRY_PASSWORD=${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
           DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
           CACHE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
           QUEUE_DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
