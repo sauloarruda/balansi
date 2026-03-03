@@ -1,0 +1,13 @@
+{
+  "enabledPlugins": {
+    "majestic-rails@majestic-marketplace": true,
+    "majestic-llm@majestic-marketplace": true,
+    "majestic-marketing@majestic-marketplace": true,
+    "majestic-sales@majestic-marketplace": true,
+    "majestic-company@majestic-marketplace": true,
+    "majestic-experts@majestic-marketplace": true,
+    "majestic-devops@majestic-marketplace": true,
+    "majestic-tools@majestic-marketplace": true,
+    "majestic-engineer@majestic-marketplace": true
+  }
+}
