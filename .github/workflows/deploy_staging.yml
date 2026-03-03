@@ -147,7 +147,7 @@ jobs:
             log_file="$(mktemp)"
 
             set +e
-            timeout 10m bin/kamal deploy -d staging 2>&1
+            timeout 20m bin/kamal deploy -d staging 2>&1 | tee "${log_file}"
             deploy_exit=${PIPESTATUS[0]}
             set -e
 
@@ -156,7 +156,12 @@ jobs:
             fi
 
             if [ "${deploy_exit}" -eq 124 ]; then
-              echo "Kamal deploy timed out after 10 minutes."
+              if grep -q "Finished all in" "${log_file}"; then
+                echo "Kamal process hit timeout after completion; treating deploy as successful."
+                return 0
+              fi
+
+              echo "Kamal deploy timed out after 20 minutes."
               return 124
             fi
 
