@@ -127,27 +127,27 @@ jobs:
 
           touch ~/.ssh/known_hosts
 
-          HOST_CANDIDATES=("staging.balansi.me" "${STAGING_INSTANCE_PUBLIC_IP}")
-          HOST_KEY_FETCHED=false
+          # HOST_CANDIDATES=("staging.balansi.me" "${STAGING_INSTANCE_PUBLIC_IP}")
+          # HOST_KEY_FETCHED=false
 
-          for host in "${HOST_CANDIDATES[@]}"; do
-            for attempt in 1 2 3 4 5 6; do
-              if ssh-keyscan -T 10 -H "${host}" >> ~/.ssh/known_hosts 2>/dev/null; then
-                echo "Fetched SSH host key from ${host}."
-                HOST_KEY_FETCHED=true
-                break 2
-              fi
+          # for host in "${HOST_CANDIDATES[@]}"; do
+          #   for attempt in 1 2 3 4 5 6; do
+          #     if ssh-keyscan -T 10 -H "${host}" >> ~/.ssh/known_hosts 2>/dev/null; then
+          #       echo "Fetched SSH host key from ${host}."
+          #       HOST_KEY_FETCHED=true
+          #       break 2
+          #     fi
 
-              echo "ssh-keyscan failed for ${host} (attempt ${attempt}/6). Retrying in 5s..."
-              sleep 5
-            done
-          done
+          #     echo "ssh-keyscan failed for ${host} (attempt ${attempt}/6). Retrying in 5s..."
+          #     sleep 5
+          #   done
+          # done
 
-          if [ "${HOST_KEY_FETCHED}" != "true" ]; then
-            echo "Failed to fetch host key via ssh-keyscan from both staging.balansi.me and ${STAGING_INSTANCE_PUBLIC_IP}."
-            echo "TCP/22 may still be blocked intermittently or sshd may not be serving host keys."
-            exit 1
-          fi
+          # if [ "${HOST_KEY_FETCHED}" != "true" ]; then
+          #   echo "Failed to fetch host key via ssh-keyscan from both staging.balansi.me and ${STAGING_INSTANCE_PUBLIC_IP}."
+          #   echo "TCP/22 may still be blocked intermittently or sshd may not be serving host keys."
+          #   exit 1
+          # fi
 
           chmod 644 ~/.ssh/known_hosts
 
