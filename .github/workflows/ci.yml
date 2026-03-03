@@ -174,8 +174,8 @@ jobs:
       - scan_js
       - lint
       - test
-    if: |
-      (vars.STAGING_DEPLOY_ENABLED == 'true') 
+ #   if: |
+ #      (vars.STAGING_DEPLOY_ENABLED == 'true') 
  #     (github.event_name == 'push' && github.ref == 'refs/heads/main')
     concurrency:
       group: staging-deploy
