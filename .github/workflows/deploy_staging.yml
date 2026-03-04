@@ -137,6 +137,15 @@ jobs:
           EOF
           chmod 600 .kamal/secrets.staging
 
+      - name: Run database migrations on staging
+        run: |
+          set -euo pipefail
+
+          # ensure the migration step happens before the application deploys, so the
+          # container can start against an up‑to‑date schema. kamal will ssh to the
+          # instance and execute the command inside the Rails container.
+          bin/kamal app exec -d staging -- rails db:migrate
+
       - name: Deploy to staging
         run: |
           set -euo pipefail
