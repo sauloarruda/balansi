@@ -18,4 +18,11 @@ production:
   <<: *default
 
 staging:
-  <<: *default
+  dispatchers:
+    - polling_interval: 10
+      batch_size: 100
+  workers:
+    - queues: "*"
+      threads: 1
+      processes: 1
+      polling_interval: 10

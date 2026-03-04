@@ -1,0 +1,243 @@
+name: Deploy Staging
+
+on:
+  pull_request:
+#   push:
+#     branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy_staging:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: staging-deploy
+      cancel-in-progress: false
+    environment: staging
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve staging SSH security group
+        run: |
+          set -euo pipefail
+
+          INSTANCE_ID="$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=balansi-staging-app" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)"
+
+          if [ -z "${INSTANCE_ID}" ] || [ "${INSTANCE_ID}" = "None" ]; then
+            echo "Instance 'balansi-staging-app' not found in running state."
+            exit 1
+          fi
+
+          STAGING_SSH_SECURITY_GROUP_ID="$(aws ec2 describe-instances \
+            --instance-ids "${INSTANCE_ID}" \
+            --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' \
+            --output text)"
+
+          STAGING_INSTANCE_PUBLIC_IP="$(aws ec2 describe-instances \
+            --instance-ids "${INSTANCE_ID}" \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)"
+
+          if [ -z "${STAGING_SSH_SECURITY_GROUP_ID}" ] || [ "${STAGING_SSH_SECURITY_GROUP_ID}" = "None" ]; then
+            echo "Could not resolve Security Group for instance ${INSTANCE_ID}."
+            exit 1
+          fi
+
+          if [ -z "${STAGING_INSTANCE_PUBLIC_IP}" ] || [ "${STAGING_INSTANCE_PUBLIC_IP}" = "None" ]; then
+            echo "Could not resolve Public IP for instance ${INSTANCE_ID}."
+            exit 1
+          fi
+
+          echo "STAGING_SSH_SECURITY_GROUP_ID=${STAGING_SSH_SECURITY_GROUP_ID}" >> "$GITHUB_ENV"
+          echo "STAGING_INSTANCE_PUBLIC_IP=${STAGING_INSTANCE_PUBLIC_IP}" >> "$GITHUB_ENV"
+
+      - name: Temporarily allow runner SSH access
+        run: |
+          set -euo pipefail
+
+          RUNNER_IP="$(curl -fsSL https://api.ipify.org)"
+          RUNNER_SSH_CIDR="${RUNNER_IP}/32"
+          echo "RUNNER_SSH_CIDR=${RUNNER_SSH_CIDR}" >> "$GITHUB_ENV"
+
+          AUTHORIZE_ERROR="$(mktemp)"
+          if ! aws ec2 authorize-security-group-ingress \
+            --group-id "${STAGING_SSH_SECURITY_GROUP_ID}" \
+            --ip-permissions "[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"${RUNNER_SSH_CIDR}\",\"Description\":\"gha-run-${GITHUB_RUN_ID}\"}]}]" \
+            2>"${AUTHORIZE_ERROR}"; then
+            if grep -q "InvalidPermission.Duplicate" "${AUTHORIZE_ERROR}"; then
+              echo "SSH rule already exists for ${RUNNER_SSH_CIDR}."
+            else
+              cat "${AUTHORIZE_ERROR}"
+              exit 1
+            fi
+          fi
+
+      - name: Diagnose SSH reachability
+        run: |
+          set -euo pipefail
+
+          targets=("staging.balansi.me" "${STAGING_INSTANCE_PUBLIC_IP}")
+          reachable=false
+
+          for target in "${targets[@]}"; do
+            echo "Testing TCP/22 reachability for ${target}..."
+            if timeout 8 bash -c "</dev/tcp/${target}/22" 2>/dev/null; then
+              echo "TCP/22 is reachable on ${target}."
+              reachable=true
+            else
+              echo "TCP/22 is NOT reachable on ${target}."
+            fi
+          done
+
+          if [ "${reachable}" != "true" ]; then
+            echo "SSH port 22 is unreachable from this GitHub runner."
+            echo "Check: subnet route to Internet Gateway, NACL rules, instance firewall (ufw/iptables), and sshd status."
+            echo "If the instance is private, use a self-hosted runner inside the VPC."
+            exit 1
+          fi
+
+      - name: Prepare SSH key
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+
+          printf '%s\n' "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/balansi-staging-key.pem
+          chmod 600 ~/.ssh/balansi-staging-key.pem
+
+      - name: Build Kamal secrets file
+        run: |
+          KAMAL_REGISTRY_PASSWORD="$(aws ecr get-login-password --region "$AWS_REGION")"
+          mkdir -p .kamal
+          cat > .kamal/secrets.staging <<'EOF'
+          # values fetched from AWS Secrets Manager rather than hard‑coded GitHub
+          # secrets.  keep the ARNs in GH secrets or repo variables and the AWS
+          # credentials in the usual CI secrets.
+          AWS_REGION=$AWS_REGION
+          RDS_SECRET_ARN=${{ secrets.STAGING_RDS_SECRET_ARN }}
+          RAILS_MASTER_KEY_SECRET_ARN=${{ secrets.STAGING_RAILS_MASTER_KEY_SECRET_ARN }}
+
+          # host/port are easier to provide directly; you can also derive them via
+          # aws rds describe-db-instances if you prefer to keep everything in
+          # secrets manager.
+          DB_HOST=${{ secrets.STAGING_DB_HOST }}
+          DB_PORT=${{ secrets.STAGING_DB_PORT }}
+
+          DB_USER=$(aws secretsmanager get-secret-value --region "$AWS_REGION" --secret-id "$RDS_SECRET_ARN" --query SecretString --output text | jq -r '.username')
+          DB_PASS=$(aws secretsmanager get-secret-value --region "$AWS_REGION" --secret-id "$RDS_SECRET_ARN" --query SecretString --output text | jq -r '.password')
+          DB_PASS_ENCODED=$(ruby -r uri -e 'print URI.encode_www_form_component(ARGV[0])' "$DB_PASS")
+
+          RAILS_MASTER_KEY=$(aws secretsmanager get-secret-value --region "$AWS_REGION" --secret-id "$RAILS_MASTER_KEY_SECRET_ARN" --query SecretString --output text)
+          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+
+          DATABASE_URL=postgresql://$DB_USER:$DB_PASS_ENCODED@$DB_HOST:$DB_PORT/balansi_staging
+          CACHE_DATABASE_URL=postgresql://$DB_USER:$DB_PASS_ENCODED@$DB_HOST:$DB_PORT/balansi_staging_cache
+          QUEUE_DATABASE_URL=postgresql://$DB_USER:$DB_PASS_ENCODED@$DB_HOST:$DB_PORT/balansi_staging_queue
+          CABLE_DATABASE_URL=postgresql://$DB_USER:$DB_PASS_ENCODED@$DB_HOST:$DB_PORT/balansi_staging_cable
+          EOF
+          chmod 600 .kamal/secrets.staging
+
+      - name: Run database migrations on staging
+        run: |
+          set -euo pipefail
+
+          # ensure the migration step happens before the application deploys, so the
+          # container can start against an up‑to‑date schema. kamal will ssh to the
+          # instance and execute the command inside the Rails container.
+          bin/kamal app exec -d staging -- rails db:migrate
+
+      - name: Deploy to staging
+        run: |
+          set -euo pipefail
+
+          deploy_once() {
+            local log_file
+            local deploy_exit
+            log_file="$(mktemp)"
+
+            set +e
+            timeout 20m bin/kamal deploy -d staging 2>&1 | tee "${log_file}"
+            deploy_exit=${PIPESTATUS[0]}
+            set -e
+
+            if [ "${deploy_exit}" -eq 0 ]; then
+              return 0
+            fi
+
+            if [ "${deploy_exit}" -eq 124 ]; then
+              if grep -q "Finished all in" "${log_file}"; then
+                echo "Kamal process hit timeout after completion; treating deploy as successful."
+                return 0
+              fi
+
+              echo "Kamal deploy timed out after 20 minutes."
+              return 124
+            fi
+
+            if grep -q "Errno::ECONNRESET" "${log_file}"; then
+              echo "Kamal deployment ended with ECONNRESET."
+              return 85
+            fi
+
+            return 1
+          }
+
+          if deploy_once; then
+            exit 0
+          fi
+
+          deploy_status=$?
+          if [ "${deploy_status}" -eq 85 ]; then
+            echo "Retrying deploy once after transient SSH reset..."
+            sleep 5
+            deploy_once
+            exit $?
+          fi
+
+          if [ "${deploy_status}" -eq 124 ]; then
+            echo "Deploy aborted due to timeout. Check the full Kamal output above to identify the hanging phase."
+            exit 124
+          fi
+
+          exit "${deploy_status}"
+
+      - name: Revoke runner SSH access
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RUNNER_SSH_CIDR:-}" ]; then
+            echo "RUNNER_SSH_CIDR is not set; nothing to revoke."
+            exit 0
+          fi
+
+          REVOKE_ERROR="$(mktemp)"
+          if ! aws ec2 revoke-security-group-ingress \
+            --group-id "${STAGING_SSH_SECURITY_GROUP_ID}" \
+            --ip-permissions "[{\"IpProtocol\":\"tcp\",\"FromPort\":22,\"ToPort\":22,\"IpRanges\":[{\"CidrIp\":\"${RUNNER_SSH_CIDR}\"}]}]" \
+            2>"${REVOKE_ERROR}"; then
+            if grep -q "InvalidPermission.NotFound" "${REVOKE_ERROR}"; then
+              echo "SSH rule for ${RUNNER_SSH_CIDR} no longer exists."
+            else
+              cat "${REVOKE_ERROR}"
+              exit 1
+            fi
+          fi

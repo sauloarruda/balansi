@@ -92,3 +92,6 @@ spec/examples.txt
 /terraform/environments/*/terraform.tfstate.*
 /terraform/environments/*/terraform.tfvars
 /terraform/environments/*/terraform.tfvars.json
+.agents.local.yml
+.claude/current_task.txt
+.agents.yml

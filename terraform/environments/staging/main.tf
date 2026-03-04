@@ -152,6 +152,13 @@ module "compute" {
     #!/bin/bash
     set -euxo pipefail
 
+    # Add 1GB swap (t3.micro has only 1GB RAM)
+    dd if=/dev/zero of=/swapfile bs=128M count=8
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+
     dnf update -y
     dnf install -y docker git
 
