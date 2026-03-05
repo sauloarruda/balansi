@@ -9,7 +9,7 @@ v1 focuses on **log**, **calculate**, and **evaluate**. The goal is to create an
 ## Technologies
 
 - **Ruby on Rails 8.1** - Web framework
-- **PostgreSQL** - Database
+- **SQLite** - Database
 - **AWS Cognito** - Authentication (Hosted UI)
 - **Terraform** - Infrastructure as Code
 - **Stimulus** - JavaScript framework
@@ -20,7 +20,7 @@ v1 focuses on **log**, **calculate**, and **evaluate**. The goal is to create an
 ### Prerequisites
 
 - Ruby 3.4.5
-- PostgreSQL 17
+- SQLite 3
 
 ### Installation
 

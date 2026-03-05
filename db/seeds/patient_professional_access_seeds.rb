@@ -11,8 +11,8 @@ professionals = []
       email: email,
       cognito_id: "cognito_professional_#{i+1}",
       name: "Professional #{i+1}",
-      timezone: "America/New_York",
-      language: "en"
+      timezone: "America/Sao_Paulo",
+      language: "pt"
     )
   end
   professional = Professional.find_by(user: user)
@@ -33,8 +33,8 @@ patients = []
       email: email,
       cognito_id: "cognito_patient_#{i+1}",
       name: "Patient #{i+1}",
-      timezone: "America/New_York",
-      language: "en"
+      timezone: "America/Sao_Paulo",
+      language: "pt"
     )
   end
   patient = Patient.find_by(user: user) || Patient.create!(user: user, professional: professionals.sample)

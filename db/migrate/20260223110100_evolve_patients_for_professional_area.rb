@@ -8,7 +8,7 @@ class EvolvePatientsForProfessionalArea < ActiveRecord::Migration[8.1]
     add_column :patients, :profile_completed_at, :datetime
     add_column :patients, :profile_last_updated_at, :datetime
 
-    change_column :patients, :professional_id, :bigint, using: "professional_id::bigint"
+    change_column :patients, :professional_id, :bigint
 
     remove_index :patients, name: "patients_user_professional_unique_idx" if index_exists?(:patients, [ :user_id, :professional_id ], name: "patients_user_professional_unique_idx")
 
@@ -27,7 +27,7 @@ class EvolvePatientsForProfessionalArea < ActiveRecord::Migration[8.1]
     add_index :patients, [ :user_id, :professional_id ], unique: true, name: "patients_user_professional_unique_idx"
     add_index :patients, :user_id unless index_exists?(:patients, :user_id)
 
-    change_column :patients, :professional_id, :integer, using: "professional_id::integer"
+    change_column :patients, :professional_id, :integer
 
     remove_column :patients, :profile_last_updated_at
     remove_column :patients, :profile_completed_at
@@ -49,17 +49,8 @@ class EvolvePatientsForProfessionalArea < ActiveRecord::Migration[8.1]
     now_sql = connection.quote(Time.current)
 
     execute <<~SQL
-      INSERT INTO professionals (id, user_id, created_at, updated_at)
-      VALUES (1, #{existing_user_id.to_i}, #{now_sql}, #{now_sql})
-      ON CONFLICT (id) DO NOTHING;
-    SQL
-
-    execute <<~SQL
-      SELECT setval(
-        pg_get_serial_sequence('professionals', 'id'),
-        COALESCE((SELECT MAX(id) FROM professionals), 1),
-        true
-      );
+      INSERT OR IGNORE INTO professionals (id, user_id, created_at, updated_at)
+      VALUES (1, #{existing_user_id.to_i}, #{now_sql}, #{now_sql});
     SQL
   end
 
@@ -67,25 +58,24 @@ class EvolvePatientsForProfessionalArea < ActiveRecord::Migration[8.1]
     execute <<~SQL
       UPDATE patients
       SET professional_id = 1
-      WHERE professional_id IS DISTINCT FROM 1;
+      WHERE professional_id IS NULL OR professional_id != 1;
     SQL
 
     execute <<~SQL
-      DELETE FROM patients AS p
-      USING (
+      DELETE FROM patients
+      WHERE id IN (
         SELECT id
         FROM (
           SELECT
             id,
             ROW_NUMBER() OVER (
               PARTITION BY user_id
-              ORDER BY updated_at DESC NULLS LAST, id DESC
+              ORDER BY updated_at DESC, id DESC
             ) AS row_num
           FROM patients
         ) ranked
         WHERE ranked.row_num > 1
-      ) AS duplicates
-      WHERE p.id = duplicates.id;
+      );
     SQL
   end
 end

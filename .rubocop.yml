@@ -40,3 +40,4 @@ Metrics/BlockLength:
   CountAsOne: ["array", "hash", "heredoc"]
   Exclude:
     - "spec/**/*"
+    - "db/schema.rb"
