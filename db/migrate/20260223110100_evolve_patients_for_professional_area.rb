@@ -52,6 +52,14 @@ class EvolvePatientsForProfessionalArea < ActiveRecord::Migration[8.1]
       INSERT OR IGNORE INTO professionals (id, user_id, created_at, updated_at)
       VALUES (1, #{existing_user_id.to_i}, #{now_sql}, #{now_sql});
     SQL
+
+    # Ensure that a professional with id = 1 exists before assigning it to patients.
+    default_professional_exists = select_value("SELECT 1 FROM professionals WHERE id = 1 LIMIT 1")
+    unless default_professional_exists
+      raise ActiveRecord::MigrationError,
+            "Failed to ensure default professional with id = 1; " \
+            "INSERT OR IGNORE did not create the expected record."
+    end
   end
 
   def normalize_existing_patients
