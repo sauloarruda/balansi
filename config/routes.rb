@@ -53,5 +53,5 @@ Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
   end
 
   # Defines the root path route ("/")
-  root to: redirect("/journals/today")
+  root to: redirect { |params, request| "/journals/today#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
 end

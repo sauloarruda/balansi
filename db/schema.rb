@@ -11,33 +11,24 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
-
-  # Custom types defined in this database.
-  # Note that some types may not work with other database engines. Be careful if changing database.
-  create_enum "exercise_status_enum", ["pending_llm", "pending_patient", "confirmed"]
-  create_enum "meal_status_enum", ["pending_llm", "pending_patient", "confirmed"]
-  create_enum "meal_type_enum", ["breakfast", "lunch", "snack", "dinner"]
-
   create_table "exercises", force: :cascade do |t|
     t.integer "calories"
     t.datetime "created_at", null: false
     t.string "description", null: false
     t.integer "duration"
-    t.bigint "journal_id", null: false
+    t.integer "journal_id", null: false
     t.integer "neat"
-    t.enum "status", default: "pending_llm", null: false, enum_type: "exercise_status_enum"
+    t.string "status", default: "pending_llm", null: false
     t.string "structured_description"
     t.datetime "updated_at", null: false
-    t.index ["journal_id", "status"], name: "exercises_journal_status_idx"
-    t.index ["journal_id"], name: "index_exercises_on_journal_id"
+    t.index [ "journal_id", "status" ], name: "exercises_journal_status_idx"
+    t.index [ "journal_id" ], name: "index_exercises_on_journal_id"
   end
 
   create_table "journals", force: :cascade do |t|
     t.integer "calories_burned"
     t.integer "calories_consumed"
-    t.datetime "closed_at", precision: nil
+    t.datetime "closed_at"
     t.datetime "created_at", null: false
     t.text "daily_note"
     t.date "date", null: false
@@ -45,15 +36,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
     t.text "feedback_positive"
     t.integer "feeling_today"
     t.integer "hydration_quality"
-    t.bigint "patient_id", null: false
+    t.integer "patient_id", null: false
     t.integer "score"
     t.integer "sleep_quality"
     t.integer "steps_count"
     t.datetime "updated_at", null: false
-    t.index ["closed_at"], name: "index_journals_on_closed_at"
-    t.index ["date"], name: "index_journals_on_date"
-    t.index ["patient_id", "date"], name: "journals_patient_date_unique_idx", unique: true
-    t.index ["patient_id"], name: "index_journals_on_patient_id"
+    t.index [ "closed_at" ], name: "index_journals_on_closed_at"
+    t.index [ "date" ], name: "index_journals_on_date"
+    t.index [ "patient_id", "date" ], name: "journals_patient_date_unique_idx", unique: true
+    t.index [ "patient_id" ], name: "index_journals_on_patient_id"
   end
 
   create_table "meals", force: :cascade do |t|
@@ -65,26 +56,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
     t.integer "fats"
     t.integer "feeling"
     t.integer "gram_weight"
-    t.bigint "journal_id", null: false
-    t.enum "meal_type", null: false, enum_type: "meal_type_enum"
+    t.integer "journal_id", null: false
+    t.string "meal_type", null: false
     t.integer "proteins"
-    t.enum "status", default: "pending_llm", null: false, enum_type: "meal_status_enum"
+    t.string "status", default: "pending_llm", null: false
     t.datetime "updated_at", null: false
-    t.index ["journal_id", "status"], name: "meals_journal_status_idx"
-    t.index ["journal_id"], name: "index_meals_on_journal_id"
+    t.index [ "journal_id", "status" ], name: "meals_journal_status_idx"
+    t.index [ "journal_id" ], name: "index_meals_on_journal_id"
   end
 
   create_table "patient_professional_accesses", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "granted_by_patient_user_id", null: false
-    t.bigint "patient_id", null: false
-    t.bigint "professional_id", null: false
+    t.integer "granted_by_patient_user_id", null: false
+    t.integer "patient_id", null: false
+    t.integer "professional_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["granted_by_patient_user_id"], name: "idx_on_granted_by_patient_user_id_c69b06733a"
-    t.index ["patient_id", "professional_id"], name: "patient_prof_access_unique_idx", unique: true
-    t.index ["patient_id"], name: "index_patient_professional_accesses_on_patient_id"
-    t.index ["professional_id", "patient_id"], name: "patient_prof_access_prof_patient_idx"
-    t.index ["professional_id"], name: "index_patient_professional_accesses_on_professional_id"
+    t.index [ "granted_by_patient_user_id" ], name: "idx_on_granted_by_patient_user_id_c69b06733a"
+    t.index [ "patient_id", "professional_id" ], name: "patient_prof_access_unique_idx", unique: true
+    t.index [ "patient_id" ], name: "index_patient_professional_accesses_on_patient_id"
+    t.index [ "professional_id", "patient_id" ], name: "patient_prof_access_prof_patient_idx"
+    t.index [ "professional_id" ], name: "index_patient_professional_accesses_on_professional_id"
   end
 
   create_table "patients", force: :cascade do |t|
@@ -97,22 +88,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
     t.decimal "height_cm", precision: 5, scale: 2
     t.integer "hydration_goal"
     t.string "phone_e164", limit: 20
-    t.bigint "professional_id", null: false
+    t.bigint "professional_id"
     t.datetime "profile_completed_at"
     t.datetime "profile_last_updated_at"
     t.integer "steps_goal"
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.decimal "weight_kg", precision: 5, scale: 2
-    t.index ["professional_id"], name: "index_patients_on_professional_id"
-    t.index ["user_id"], name: "index_patients_on_user_id", unique: true
+    t.index [ "professional_id" ], name: "index_patients_on_professional_id"
+    t.index [ "user_id" ], name: "index_patients_on_user_id", unique: true
   end
 
   create_table "professionals", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
-    t.index ["user_id"], name: "index_professionals_on_user_id", unique: true
+    t.integer "user_id", null: false
+    t.index [ "user_id" ], name: "index_professionals_on_user_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -123,8 +114,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
     t.string "name", limit: 255, null: false
     t.string "timezone", limit: 50, default: "America/Sao_Paulo", null: false
     t.datetime "updated_at", null: false
-    t.index ["cognito_id"], name: "index_users_on_cognito_id", unique: true
-    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index [ "cognito_id" ], name: "index_users_on_cognito_id", unique: true
+    t.index [ "email" ], name: "index_users_on_email", unique: true
   end
 
   add_foreign_key "exercises", "journals", on_delete: :cascade
