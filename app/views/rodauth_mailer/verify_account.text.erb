@@ -1,0 +1,7 @@
+<%= t("auth.rodauth.emails.verify_account.greeting", name: @rodauth.account[:name]) %>
+
+<%= t("auth.rodauth.emails.verify_account.body") %>
+
+<%= @rodauth.verify_account_email_link %>
+
+<%= t("auth.rodauth.emails.verify_account.ignore_hint") %>

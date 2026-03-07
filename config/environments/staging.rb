@@ -47,9 +47,6 @@ Rails.application.configure do
 
   # Set host used by URL helpers and mailers.
   config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "staging.balansi.me") }
-  config.action_mailer.default_options = {
-    from: ENV.fetch("MAILER_FROM", "no-reply@#{ENV.fetch("APP_HOST", "staging.balansi.me")}")
-  }
 
   # SMTP delivery is configured via Rails credentials (smtp: username/password).
   # See config/application.rb for the shared Balansi::Application.configure_smtp! helper.

@@ -34,7 +34,7 @@ RSpec.describe "Rodauth authentication", type: :request do
   end
 
   describe "POST /auth/sign_up" do
-    it "creates a user, creates the patient profile, and logs the user in" do
+    it "creates a user and patient profile, then redirects to verify-email page" do
       token = authenticity_token_for(auth_sign_up_path)
 
       expect do
@@ -53,12 +53,13 @@ RSpec.describe "Rodauth authentication", type: :request do
       user = User.order(:id).last
 
       expect(response).to have_http_status(:found)
-      expect(response).to redirect_to(root_path)
-      expect(session[:user_id]).to eq(user.id)
+      expect(response).to redirect_to("/auth/verify-email/resend")
+      expect(session[:user_id]).to be_nil
       expect(user.password_hash).to be_present
       expect(user.language).to eq("en")
       expect(user.timezone).to eq("America/Sao_Paulo")
       expect(user.patient.professional_id).to eq(owner_professional.id)
+      expect(user.status_id).to eq(User::UNVERIFIED_STATUS)
     end
 
     it "uses the provided professional_id when present" do

@@ -1,6 +1,15 @@
 class User < ApplicationRecord
   include Rodauth::Rails.model
 
+  # Rodauth status_id values
+  UNVERIFIED_STATUS = 1
+  OPEN_STATUS       = 2
+  CLOSED_STATUS     = 3
+
+  def verified?
+    status_id == OPEN_STATUS
+  end
+
   has_one :patient, dependent: :destroy
   has_one :professional, dependent: :destroy
 

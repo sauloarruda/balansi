@@ -1,0 +1,16 @@
+- content_for :title, t("auth.local.verify_account_resend.title")
+
+h1.text-3xl.font-bold.mb-2 = t("auth.local.verify_account_resend.title")
+p.text-gray-600.mb-6 = t("auth.local.verify_account_resend.description")
+
+.mb-6.rounded-lg.border.border-blue-200.bg-blue-50.p-4.text-blue-800
+  p = t("auth.local.verify_account_resend.check_spam")
+
+= form_with url: rodauth.verify_account_resend_path, method: :post, data: { turbo: false }, class: "space-y-6" do |f|
+  div
+    = f.label rodauth.login_param, t("auth.local.fields.email")
+    = f.email_field rodauth.login_param, id: rodauth.login_param, autocomplete: "email",
+        required: true, placeholder: t("auth.local.fields.email_placeholder")
+
+  .pt-4.border-t.border-gray-200
+    = f.submit t("auth.local.verify_account_resend.submit"), class: "w-full sm:w-auto"

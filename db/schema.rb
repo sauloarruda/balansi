@@ -10,7 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_06_213448) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_07_131130) do
+  create_table "account_verification_keys", force: :cascade do |t|
+    t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "key", null: false
+    t.datetime "requested_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+  end
+
   create_table "exercises", force: :cascade do |t|
     t.integer "calories"
     t.datetime "created_at", null: false
@@ -113,16 +119,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_06_213448) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.string "cognito_id", limit: 255
     t.datetime "created_at", null: false
     t.string "email", limit: 255, null: false
     t.string "language", limit: 10, default: "pt", null: false
     t.string "name", limit: 255, null: false
     t.string "password_hash"
+    t.integer "status_id", default: 2, null: false
     t.string "timezone", limit: 50, default: "America/Sao_Paulo", null: false
     t.datetime "updated_at", null: false
+    t.index [ "cognito_id" ], name: "index_users_on_cognito_id", unique: true
     t.index [ "email" ], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "account_verification_keys", "users", column: "id"
   add_foreign_key "exercises", "journals", on_delete: :cascade
   add_foreign_key "journals", "patients", on_delete: :cascade
   add_foreign_key "meals", "journals", on_delete: :cascade
