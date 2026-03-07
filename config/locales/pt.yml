@@ -445,6 +445,47 @@ pt:
         already_shared: "O acesso já foi concedido a este profissional."
         revoke_not_found: "Acesso não encontrado."
   auth:
+    actions:
+      logout: "Sair"
+    rodauth:
+      flash:
+        create_account_success: "Sua conta foi criada com sucesso."
+        login_success: "Login realizado com sucesso."
+        logout_success: "Sessão encerrada com sucesso."
+        login_required: "Faça login para continuar."
+      errors:
+        no_matching_login: "Nenhuma conta encontrada para este email."
+        invalid_password: "Senha incorreta."
+        login_taken: "Já existe uma conta com este email."
+        password_too_short: "A senha precisa ter pelo menos %{count} caracteres."
+        invalid_email: "Informe um email válido."
+        name_blank: "Informe seu nome."
+        invalid_timezone: "Timezone inválido."
+        invalid_language: "Idioma inválido."
+        patient_profile_creation_failed: "Não foi possível criar o perfil do paciente: %{message}"
+    local:
+      fields:
+        name: "Nome"
+        name_placeholder: "Como você gostaria de ser chamado?"
+        email: "Email"
+        email_placeholder: "voce@exemplo.com"
+        email_confirmation: "Confirmar email"
+        password: "Senha"
+        password_placeholder: "Digite sua senha"
+        password_confirmation: "Confirmar senha"
+      login:
+        title: "Entrar"
+        description: "Acesse sua conta para continuar seu acompanhamento."
+        submit: "Entrar"
+        no_account: "Ainda não tem conta?"
+        create_account: "Criar conta"
+      create_account:
+        title: "Criar conta"
+        description: "Crie sua conta para começar a usar o Balansi."
+        professional_context: "Seu cadastro será vinculado ao profissional responsável pelo convite."
+        submit: "Criar conta"
+        has_account: "Já possui conta?"
+        sign_in: "Entrar"
     sign_up:
       errors:
         invalid_professional_signup_context: "Contexto de cadastro profissional inválido"

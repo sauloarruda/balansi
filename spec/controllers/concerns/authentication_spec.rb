@@ -30,7 +30,6 @@ RSpec.describe Authentication, type: :controller do
       get :public_action
       expect(controller.send(:current_user)).to be_nil
       expect(session[:user_id]).to be_nil
-      expect(session[:refresh_token]).to be_nil
     end
 
     it "is memoized" do

@@ -1,0 +1,36 @@
+doctype html
+html
+  head
+    title = (@page_title || content_for(:title) || "Balansi")
+    meta name="viewport" content="width=device-width,initial-scale=1"
+    meta name="apple-mobile-web-app-capable" content="yes"
+    meta name="application-name" content="Balansi"
+    meta name="mobile-web-app-capable" content="yes"
+    = csrf_meta_tags
+    = csp_meta_tag
+
+    = yield :head
+
+    link rel="icon" href=asset_path("balansi-icon.png") type="image/png"
+    link rel="apple-touch-icon" href=asset_path("balansi-icon.png")
+
+    = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
+    = stylesheet_link_tag "application", "data-turbo-track": "reload"
+    = javascript_importmap_tags
+  body.bg-gray-50
+    main.min-h-screen
+      .max-w-7xl.mx-auto.px-4.py-8.md:py-12
+        .mx-auto.max-w-xl
+          .mb-8.flex.justify-center
+            = link_to auth_login_path, class: "inline-flex items-center justify-center" do
+              = image_tag "balansi-logo.svg", alt: "Balansi", class: "h-8"
+
+          .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6.md:p-8
+            - if notice
+              .mb-6.rounded-lg.border.border-green-200.bg-green-50.p-4.text-green-800 role="status" aria-live="polite"
+                = notice
+            - if alert
+              .mb-6.rounded-lg.border.border-red-200.bg-red-50.p-4.text-red-800 role="alert" aria-live="assertive"
+                = alert
+
+            = yield

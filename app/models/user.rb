@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  include Rodauth::Rails.model
+
   has_one :patient, dependent: :destroy
   has_one :professional, dependent: :destroy
 

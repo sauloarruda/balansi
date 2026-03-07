@@ -28,26 +28,6 @@ output "dns_fqdn" {
   value       = try(module.dns[0].fqdn, null)
 }
 
-output "cognito_user_pool_id" {
-  description = "Cognito User Pool ID"
-  value       = module.cognito.user_pool_id
-}
-
-output "cognito_client_id" {
-  description = "Cognito App Client ID"
-  value       = module.cognito.client_id
-}
-
-output "cognito_domain" {
-  description = "Cognito domain prefix"
-  value       = module.cognito.domain
-}
-
-output "cognito_region" {
-  description = "Cognito AWS region"
-  value       = module.cognito.region
-}
-
 output "rds_master_secret_arn" {
   description = "RDS-managed master user password secret ARN"
   value       = module.rds.master_user_secret_arn
@@ -61,11 +41,6 @@ output "rails_master_key_secret_arn" {
 output "app_env_secret_arn" {
   description = "Secrets Manager ARN for application env vars"
   value       = aws_secretsmanager_secret.app_env.arn
-}
-
-output "cognito_client_secret_secret_arn" {
-  description = "Secrets Manager ARN where Cognito client secret should be stored"
-  value       = aws_secretsmanager_secret.cognito_client_secret.arn
 }
 
 output "database_names" {

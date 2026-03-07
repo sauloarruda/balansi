@@ -165,15 +165,3 @@ variable "app_domain" {
   type        = string
   default     = "staging.balansi.me"
 }
-
-variable "cognito_callback_urls" {
-  description = "Allowed callback URLs for Cognito app client. Leave empty to auto-generate from app_domain."
-  type        = list(string)
-  default     = []
-}
-
-variable "cognito_logout_urls" {
-  description = "Allowed logout URLs for Cognito app client. Leave empty to auto-generate from app_domain."
-  type        = list(string)
-  default     = []
-}

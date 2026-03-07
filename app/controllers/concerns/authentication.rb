@@ -5,7 +5,7 @@
 # - Provides a helper_method :current_user available in views
 # - Redirects unauthenticated users to "/auth/sign_in"
 #
-# In development only: allows bypassing Cognito by passing ?test_user_id=ID
+# In development only: allows bypassing the auth UI by passing ?test_user_id=ID
 # to sign in as that user and redirect to the same URL without the param.
 #
 # The current_user method loads the user from session, handling cases where
@@ -21,10 +21,10 @@ module Authentication
 
   private
 
-  # In development, allow signing in via ?test_user_id=ID without Cognito.
+  # In development, allow signing in via ?test_user_id=ID without using the auth UI.
   # When the user is not found, sets a flash alert and redirects back to the
   # sign-in page (without the param) so the error is shown there instead of
-  # bouncing the user to Cognito.
+  # looping through the auth flow.
   def development_test_user_login!
     reset_session
     user = development_test_user
@@ -35,10 +35,8 @@ module Authentication
     end
 
     session[:user_id] = user.id
-    session.delete(:refresh_token)
-
     target_url = if request.path.match?(%r{/auth/(sign_in|sign_up)})
-      # Avoid staying on auth page (which would redirect to Cognito)
+      # Avoid staying on auth page after the test login hook.
       user.professional.present? ? professional_patients_path : root_path
     elsif request.query_parameters.except("test_user_id").any?
       "#{request.path}?#{request.query_parameters.except("test_user_id").to_query}"
@@ -65,7 +63,7 @@ module Authentication
   # @note This method:
   #   - Memoizes the user to avoid multiple database queries per request
   #   - Handles cases where user was deleted while session is still active
-  #   - Clears invalid session data (user_id and refresh_token) if user not found
+  #   - Clears invalid session data if user not found
   #
   # @example Check if user is authenticated
   #   if current_user
@@ -77,7 +75,6 @@ module Authentication
     # User was deleted but session still has user_id
     # Clear invalid session and return nil
     session.delete(:user_id)
-    session.delete(:refresh_token)
     nil
   end
 

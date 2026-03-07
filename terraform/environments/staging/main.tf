@@ -6,14 +6,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.1"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
   }
 
   # Recommended for team usage (uncomment after creating bucket/table)
@@ -48,12 +40,6 @@ data "aws_ssm_parameter" "amazon_linux_2023_x86_64" {
 
 locals {
   selected_azs = slice(data.aws_availability_zones.available.names, 0, 2)
-  default_cognito_callback_urls = [
-    "https://${var.app_domain}/auth/callback"
-  ]
-  default_cognito_logout_urls = [
-    "https://${var.app_domain}/"
-  ]
 
   common_tags = {
     Project     = var.project_name
@@ -64,8 +50,7 @@ locals {
   runtime_secret_arns = concat(
     [
       aws_secretsmanager_secret.rails_master_key.arn,
-      aws_secretsmanager_secret.app_env.arn,
-      aws_secretsmanager_secret.cognito_client_secret.arn
+      aws_secretsmanager_secret.app_env.arn
     ],
     var.rds_manage_master_user_password ? [module.rds.master_user_secret_arn] : []
   )
@@ -81,13 +66,6 @@ resource "aws_secretsmanager_secret" "rails_master_key" {
 resource "aws_secretsmanager_secret" "app_env" {
   name        = "/${var.project_name}/${var.environment}/app/env"
   description = "Application environment variables for ${var.environment}"
-
-  tags = local.common_tags
-}
-
-resource "aws_secretsmanager_secret" "cognito_client_secret" {
-  name        = "/${var.project_name}/${var.environment}/cognito/client_secret"
-  description = "Cognito app client secret for ${var.environment}"
 
   tags = local.common_tags
 }
@@ -176,15 +154,4 @@ module "dns" {
   zone_id     = var.route53_zone_id
   record_name = var.app_domain
   records     = [module.compute.public_ip]
-}
-
-module "cognito" {
-  source = "../../modules/cognito"
-
-  user_pool_name = "${var.project_name}-users-${var.environment}"
-  project_name   = var.project_name
-  environment    = var.environment
-  callback_urls  = length(var.cognito_callback_urls) > 0 ? var.cognito_callback_urls : local.default_cognito_callback_urls
-  logout_urls    = length(var.cognito_logout_urls) > 0 ? var.cognito_logout_urls : local.default_cognito_logout_urls
-  tags           = local.common_tags
 }

@@ -79,7 +79,7 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
-  # HTTP mocking for testing external services (Cognito)
+  # HTTP mocking for testing external services
   gem "webmock"
   # RSpec testing framework
   gem "rspec-rails"
@@ -92,11 +92,8 @@ end
 # ActiveInteraction for service objects pattern
 gem "active_interaction", "~> 5.0"
 
-# HTTP client for Cognito API calls
+# HTTP client for external API calls
 gem "httparty"
-
-# JWT token verification for Cognito ID tokens
-gem "jwt"
 
 # Rate limiting middleware
 gem "rack-attack"
@@ -105,3 +102,7 @@ gem "rack-attack"
 gem "enumerize"
 
 gem "phonelib", "~> 0.10.16"
+
+gem "rodauth-rails", "~> 2.1"
+gem "bcrypt", "~> 3.1", require: false
+gem "sequel-activerecord_connection", "~> 2.0", require: false

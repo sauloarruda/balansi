@@ -9,9 +9,6 @@ Bundler.require(*Rails.groups)
 # Require rack-attack for rate limiting
 require "rack/attack"
 
-# Require JWT gem for token verification
-require "jwt"
-
 module Balansi
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
@@ -33,7 +30,7 @@ module Balansi
     # Configure session store
     config.session_store :cookie_store,
       key: "_balansi_session",
-      expire_after: 30.days  # Align with Cognito refresh_token_validity (30 days)
+      expire_after: 30.days
 
     # Configure i18n
     config.i18n.available_locales = [ :pt, :en ]
@@ -45,5 +42,31 @@ module Balansi
 
     # Use Rails routes to render custom error pages (403/404/500)
     config.exceptions_app = routes
+
+    # Configures Action Mailer SMTP delivery for any environment.
+    # Reads credentials from Rails credentials (smtp: username/password).
+    # SMTP is enabled only when both credentials are present.
+    # Other SMTP parameters (address, port, etc.) can be overridden via ENV vars.
+    def self.configure_smtp!(config, default_host: "localhost")
+      smtp_username = Rails.application.credentials.dig(:smtp, :username)
+      smtp_password = Rails.application.credentials.dig(:smtp, :password)
+      smtp_configured = smtp_username.present? && smtp_password.present?
+
+      config.action_mailer.perform_deliveries = smtp_configured
+      config.action_mailer.raise_delivery_errors = smtp_configured
+
+      return unless smtp_configured
+
+      config.action_mailer.delivery_method = :smtp
+      config.action_mailer.smtp_settings = {
+        user_name: smtp_username,
+        password: smtp_password,
+        address: ENV.fetch("SMTP_ADDRESS", "email-smtp.sa-east-1.amazonaws.com"),
+        port: ENV.fetch("SMTP_PORT", 587).to_i,
+        domain: ENV.fetch("SMTP_DOMAIN", default_host),
+        authentication: ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym,
+        enable_starttls_auto: ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", "true") == "true"
+      }
+    end
   end
 end
