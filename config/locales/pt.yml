@@ -453,6 +453,10 @@ pt:
         login_success: "Login realizado com sucesso."
         logout_success: "Sessão encerrada com sucesso."
         login_required: "Faça login para continuar."
+        verify_account_success: "Email confirmado com sucesso. Bem-vindo!"
+        resend_verify_account_success: "Email de confirmação reenviado."
+        verify_account_email_sent: "Email de confirmação enviado. Verifique sua caixa de entrada."
+        verify_account_email_recently_sent: "Um email de confirmação já foi enviado recentemente. Verifique sua caixa de entrada ou aguarde alguns minutos antes de tentar novamente."
       errors:
         no_matching_login: "Nenhuma conta encontrada para este email."
         invalid_password: "Senha incorreta."
@@ -463,6 +467,16 @@ pt:
         invalid_timezone: "Timezone inválido."
         invalid_language: "Idioma inválido."
         patient_profile_creation_failed: "Não foi possível criar o perfil do paciente: %{message}"
+        unverified_account: "Você precisa confirmar seu email antes de fazer login. Verifique sua caixa de entrada ou reenvie o email."
+        invalid_verification_key: "Link de verificação inválido ou expirado."
+      emails:
+        verify_account:
+          subject: "Confirme seu email no Balansi"
+          greeting: "Olá %{name},"
+          body: "Parabéns! Você acabou de criar uma conta na Balansi. Clique no botão abaixo para confirmar seu endereço de email e ativar sua conta."
+          cta: "Confirmar email"
+          link_fallback: "Se o botão não funcionar, copie e cole este link no navegador:"
+          ignore_hint: "Se você não criou uma conta no Balansi, ignore este email."
     local:
       fields:
         name: "Nome"
@@ -486,6 +500,15 @@ pt:
         submit: "Criar conta"
         has_account: "Já possui conta?"
         sign_in: "Entrar"
+      verify_account:
+        title: "Confirmar email"
+        description: "Clique no botão abaixo para confirmar seu endereço de email e ativar sua conta."
+        submit: "Confirmar email"
+      verify_account_resend:
+        title: "Verifique seu email"
+        description: "Enviamos um link de confirmação para você. Clique no link para ativar sua conta."
+        check_spam: "Não encontrou o email? Verifique a pasta de spam ou lixo eletrônico."
+        submit: "Reenviar email"
     sign_up:
       errors:
         invalid_professional_signup_context: "Contexto de cadastro profissional inválido"

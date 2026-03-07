@@ -49,6 +49,10 @@ Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
     resources :exercises, controller: "journal_entries/exercises", except: [ :index ]
   end
 
+  if Rails.env.development?
+    mount LetterOpenerWeb::Engine, at: "/letter_opener"
+  end
+
   # Defines the root path route ("/")
   root to: redirect { |params, request| "/journals/today#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
 end

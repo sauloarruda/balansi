@@ -1,0 +1,6 @@
+- content_for :title, t("auth.local.verify_account.title")
+
+= form_with url: rodauth.verify_account_path, method: :post, data: { turbo: false }, id: "verify-account-form" do |f|
+
+javascript:
+  document.getElementById("verify-account-form").submit();

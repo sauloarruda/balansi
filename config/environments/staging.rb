@@ -55,6 +55,10 @@ Rails.application.configure do
   # See config/application.rb for the shared Balansi::Application.configure_smtp! helper.
   Balansi::Application.configure_smtp!(config, default_host: ENV.fetch("APP_HOST", "staging.balansi.me"))
 
+  # SMTP delivery is configured via Rails credentials (smtp: username/password).
+  # See config/application.rb for the shared Balansi::Application.configure_smtp! helper.
+  Balansi::Application.configure_smtp!(config, default_host: ENV.fetch("APP_HOST", "staging.balansi.me"))
+
   # Enable locale fallbacks for I18n.
   config.i18n.fallbacks = true
 

@@ -2,7 +2,7 @@ require "sequel/core"
 
 class RodauthMain < Rodauth::Rails::Auth
   configure do # rubocop:disable Metrics/BlockLength
-    enable :create_account, :login, :logout, :remember
+    enable :create_account, :login, :logout, :remember, :verify_account
 
     db Sequel.sqlite(extensions: :activerecord_connection, keep_reference: false)
     convert_token_id_to_integer? { User.columns_hash["id"].type == :integer }
@@ -20,6 +20,10 @@ class RodauthMain < Rodauth::Rails::Auth
     rails_controller { RodauthController }
     title_instance_variable :@page_title
     flash_error_key :alert
+    email_from do
+      Rails.application.credentials.mailer_from ||
+        ENV.fetch("MAILER_FROM", "support@#{Rails.application.config.action_mailer.default_url_options&.fetch(:host, "localhost")}")
+    end
     login_param "email"
     login_confirm_param "email_confirmation"
     login_label { I18n.t("auth.local.fields.email") }
@@ -40,6 +44,23 @@ class RodauthMain < Rodauth::Rails::Auth
     login_not_valid_email_message { I18n.t("auth.rodauth.errors.invalid_email") }
     login_does_not_meet_requirements_message do
       login_requirement_message.presence || login_not_valid_email_message
+    end
+
+    # Verify account
+    verify_account_route "verify-email"
+    verify_account_resend_route "verify-email/resend"
+    verify_account_set_password? { false }
+    no_matching_verify_account_key_error_flash { I18n.t("auth.rodauth.errors.invalid_verification_key") }
+    verify_account_notice_flash { I18n.t("auth.rodauth.flash.verify_account_success") }
+    verify_account_email_sent_notice_flash { I18n.t("auth.rodauth.flash.verify_account_email_sent") }
+    verify_account_email_recently_sent_error_flash { I18n.t("auth.rodauth.flash.verify_account_email_recently_sent") }
+    attempt_to_login_to_unverified_account_error_flash { I18n.t("auth.rodauth.errors.unverified_account") }
+    verify_account_email_subject { I18n.t("auth.rodauth.emails.verify_account.subject") }
+    create_account_redirect { "#{prefix}/verify-email/resend" }
+    verify_account_redirect { login_redirect }
+
+    create_verify_account_email do
+      RodauthMailer.verify_account(self.class.configuration_name, account_id, verify_account_key_value)
     end
 
     after_login { remember_login }

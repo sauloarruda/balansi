@@ -38,9 +38,9 @@ Rails.application.configure do
   # Port updated to 4000 to match `bin/dev` and other development tooling.
   config.action_mailer.default_url_options = { host: "localhost", port: 4000 }
 
-  # SMTP delivery is configured via Rails credentials (smtp: username/password).
-  # See config/application.rb for the shared Balansi::Application.configure_smtp! helper.
-  Balansi::Application.configure_smtp!(config, default_host: "localhost")
+  # Capture all emails and display them at /letter_opener
+  config.action_mailer.delivery_method = :letter_opener_web
+  config.action_mailer.perform_deliveries = true
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
