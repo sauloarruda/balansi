@@ -397,6 +397,47 @@ en:
         already_shared: "Access has already been granted to this professional."
         revoke_not_found: "Access not found."
   auth:
+    actions:
+      logout: "Sign out"
+    rodauth:
+      flash:
+        create_account_success: "Your account was created successfully."
+        login_success: "Signed in successfully."
+        logout_success: "Signed out successfully."
+        login_required: "Sign in to continue."
+      errors:
+        no_matching_login: "No account was found for this email."
+        invalid_password: "Incorrect password."
+        login_taken: "An account with this email already exists."
+        password_too_short: "Password must be at least %{count} characters long."
+        invalid_email: "Enter a valid email."
+        name_blank: "Enter your name."
+        invalid_timezone: "Invalid timezone."
+        invalid_language: "Invalid language."
+        patient_profile_creation_failed: "Could not create the patient profile: %{message}"
+    local:
+      fields:
+        name: "Name"
+        name_placeholder: "How should we call you?"
+        email: "Email"
+        email_placeholder: "you@example.com"
+        email_confirmation: "Confirm email"
+        password: "Password"
+        password_placeholder: "Enter your password"
+        password_confirmation: "Confirm password"
+      login:
+        title: "Sign in"
+        description: "Access your account to continue your care."
+        submit: "Sign in"
+        no_account: "Don't have an account yet?"
+        create_account: "Create account"
+      create_account:
+        title: "Create account"
+        description: "Create your account to start using Balansi."
+        professional_context: "Your account will be linked to the professional who invited you."
+        submit: "Create account"
+        has_account: "Already have an account?"
+        sign_in: "Sign in"
     sign_up:
       errors:
         invalid_professional_signup_context: "Invalid professional signup context"

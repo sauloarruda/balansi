@@ -70,18 +70,9 @@ RSpec.describe User, type: :model do
 
   describe "database constraints" do
     it "has unique email constraint" do
-      create(:user, email: "test@example.com", cognito_id: "cognito_123")
+      create(:user, email: "test@example.com")
 
-      duplicate_user = build(:user, email: "test@example.com", cognito_id: "cognito_456")
-      expect {
-        duplicate_user.save(validate: false)
-      }.to raise_error(ActiveRecord::RecordNotUnique)
-    end
-
-    it "has unique cognito_id constraint" do
-      create(:user, cognito_id: "cognito_123")
-
-      duplicate_user = build(:user, cognito_id: "cognito_123")
+      duplicate_user = build(:user, email: "test@example.com")
       expect {
         duplicate_user.save(validate: false)
       }.to raise_error(ActiveRecord::RecordNotUnique)

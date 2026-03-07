@@ -10,7 +10,7 @@ v1 focuses on **log**, **calculate**, and **evaluate**. The goal is to create an
 
 - **Ruby on Rails 8.1** - Web framework
 - **SQLite** - Database
-- **AWS Cognito** - Authentication (Hosted UI)
+- **Rodauth** - Authentication for Rails
 - **Terraform** - Infrastructure as Code
 - **Stimulus** - JavaScript framework
 - **RSpec** - Testing framework
@@ -45,14 +45,28 @@ Or use the setup script:
 bin/setup
 ```
 
-**Note**: Infrastructure setup (Terraform) and Rails credentials configuration are only needed once. See [`terraform/README.md`](terraform/README.md) for initial infrastructure setup.
+Authentication is local to the Rails app. There is no external OAuth provider setup required for development.
+
+## Authentication
+
+Balansi uses `rodauth-rails` with server-rendered auth screens under `/auth`.
+
+- `GET /auth/sign_in` - sign in
+- `GET /auth/sign_up` - create account
+- `POST /auth/sign_out` - sign out
+
+Implementation entry points:
+- [`app/misc/rodauth_main.rb`](app/misc/rodauth_main.rb) - Rodauth feature configuration and signup provisioning
+- [`app/controllers/rodauth_controller.rb`](app/controllers/rodauth_controller.rb) - Rails controller wrapper for Rodauth callbacks, layout and locale concerns
+- [`app/views/rodauth`](app/views/rodauth) - local auth views in Slim/Tailwind
+
+The signup flow creates the `User`, stores the browser locale/timezone defaults, and provisions a `Patient` linked to the selected professional context when present.
 
 ## Documentation
 
 - **Product Vision**: [`doc/PITCH-v1.md`](doc/PITCH-v1.md) - Product pitch and v1 scope
-- **Authentication PRD**: [`doc/auth/prd.md`](doc/auth/prd.md) - Authentication module requirements
-- **Authentication ERD**: [`doc/auth/erd.md`](doc/auth/erd.md) - Authentication architecture and data model
-- **Infrastructure**: [`terraform/README.md`](terraform/README.md) - Terraform setup and Cognito configuration
+- **Rodauth configuration**: [`app/misc/rodauth_main.rb`](app/misc/rodauth_main.rb)
+- **Infrastructure**: `terraform/` and `config/deploy*.yml`
 
 ## Kamal Secrets
 
@@ -113,12 +127,12 @@ See the current README for detailed testing instructions.
 
 ### Development test users (AI testing)
 
-When an AI-powered run or manual exploration needs to exercise authenticated routes without navigating the Cognito hosted UI, start the app locally (`bin/dev`). Append `?test_user_id=<id>` to any GET URL and the [Authentication concern](app/controllers/concerns/authentication.rb#L1-L60) intercepts that parameter in development, loads the matching user, clears the query parameter, and redirects back so the rest of your session runs against that account.
+When an AI-powered run or manual exploration needs to exercise authenticated routes without going through the auth UI, start the app locally (`bin/dev`). Append `?test_user_id=<id>` to any GET URL and the [Authentication concern](app/controllers/concerns/authentication.rb#L1-L60) intercepts that parameter in development, loads the matching user, clears the query parameter, and redirects back so the rest of your session runs against that account.
 
 Steps to use it safely:
 1. Find a user ID from the development database (for example, `bin/rails runner "puts User.first.id"` or inspect `db/seeds/development.rb`).
 2. Visit `http://localhost:4000/<protected_path>?test_user_id=<id>`; the user will be signed in for that request and redirected without the parameter.
 3. If the ID does not exist the concern redirects to `/auth/sign_in` with an alert that includes the missing ID.
-4. The bypass runs only when `Rails.env.development?` and on GET requests. It also clears `session[:refresh_token]` so you start with a clean session.
+4. The bypass runs only when `Rails.env.development?` and on GET requests.
 
 Use this shortcut for AI or automation tests that need authenticated context; do not expose `test_user_id` in staging/production.

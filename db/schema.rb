@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_06_213448) do
   create_table "exercises", force: :cascade do |t|
     t.integer "calories"
     t.datetime "created_at", null: false
@@ -106,15 +106,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
     t.index [ "user_id" ], name: "index_professionals_on_user_id", unique: true
   end
 
+  create_table "user_remember_keys", force: :cascade do |t|
+    t.datetime "deadline", null: false
+    t.string "key", null: false
+    t.index [ "id" ], name: "index_user_remember_keys_on_id", unique: true
+  end
+
   create_table "users", force: :cascade do |t|
-    t.string "cognito_id", limit: 255, null: false
     t.datetime "created_at", null: false
     t.string "email", limit: 255, null: false
     t.string "language", limit: 10, default: "pt", null: false
     t.string "name", limit: 255, null: false
+    t.string "password_hash"
     t.string "timezone", limit: 50, default: "America/Sao_Paulo", null: false
     t.datetime "updated_at", null: false
-    t.index [ "cognito_id" ], name: "index_users_on_cognito_id", unique: true
     t.index [ "email" ], name: "index_users_on_email", unique: true
   end
 
@@ -127,4 +132,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_142345) do
   add_foreign_key "patients", "professionals"
   add_foreign_key "patients", "users", on_delete: :cascade
   add_foreign_key "professionals", "users", on_delete: :cascade
+  add_foreign_key "user_remember_keys", "users", column: "id"
 end

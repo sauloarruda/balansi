@@ -9,7 +9,6 @@ professionals = []
   unless user
     user = User.create!(
       email: email,
-      cognito_id: "cognito_professional_#{i+1}",
       name: "Professional #{i+1}",
       timezone: "America/Sao_Paulo",
       language: "pt"
@@ -31,7 +30,6 @@ patients = []
   unless user
     user = User.create!(
       email: email,
-      cognito_id: "cognito_patient_#{i+1}",
       name: "Patient #{i+1}",
       timezone: "America/Sao_Paulo",
       language: "pt"

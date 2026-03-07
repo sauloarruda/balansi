@@ -44,10 +44,16 @@ env:
     - CACHE_DATABASE_URL
     - QUEUE_DATABASE_URL
     - CABLE_DATABASE_URL
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
   clear:
     RAILS_ENV: staging
     RACK_ENV: staging
     APP_HOST: staging.balansi.me
+    MAILER_FROM: no-reply@staging.balansi.me
+    SMTP_ADDRESS: email-smtp.sa-east-1.amazonaws.com
+    SMTP_PORT: 587
+    SMTP_DOMAIN: staging.balansi.me
 
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
