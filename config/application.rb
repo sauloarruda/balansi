@@ -43,11 +43,15 @@ module Balansi
     # Use Rails routes to render custom error pages (403/404/500)
     config.exceptions_app = routes
 
-    # Configures Action Mailer SMTP delivery for any environment.
-    # Reads credentials from Rails credentials (smtp: username/password).
-    # SMTP is enabled only when both credentials are present.
-    # Other SMTP parameters (address, port, etc.) can be overridden via ENV vars.
+    # Configures Action Mailer for any environment.
+    # - Sender (from): reads credentials mailer_from, then ENV MAILER_FROM, then "support@<default_host>".
+    # - SMTP delivery: reads credentials smtp: username/password; disabled when absent.
+    # - Other SMTP params can be overridden via ENV vars (SMTP_ADDRESS, SMTP_PORT, etc.).
     def self.configure_smtp!(config, default_host: "localhost")
+      from = Rails.application.credentials.mailer_from ||
+             ENV.fetch("MAILER_FROM", "support@#{default_host}")
+      config.action_mailer.default_options = { from: from }
+
       smtp_username = Rails.application.credentials.dig(:smtp, :username)
       smtp_password = Rails.application.credentials.dig(:smtp, :password)
       smtp_configured = smtp_username.present? && smtp_password.present?

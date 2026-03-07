@@ -405,6 +405,10 @@ en:
         login_success: "Signed in successfully."
         logout_success: "Signed out successfully."
         login_required: "Sign in to continue."
+        verify_account_success: "Email confirmed successfully. Welcome!"
+        resend_verify_account_success: "Confirmation email resent."
+        verify_account_email_sent: "Confirmation email sent. Check your inbox."
+        verify_account_email_recently_sent: "A confirmation email was already sent recently. Check your inbox or wait a few minutes before trying again."
       errors:
         no_matching_login: "No account was found for this email."
         invalid_password: "Incorrect password."
@@ -415,6 +419,16 @@ en:
         invalid_timezone: "Invalid timezone."
         invalid_language: "Invalid language."
         patient_profile_creation_failed: "Could not create the patient profile: %{message}"
+        unverified_account: "You need to confirm your email before signing in. Check your inbox or resend the confirmation email."
+        invalid_verification_key: "Invalid or expired verification link."
+      emails:
+        verify_account:
+          subject: "Confirm your email at Balansi"
+          greeting: "Hello %{name},"
+          body: "Congratulations! You just created an account at Balansi. Click the button below to confirm your email address and activate your account."
+          cta: "Confirm email"
+          link_fallback: "If the button doesn't work, copy and paste this link into your browser:"
+          ignore_hint: "If you didn't create a Balansi account, you can safely ignore this email."
     local:
       fields:
         name: "Name"
@@ -438,6 +452,15 @@ en:
         submit: "Create account"
         has_account: "Already have an account?"
         sign_in: "Sign in"
+      verify_account:
+        title: "Confirm your email"
+        description: "Click the button below to confirm your email address and activate your account."
+        submit: "Confirm email"
+      verify_account_resend:
+        title: "Verify your email"
+        description: "We sent a confirmation link to you. Click it to activate your account."
+        check_spam: "Can't find it? Check your spam or junk folder."
+        submit: "Resend email"
     sign_up:
       errors:
         invalid_professional_signup_context: "Invalid professional signup context"

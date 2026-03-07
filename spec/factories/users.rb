@@ -14,5 +14,9 @@ FactoryBot.define do
         user.password = evaluator.password
       end
     end
+
+    trait :unverified do
+      status_id { User::UNVERIFIED_STATUS }
+    end
   end
 end
