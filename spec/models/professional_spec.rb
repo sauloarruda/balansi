@@ -26,6 +26,38 @@ RSpec.describe Professional, type: :model do
     end
   end
 
+  describe "invite_code" do
+    it "is auto-generated on create" do
+      professional = create(:professional)
+      expect(professional.invite_code).to match(/\A[A-Z0-9]{6}\z/)
+    end
+
+    it "is unique across professionals" do
+      p1 = create(:professional)
+      p2 = create(:professional)
+      expect(p1.invite_code).not_to eq(p2.invite_code)
+    end
+
+    it "enforces uniqueness at the model level" do
+      existing = create(:professional)
+      duplicate = build(:professional, invite_code: existing.invite_code)
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:invite_code]).to be_present
+    end
+
+    it "validates length of 6" do
+      professional = build(:professional, invite_code: "ABC")
+      expect(professional).not_to be_valid
+      expect(professional.errors[:invite_code]).to be_present
+    end
+
+    it "validates uppercase alphanumeric format" do
+      professional = build(:professional, invite_code: "abc!@#")
+      expect(professional).not_to be_valid
+      expect(professional.errors[:invite_code]).to be_present
+    end
+  end
+
   describe "#linked_patients" do
     it "returns owned and shared patients" do
       professional = create(:professional)

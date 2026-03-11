@@ -6,6 +6,10 @@ class Professional < ApplicationRecord
   has_many :shared_patients, through: :patient_professional_accesses, source: :patient
 
   validates :user_id, uniqueness: true
+  validates :invite_code, presence: true, uniqueness: true, length: { is: 6 },
+                          format: { with: /\A[A-Z0-9]{6}\z/ }
+
+  before_validation :generate_invite_code, on: :create
 
   def linked_patients
     # include user by default to avoid n+1 when callers iterate over patient.user
@@ -21,5 +25,16 @@ class Professional < ApplicationRecord
 
   def can_access?(patient)
     owner_of?(patient) || shared_patients.exists?(id: patient.id)
+  end
+
+  private
+
+  def generate_invite_code
+    return if invite_code.present?
+
+    loop do
+      self.invite_code = SecureRandom.alphanumeric(6).upcase
+      break unless Professional.exists?(invite_code: invite_code)
+    end
   end
 end
