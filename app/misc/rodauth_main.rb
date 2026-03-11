@@ -64,7 +64,7 @@ class RodauthMain < Rodauth::Rails::Auth
     end
 
     send_verify_account_email do
-      create_verify_account_email.deliver_now
+      create_verify_account_email.deliver_later
     end
 
     after_login { remember_login }
