@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_07_131130) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_10_230908) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
@@ -107,8 +107,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_07_131130) do
 
   create_table "professionals", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "invite_code", limit: 6, null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index [ "invite_code" ], name: "index_professionals_on_invite_code", unique: true
     t.index [ "user_id" ], name: "index_professionals_on_user_id", unique: true
   end
 
