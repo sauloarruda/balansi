@@ -466,7 +466,7 @@ pt:
         name_blank: "Informe seu nome."
         invalid_timezone: "Timezone inválido."
         invalid_language: "Idioma inválido."
-        patient_profile_creation_failed: "Não foi possível criar o perfil do paciente: %{message}"
+        patient_profile_creation_failed: "Não foi possível criar o perfil do paciente"
         unverified_account: "Você precisa confirmar seu email antes de fazer login. Verifique sua caixa de entrada ou reenvie o email."
         invalid_verification_key: "Link de verificação inválido ou expirado."
       emails:

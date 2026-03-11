@@ -418,7 +418,7 @@ en:
         name_blank: "Enter your name."
         invalid_timezone: "Invalid timezone."
         invalid_language: "Invalid language."
-        patient_profile_creation_failed: "Could not create the patient profile: %{message}"
+        patient_profile_creation_failed: "Could not create the patient profile"
         unverified_account: "You need to confirm your email before signing in. Check your inbox or resend the confirmation email."
         invalid_verification_key: "Invalid or expired verification link."
       emails:

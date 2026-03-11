@@ -13,11 +13,15 @@ class AddInviteCodeToProfessionals < ActiveRecord::Migration[8.1]
 
   private
 
+  class MigrationProfessional < ApplicationRecord
+    self.table_name = "professionals"
+  end
+
   def backfill_invite_codes
-    Professional.find_each do |professional|
+    MigrationProfessional.find_each do |professional|
       loop do
         code = SecureRandom.alphanumeric(6).upcase
-        unless Professional.exists?(invite_code: code)
+        unless MigrationProfessional.exists?(invite_code: code)
           professional.update_columns(invite_code: code)
           break
         end

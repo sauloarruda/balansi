@@ -15,9 +15,10 @@ h1.text-3xl.font-bold.mb-6 = t("professional.patients.index.title")
       - @patients.each do |patient|
         li.px-6.py-4.hover:bg-gray-50
           .sm:flex.sm:items-center.sm:justify-between
-            = link_to journal_professional_patient_path(patient), class: "block sm:flex-1" do
+            .sm:flex-1
               .flex.flex-col.sm:flex-row.sm:items-center.sm:gap-4.w-full
-                .font-medium.text-gray-900.text-left = patient.user.name
+                = link_to journal_professional_patient_path(patient), class: "font-medium text-gray-900 text-left hover:underline"
+                  = patient.user.name
                 .flex.flex-col.sm:flex-row.sm:items-center.gap-1.sm:gap-4.mt-1.sm:mt-0
                   = mail_to patient.user.email, class: "inline-flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600" do
                     svg.h-4.w-4.shrink-0 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"

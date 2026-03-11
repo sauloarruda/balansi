@@ -69,7 +69,7 @@ class RodauthMain < Rodauth::Rails::Auth
     logout_redirect { rails_routes.auth_login_path }
 
     before_create_account_route do
-      redirect rails_routes.auth_login_path if request.get? && normalized_invite_code.blank?
+      redirect rails_routes.auth_login_path if request.get? && invalid_signup_state?
       rails_controller_instance.instance_variable_set(:@signup_professional, resolved_signup_professional)
     end
 
@@ -89,11 +89,14 @@ class RodauthMain < Rodauth::Rails::Auth
         patient.professional_id = resolved_signup_professional.id
       end
     rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error(
+        "Patient profile creation failed for account_id=#{account_id}: #{e.class}: #{e.message}"
+      )
       db.rollback_on_exit
       throw_error_status(
         422,
         "invite_code",
-        I18n.t("auth.rodauth.errors.patient_profile_creation_failed", message: e.message)
+        I18n.t("auth.rodauth.errors.patient_profile_creation_failed")
       )
     end
   end
@@ -135,6 +138,10 @@ class RodauthMain < Rodauth::Rails::Auth
       code = normalized_invite_code
       code.present? ? Professional.find_by(invite_code: code) : nil
     end
+  end
+
+  def invalid_signup_state?
+    normalized_invite_code.blank? || resolved_signup_professional.nil?
   end
 
   def normalized_invite_code
