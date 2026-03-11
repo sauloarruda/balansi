@@ -10,6 +10,11 @@ class User < ApplicationRecord
     status_id == OPEN_STATUS
   end
 
+  def compact_email
+    local, domain = email.split("@", 2)
+    "#{local.first(4)}...@#{domain}"
+  end
+
   has_one :patient, dependent: :destroy
   has_one :professional, dependent: :destroy
 

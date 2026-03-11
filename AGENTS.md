@@ -69,3 +69,19 @@ Append `?test_user_id=<id>` to any GET request in development to auto-sign-in as
 - Slim templates (not ERB)
 - Prefer Hotwire (Turbo Frames/Streams) over full-page renders for interactivity
 - Test with RSpec + FactoryBot; system tests use Capybara
+
+### Public Controllers (no auth)
+
+For fully public entry points that must bypass `ApplicationController` authentication (e.g., invite landing pages), inherit from `ActionController::Base` directly — not `ApplicationController`. This avoids chaining `skip_before_action` calls against `authenticate_user!`, `ensure_current_patient!`, etc.
+
+```ruby
+class InvitesController < ActionController::Base
+  def show
+    # public action
+  end
+end
+```
+
+### Wildcard Route Ordering
+
+Place catch-all / wildcard routes (e.g., `GET /:invite_code`) **last** in `routes.rb`, just before `root`. Use a regex constraint to prevent swallowing legitimate paths.
