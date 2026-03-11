@@ -448,7 +448,7 @@ en:
       create_account:
         title: "Create account"
         description: "Create your account to start using Balansi."
-        professional_context: "Your account will be linked to the professional who invited you."
+        professional_context: "You are signing up as a patient of %{name}."
         submit: "Create account"
         has_account: "Already have an account?"
         sign_in: "Sign in"
@@ -463,8 +463,7 @@ en:
         submit: "Resend email"
     sign_up:
       errors:
-        invalid_professional_signup_context: "Invalid professional signup context"
-        no_professionals_available_for_patient_assignment: "No professionals available for patient assignment"
+        invalid_invite_code: "Invalid or expired invite code."
   forms:
     errors:
       alert: "There are form validation errors."

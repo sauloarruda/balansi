@@ -25,7 +25,7 @@ class RodauthMain < Rodauth::Rails::Auth
         ENV.fetch("MAILER_FROM", "support@#{Rails.application.config.action_mailer.default_url_options&.fetch(:host, "localhost")}")
     end
     login_param "email"
-    login_confirm_param "email_confirmation"
+    require_login_confirmation? { false }
     login_label { I18n.t("auth.local.fields.email") }
     password_label { I18n.t("auth.local.fields.password") }
     login_return_to_requested_location? true
@@ -68,6 +68,10 @@ class RodauthMain < Rodauth::Rails::Auth
     login_redirect { rails_routes.root_path }
     logout_redirect { rails_routes.auth_login_path }
 
+    before_create_account_route do
+      redirect rails_routes.auth_login_path if request.get? && normalized_invite_code.blank?
+    end
+
     before_create_account do
       validate_signup_context!
 
@@ -87,7 +91,7 @@ class RodauthMain < Rodauth::Rails::Auth
       db.rollback_on_exit
       throw_error_status(
         422,
-        "professional_id",
+        "invite_code",
         I18n.t("auth.rodauth.errors.patient_profile_creation_failed", message: e.message)
       )
     end
@@ -101,7 +105,7 @@ class RodauthMain < Rodauth::Rails::Auth
     throw_error_status(422, "language", I18n.t("auth.rodauth.errors.invalid_language")) if normalized_language.blank?
     return if resolved_signup_professional.present?
 
-    throw_error_status(422, "professional_id", signup_professional_error_message)
+    throw_error_status(422, "invite_code", I18n.t("auth.sign_up.errors.invalid_invite_code"))
   end
 
   def normalized_name
@@ -127,26 +131,16 @@ class RodauthMain < Rodauth::Rails::Auth
 
   def resolved_signup_professional
     @resolved_signup_professional ||= begin
-      professional_id = normalized_professional_id
-      professional_id.present? ? Professional.find_by(id: professional_id) : Professional.order(:id).first
+      code = normalized_invite_code
+      code.present? ? Professional.find_by(invite_code: code) : nil
     end
   end
 
-  def signup_professional_error_message
-    if normalized_professional_id.present?
-      I18n.t("auth.sign_up.errors.invalid_professional_signup_context")
-    else
-      I18n.t("auth.sign_up.errors.no_professionals_available_for_patient_assignment")
-    end
-  end
+  def normalized_invite_code
+    code = param_or_nil("invite_code")
+    return if code.blank?
 
-  def normalized_professional_id
-    professional_id = param_or_nil("professional_id")
-    return if professional_id.blank?
-
-    value = Integer(professional_id, 10)
-    value.positive? ? value : nil
-  rescue ArgumentError, TypeError
-    nil
+    sanitized = code.to_s.strip.upcase
+    sanitized.match?(/\A[A-Z0-9]{6}\z/) ? sanitized : nil
   end
 end

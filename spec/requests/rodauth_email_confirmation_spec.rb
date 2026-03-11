@@ -15,14 +15,14 @@ RSpec.describe "Email confirmation", type: :request do
   end
 
   def sign_up_as(email:, name: "Test Person")
-    token = authenticity_token_for(auth_sign_up_path)
+    token = authenticity_token_for(auth_sign_up_path(invite_code: owner_professional.invite_code))
     post auth_sign_up_path, params: {
       authenticity_token: token,
       name: name,
       email: email,
-      email_confirmation: email,
       password: "password123",
-      "password-confirm" => "password123"
+      "password-confirm" => "password123",
+      invite_code: owner_professional.invite_code
     }
   end
 

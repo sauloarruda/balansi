@@ -35,16 +35,16 @@ RSpec.describe "Rodauth authentication", type: :request do
 
   describe "POST /auth/sign_up" do
     it "creates a user and patient profile, then redirects to verify-email page" do
-      token = authenticity_token_for(auth_sign_up_path)
+      token = authenticity_token_for(auth_sign_up_path(invite_code: owner_professional.invite_code))
 
       expect do
         post auth_sign_up_path, params: {
           authenticity_token: token,
           name: "Nova Pessoa",
           email: "nova@example.com",
-          email_confirmation: "nova@example.com",
           password: "password123",
-          "password-confirm" => "password123"
+          "password-confirm" => "password123",
+          invite_code: owner_professional.invite_code
         }, headers: {
           "Accept-Language" => "en-US"
         }
@@ -62,18 +62,17 @@ RSpec.describe "Rodauth authentication", type: :request do
       expect(user.status_id).to eq(User::UNVERIFIED_STATUS)
     end
 
-    it "uses the provided professional_id when present" do
+    it "links the patient to the professional identified by invite_code" do
       selected_professional = create(:professional)
-      token = authenticity_token_for(auth_sign_up_path(professional_id: selected_professional.id))
+      token = authenticity_token_for(auth_sign_up_path(invite_code: selected_professional.invite_code))
 
       post auth_sign_up_path, params: {
         authenticity_token: token,
         name: "Paciente Vinculado",
         email: "vinculado@example.com",
-        email_confirmation: "vinculado@example.com",
         password: "password123",
         "password-confirm" => "password123",
-        professional_id: selected_professional.id
+        invite_code: selected_professional.invite_code
       }
 
       expect(response).to have_http_status(:found)
@@ -83,15 +82,15 @@ RSpec.describe "Rodauth authentication", type: :request do
     it "shows a specific message when the email is already taken" do
       existing_user = create(:user, email: "existing-signup@example.com")
       create(:patient, user: existing_user)
-      token = authenticity_token_for(auth_sign_up_path)
+      token = authenticity_token_for(auth_sign_up_path(invite_code: owner_professional.invite_code))
 
       post auth_sign_up_path, params: {
         authenticity_token: token,
         name: "Pessoa Duplicada",
         email: existing_user.email,
-        email_confirmation: existing_user.email,
         password: "password123",
-        "password-confirm" => "password123"
+        "password-confirm" => "password123",
+        invite_code: owner_professional.invite_code
       }
 
       expect(response).to have_http_status(:unprocessable_content)
@@ -102,15 +101,15 @@ RSpec.describe "Rodauth authentication", type: :request do
     it "shows validation errors in the browser language for unauthenticated requests" do
       existing_user = create(:user, email: "existing-english-signup@example.com")
       create(:patient, user: existing_user)
-      token = authenticity_token_for(auth_sign_up_path)
+      token = authenticity_token_for(auth_sign_up_path(invite_code: owner_professional.invite_code))
 
       post auth_sign_up_path, params: {
         authenticity_token: token,
         name: "Existing Person",
         email: existing_user.email,
-        email_confirmation: existing_user.email,
         password: "password123",
-        "password-confirm" => "password123"
+        "password-confirm" => "password123",
+        invite_code: owner_professional.invite_code
       }, headers: {
         "Accept-Language" => "en-US,en;q=0.9"
       }
@@ -118,6 +117,27 @@ RSpec.describe "Rodauth authentication", type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("An account with this email already exists.")
       expect(response.body).not_to include("Já existe uma conta com este email.")
+    end
+
+    it "redirects to sign_in when no invite_code is provided on GET" do
+      get auth_sign_up_path
+      expect(response).to redirect_to(auth_login_path)
+    end
+
+    it "returns 422 with error when posting without an invite_code" do
+      token = authenticity_token_for(auth_sign_up_path(invite_code: owner_professional.invite_code))
+
+      post auth_sign_up_path, params: {
+        authenticity_token: token,
+        name: "Sem Codigo",
+        email: "semcodigo@example.com",
+        password: "password123",
+        "password-confirm" => "password123"
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Invalid or expired invite code")
+        .or include("Código de convite inválido")
     end
   end
 

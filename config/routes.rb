@@ -53,6 +53,10 @@ Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
     mount LetterOpenerWeb::Engine, at: "/letter_opener"
   end
 
+  # Public invite entry point — must be declared LAST to avoid shadowing other routes
+  get "/:invite_code", to: "invites#show", as: :invite_signup,
+      constraints: { invite_code: /[A-Za-z0-9]{6}/ }
+
   # Defines the root path route ("/")
   root to: redirect { |params, request| "/journals/today#{request.query_string.present? ? "?#{request.query_string}" : ""}" }
 end
