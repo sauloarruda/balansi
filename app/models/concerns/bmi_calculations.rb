@@ -58,7 +58,7 @@ module BmiCalculations
   end
 
   # Weight (kg) ranges per BMI category for current height. For chart. Nil if height missing.
-  # Returns Hash: { underweight: [0, 53.5], normal: [53.5, 72.0], ... }
+  # Returns Hash: { underweight: [0, 53.5], normal: [53.5, 72.3], ... }
   def bmi_category_weight_ranges
     return nil if height_cm.blank?
 

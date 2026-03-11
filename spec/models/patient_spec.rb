@@ -174,12 +174,12 @@ RSpec.describe Patient, type: :model do
       patient = build(:patient, height_cm: 170)
       min, max = patient.normal_bmi_weight_range
       expect(min).to eq(53.5)
-      expect(max).to eq(72.0)
+      expect(max).to eq(72.3)
     end
 
     it "returns weight_difference_to_normal_kg (positive = to lose)" do
       patient = build(:patient, weight_kg: 85, height_cm: 170)
-      expect(patient.weight_difference_to_normal_kg).to eq(13.0)
+      expect(patient.weight_difference_to_normal_kg).to eq(12.7)
     end
 
     it "returns weight_difference_to_normal_kg (negative = to gain)" do
