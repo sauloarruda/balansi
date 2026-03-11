@@ -70,6 +70,7 @@ class RodauthMain < Rodauth::Rails::Auth
 
     before_create_account_route do
       redirect rails_routes.auth_login_path if request.get? && normalized_invite_code.blank?
+      rails_controller_instance.instance_variable_set(:@signup_professional, resolved_signup_professional)
     end
 
     before_create_account do
@@ -141,6 +142,6 @@ class RodauthMain < Rodauth::Rails::Auth
     return if code.blank?
 
     sanitized = code.to_s.strip.upcase
-    sanitized.match?(/\A[A-Z0-9]{6}\z/) ? sanitized : nil
+    sanitized.match?(Professional::INVITE_CODE_FORMAT) ? sanitized : nil
   end
 end

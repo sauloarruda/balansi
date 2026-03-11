@@ -29,7 +29,7 @@ RSpec.describe Professional, type: :model do
   describe "invite_code" do
     it "is auto-generated on create" do
       professional = create(:professional)
-      expect(professional.invite_code).to match(/\A[A-Z0-9]{6}\z/)
+      expect(professional.invite_code).to match(Professional::INVITE_CODE_FORMAT)
     end
 
     it "is unique across professionals" do

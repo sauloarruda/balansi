@@ -6,8 +6,10 @@ class Professional < ApplicationRecord
   has_many :shared_patients, through: :patient_professional_accesses, source: :patient
 
   validates :user_id, uniqueness: true
+  INVITE_CODE_FORMAT = /\A[A-Z0-9]{6}\z/
+
   validates :invite_code, presence: true, uniqueness: true, length: { is: 6 },
-                          format: { with: /\A[A-Z0-9]{6}\z/ }
+                          format: { with: INVITE_CODE_FORMAT }
 
   before_validation :generate_invite_code, on: :create
 

@@ -10,9 +10,9 @@
 h1.text-3xl.font-bold.mb-2 = t("auth.local.create_account.title")
 p.text-gray-600.mb-6 = t("auth.local.create_account.description")
 
-- if (signup_professional = params[:invite_code].present? && Professional.find_by(invite_code: params[:invite_code]))
+- if @signup_professional
   .mb-6.rounded-lg.border.border-blue-200.bg-blue-50.p-4.text-blue-800
-    = t("auth.local.create_account.professional_context", name: signup_professional.user.name)
+    = t("auth.local.create_account.professional_context", name: @signup_professional.user.name)
 
 = form_with url: rodauth.create_account_path, method: :post, data: { turbo: false }, class: "space-y-6" do |f|
   - if form_has_errors

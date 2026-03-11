@@ -136,8 +136,8 @@ RSpec.describe "Rodauth authentication", type: :request do
       }
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Invalid or expired invite code")
-        .or include("Código de convite inválido")
+      expect(response.body).to match(/Invalid or expired invite code\.?/)
+        .or match(/Código de convite inválido(?: ou expirado)?\.?/)
     end
   end
 

@@ -11,7 +11,10 @@ class User < ApplicationRecord
   end
 
   def compact_email
+    return email if email.blank?
+
     local, domain = email.split("@", 2)
+    return email if local.blank? || domain.blank?
     "#{local.first(4)}...@#{domain}"
   end
 
