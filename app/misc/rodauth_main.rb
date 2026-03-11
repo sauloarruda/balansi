@@ -63,6 +63,10 @@ class RodauthMain < Rodauth::Rails::Auth
       RodauthMailer.verify_account(self.class.configuration_name, account_id, verify_account_key_value)
     end
 
+    send_verify_account_email do
+      create_verify_account_email.deliver_later
+    end
+
     after_login { remember_login }
     extend_remember_deadline? true
     login_redirect { rails_routes.root_path }

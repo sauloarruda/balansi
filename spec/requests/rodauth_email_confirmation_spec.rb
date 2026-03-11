@@ -2,6 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Email confirmation", type: :request do
   include ActiveSupport::Testing::TimeHelpers
+  include ActiveJob::TestHelper
   let!(:owner_professional) { create(:professional) }
 
   before do
@@ -28,7 +29,7 @@ RSpec.describe "Email confirmation", type: :request do
 
   describe "POST /auth/sign_up" do
     it "sends a confirmation email after sign-up" do
-      expect { sign_up_as(email: "newuser@example.com") }
+      expect { perform_enqueued_jobs { sign_up_as(email: "newuser@example.com") } }
         .to change { ActionMailer::Base.deliveries.count }.by(1)
 
       mail = ActionMailer::Base.deliveries.last
@@ -66,7 +67,7 @@ RSpec.describe "Email confirmation", type: :request do
 
   describe "GET /auth/verify-email (confirmation link)" do
     it "verifies the account and redirects to root" do
-      sign_up_as(email: "verify-link@example.com")
+      perform_enqueued_jobs { sign_up_as(email: "verify-link@example.com") }
 
       mail = ActionMailer::Base.deliveries.last
       text_body = mail.parts.find { |p| p.content_type.include?("text/plain") }&.body&.decoded || mail.body.decoded
@@ -96,16 +97,18 @@ RSpec.describe "Email confirmation", type: :request do
 
   describe "POST /auth/verify-email/resend" do
     it "resends the confirmation email after the cooldown period" do
-      sign_up_as(email: "resend@example.com")
+      perform_enqueued_jobs { sign_up_as(email: "resend@example.com") }
       ActionMailer::Base.deliveries.clear
 
       travel_to(6.minutes.from_now) do
         token = authenticity_token_for("/auth/verify-email/resend")
         expect do
-          post "/auth/verify-email/resend", params: {
-            authenticity_token: token,
-            email: "resend@example.com"
-          }
+          perform_enqueued_jobs do
+            post "/auth/verify-email/resend", params: {
+              authenticity_token: token,
+              email: "resend@example.com"
+            }
+          end
         end.to change { ActionMailer::Base.deliveries.count }.by(1)
       end
     end
