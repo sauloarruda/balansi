@@ -2,18 +2,17 @@
 
 - name_error = rodauth.field_error("name")
 - login_error = rodauth.field_error(rodauth.login_param)
-- login_confirm_error = rodauth.field_error(rodauth.login_confirm_param)
 - password_error = rodauth.field_error(rodauth.password_param)
 - password_confirm_error = rodauth.field_error(rodauth.password_confirm_param)
-- general_errors = %w[professional_id timezone language].filter_map { |field| rodauth.field_error(field) }.uniq
-- form_has_errors = general_errors.any? || [name_error, login_error, login_confirm_error, password_error, password_confirm_error].any?(&:present?)
+- general_errors = %w[invite_code timezone language].filter_map { |field| rodauth.field_error(field) }.uniq
+- form_has_errors = general_errors.any? || [name_error, login_error, password_error, password_confirm_error].any?(&:present?)
 
 h1.text-3xl.font-bold.mb-2 = t("auth.local.create_account.title")
 p.text-gray-600.mb-6 = t("auth.local.create_account.description")
 
-- if params[:professional_id].present?
+- if @signup_professional
   .mb-6.rounded-lg.border.border-blue-200.bg-blue-50.p-4.text-blue-800
-    = t("auth.local.create_account.professional_context")
+    = t("auth.local.create_account.professional_context", name: @signup_professional.user.name)
 
 = form_with url: rodauth.create_account_path, method: :post, data: { turbo: false }, class: "space-y-6" do |f|
   - if form_has_errors
@@ -24,7 +23,7 @@ p.text-gray-600.mb-6 = t("auth.local.create_account.description")
           - general_errors.each do |error|
             li = error
 
-  = f.hidden_field "professional_id", value: params[:professional_id]
+  = f.hidden_field "invite_code", value: params[:invite_code]
 
   div
     = f.label "name", t("auth.local.fields.name")
@@ -37,12 +36,6 @@ p.text-gray-600.mb-6 = t("auth.local.create_account.description")
     = f.email_field rodauth.login_param, value: params[rodauth.login_param], id: rodauth.login_param, autocomplete: "email", required: true, placeholder: t("auth.local.fields.email_placeholder")
     - if login_error.present?
       p.mt-2.text-sm.text-red-600 = login_error
-
-  div
-    = f.label rodauth.login_confirm_param, t("auth.local.fields.email_confirmation")
-    = f.email_field rodauth.login_confirm_param, value: params[rodauth.login_confirm_param], id: rodauth.login_confirm_param, autocomplete: "email", required: true, placeholder: t("auth.local.fields.email_placeholder")
-    - if login_confirm_error.present?
-      p.mt-2.text-sm.text-red-600 = login_confirm_error
 
   div
     = f.label rodauth.password_param, t("auth.local.fields.password")

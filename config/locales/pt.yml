@@ -466,7 +466,7 @@ pt:
         name_blank: "Informe seu nome."
         invalid_timezone: "Timezone inválido."
         invalid_language: "Idioma inválido."
-        patient_profile_creation_failed: "Não foi possível criar o perfil do paciente: %{message}"
+        patient_profile_creation_failed: "Não foi possível criar o perfil do paciente"
         unverified_account: "Você precisa confirmar seu email antes de fazer login. Verifique sua caixa de entrada ou reenvie o email."
         invalid_verification_key: "Link de verificação inválido ou expirado."
       emails:
@@ -496,7 +496,7 @@ pt:
       create_account:
         title: "Criar conta"
         description: "Crie sua conta para começar a usar o Balansi."
-        professional_context: "Seu cadastro será vinculado ao profissional responsável pelo convite."
+        professional_context: "Você está se cadastrando como paciente de %{name}."
         submit: "Criar conta"
         has_account: "Já possui conta?"
         sign_in: "Entrar"
@@ -511,8 +511,7 @@ pt:
         submit: "Reenviar email"
     sign_up:
       errors:
-        invalid_professional_signup_context: "Contexto de cadastro profissional inválido"
-        no_professionals_available_for_patient_assignment: "Nenhum profissional disponível para vincular o paciente"
+        invalid_invite_code: "Código de convite inválido ou expirado."
   forms:
     errors:
       alert: "Existem erros no preenchimento."
