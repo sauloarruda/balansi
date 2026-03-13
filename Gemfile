@@ -108,3 +108,5 @@ gem "phonelib", "~> 0.10.16"
 gem "rodauth-rails", "~> 2.1"
 gem "bcrypt", "~> 3.1", require: false
 gem "sequel-activerecord_connection", "~> 2.0", require: false
+gem "sentry-ruby"
+gem "sentry-rails"
