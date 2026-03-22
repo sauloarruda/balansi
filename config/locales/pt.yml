@@ -29,6 +29,19 @@
 
 pt:
   hello: "Olá mundo"
+  users:
+    profile:
+      title: "Configurações de Perfil"
+      navigation:
+        title: "Perfil"
+      language: "Idioma"
+      language_options:
+        en: "Inglês"
+        pt: "Português"
+      timezone: "Fuso horário"
+      submit: "Salvar configurações"
+      messages:
+        updated: "Configurações de perfil atualizadas com sucesso."
   errors:
     forbidden:
       title: "403 Acesso negado"
@@ -147,9 +160,10 @@ pt:
   time:
     formats:
       long: "%d de %B de %Y %H:%M"
+      profile_updated_at: "%d/%m/%Y %H:%M"
   journals:
     navigation:
-      title: "Diário Alimentar"
+      title: "Diário"
     date_navigator:
       today: "Hoje"
       previous_day: "Dia anterior"
@@ -278,10 +292,10 @@ pt:
         breadcrumb_profile: "Profile"
         personal_profile: "Perfil pessoal"
         clinical_assessment: "Avaliação técnica"
+        profile_completed_at: "Perfil concluído em %{date}"
+        profile_last_updated_at: "Perfil atualizado em %{date}"
         profile_updated_at: "Perfil atualizado em %{date}"
         assessment_updated_at: "Avaliação atualizada em %{date}"
-        edit_personal_profile: "Editar perfil"
-        edit_clinical_assessment: "Editar avaliação clínica"
         bmi: "IMC"
         bmi_current_range: "Faixa atual"
         weight_to_lose: "Peso a perder para faixa normal: %{kg} kg"
@@ -368,6 +382,7 @@ pt:
       feeling: "Sensação:"
       feeling_positive: "✓ Positivo"
       feeling_not_ideal: "✗ Não Ideal"
+      save_changes: "Salvar Alterações"
       confirm: "Confirmar Refeição"
       edit_description: "Editar Descrição e Reprocessar"
       cancel: "Cancelar"
@@ -451,6 +466,7 @@ pt:
       flash:
         create_account_success: "Sua conta foi criada com sucesso."
         login_success: "Login realizado com sucesso."
+        login_error: "Ocorreu um erro ao fazer login."
         logout_success: "Sessão encerrada com sucesso."
         login_required: "Faça login para continuar."
         verify_account_success: "Email confirmado com sucesso. Bem-vindo!"

@@ -26,7 +26,15 @@ html
   body.bg-gray-50 data-controller="drawer"
     / Navbar with Logo and Hamburger Menu
     nav.bg-white.border-b.border-gray-200.px-4.py-3
-      .max-w-7xl.mx-auto.flex.items-center.justify-between
+      .max-w-7xl.px-2.mx-auto.flex.items-center.justify-between
+        - journals_active = current_patient.present? && current_page?(today_journals_path)
+        - journal_entry_active = controller_path.start_with?("journal_entries/")
+        - journals_active = current_patient.present? && (current_page?(today_journals_path) || controller_name == "journals" || journal_entry_active)
+        - accesses_active = current_patient.present? && current_user&.professional.blank? && current_page?(patient_professional_accesses_path)
+        - profile_path = current_patient.present? ? patient_personal_profile_path : user_profile_path
+        - profile_active = current_user.present? && current_page?(profile_path)
+        - professional_patients_active = current_user&.professional.present? && current_page?(professional_patients_path)
+
         / Logo
         - if respond_to?(:root_path)
           = link_to root_path, class: "flex items-center" do
@@ -37,16 +45,22 @@ html
 
         .flex.items-center.gap-2
           - if current_patient.present?
-            = link_to today_journals_path, class: "inline-flex items-center justify-center text-sm font-medium text-pink-800 bg-pink-50 border border-pink-200 hover:bg-pink-100 focus:ring-4 focus:ring-pink-200 rounded-lg px-3 py-2" do
-              = t("journals.navigation.title")
+            - journals_top_button_class = journals_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            - journals_top_icon_class = journals_active ? "w-5 h-5" : "w-5 h-5"
+            = link_to today_journals_path, class: journals_top_button_class, title: t("journals.navigation.title"), aria: { label: t("journals.navigation.title"), current: (journals_active ? "page" : nil) } do
+              = heroicon "book-open", variant: :outline, options: { class: journals_top_icon_class }
           - if current_patient.present? && current_user&.professional.blank?
-            = link_to patient_personal_profile_path, class: "inline-flex items-center justify-center text-sm font-medium text-pink-800 bg-pink-50 border border-pink-200 hover:bg-pink-100 focus:ring-4 focus:ring-pink-200 rounded-lg px-3 py-2" do
-              = t("patient_personal_profile.navigation.title")
-            = link_to patient_professional_accesses_path, class: "inline-flex items-center justify-center text-sm font-medium text-pink-800 bg-pink-50 border border-pink-200 hover:bg-pink-100 focus:ring-4 focus:ring-pink-200 rounded-lg px-3 py-2" do
-              = t("patient.professional_accesses.navigation.title")
+            - accesses_top_button_class = accesses_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            = link_to patient_professional_accesses_path, class: accesses_top_button_class, title: t("patient.professional_accesses.navigation.title"), aria: { label: t("patient.professional_accesses.navigation.title"), current: (accesses_active ? "page" : nil) } do
+              = heroicon "user-group", variant: :outline, options: { class: "w-5 h-5" }
           - if current_user&.professional.present?
-            = link_to professional_patients_path, class: "inline-flex items-center justify-center text-sm font-medium text-blue-800 bg-blue-50 border border-blue-200 hover:bg-blue-100 focus:ring-4 focus:ring-blue-200 rounded-lg px-3 py-2" do
+            - professional_button_class = professional_patients_active ? "inline-flex items-center justify-center text-sm font-medium text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2" : "inline-flex items-center justify-center text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg px-3 py-2"
+            = link_to professional_patients_path, class: professional_button_class, aria: { current: (professional_patients_active ? "page" : nil) } do
               = t("professional.patients.index.title")
+          - if current_user.present?
+            - profile_top_button_class = profile_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            = link_to profile_path, class: profile_top_button_class, title: t("users.profile.navigation.title"), aria: { label: t("users.profile.navigation.title"), current: (profile_active ? "page" : nil) } do
+              = heroicon "user-circle", variant: :outline, options: { class: "w-5 h-5" }
 
           / Hamburger Menu Button
           button.inline-flex.items-center.p-2.text-sm.text-gray-500.rounded-lg.hover:bg-gray-100.focus:outline-none.focus:ring-2.focus:ring-gray-200 data-action="drawer#toggle" aria-controls="drawer-navigation" type="button"
@@ -68,29 +82,31 @@ html
         ul.space-y-2.font-medium
           li
             - if current_patient.present?
-              = link_to today_journals_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
-                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
-                  path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"
-                  path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"
+              - journals_drawer_link_class = journals_active ? "flex items-center p-2 text-pink-700 bg-pink-50 rounded-lg group" : "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
+              - journals_drawer_icon_class = journals_active ? "w-5 h-5 text-pink-700 transition duration-75" : "w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900"
+              = link_to today_journals_path, class: journals_drawer_link_class, aria: { current: (journals_active ? "page" : nil) } do
+                = heroicon "book-open", variant: :outline, options: { class: journals_drawer_icon_class }
                 span.ml-3 = t("journals.navigation.title")
+          - if current_user.present?
+            li
+              - profile_drawer_link_class = profile_active ? "flex items-center p-2 text-pink-700 bg-pink-50 rounded-lg group" : "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
+              - profile_drawer_icon_class = profile_active ? "w-5 h-5 text-pink-700 transition duration-75" : "w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900"
+              = link_to profile_path, class: profile_drawer_link_class, aria: { current: (profile_active ? "page" : nil) } do
+                = heroicon "user-circle", variant: :outline, options: { class: profile_drawer_icon_class }
+                span.ml-3 = t("users.profile.navigation.title")
           li
             - if current_patient.present? && current_user&.professional.blank?
-              = link_to patient_personal_profile_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
-                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
-                  path(fill-rule="evenodd" d="M10 12a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd")
-                  path(d="M3 18a6 6 0 0114 0v1H3v-1z")
-                span.ml-3 = t("patient_personal_profile.navigation.title")
-          li
-            - if current_patient.present? && current_user&.professional.blank?
-              = link_to patient_professional_accesses_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
-                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
-                  path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 12.094A5.973 5.973 0 004 15v1H1v-1a3 3 0 013.75-2.906z"
+              - accesses_drawer_link_class = accesses_active ? "flex items-center p-2 text-pink-700 bg-pink-50 rounded-lg group" : "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
+              - accesses_drawer_icon_class = accesses_active ? "w-5 h-5 text-pink-700 transition duration-75" : "w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900"
+              = link_to patient_professional_accesses_path, class: accesses_drawer_link_class, aria: { current: (accesses_active ? "page" : nil) } do
+                = heroicon "user-group", variant: :outline, options: { class: accesses_drawer_icon_class }
                 span.ml-3 = t("patient.professional_accesses.navigation.title")
           li
             - if current_user&.professional.present?
-              = link_to professional_patients_path, class: "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group" do
-                svg.w-5.h-5.text-gray-500.transition.duration-75.group-hover:text-gray-900 aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
-                  path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+              - professional_drawer_link_class = professional_patients_active ? "flex items-center p-2 text-blue-800 bg-blue-50 rounded-lg group" : "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
+              - professional_drawer_icon_class = professional_patients_active ? "w-5 h-5 text-blue-700 transition duration-75" : "w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900"
+              = link_to professional_patients_path, class: professional_drawer_link_class, aria: { current: (professional_patients_active ? "page" : nil) } do
+                = heroicon "users", variant: :outline, options: { class: professional_drawer_icon_class }
                 span.ml-3 = t("professional.patients.index.title")
           - if current_user
             li
