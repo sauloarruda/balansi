@@ -33,6 +33,7 @@ class RodauthMain < Rodauth::Rails::Auth
     password_maximum_bytes 72
     create_account_notice_flash { I18n.t("auth.rodauth.flash.create_account_success") }
     login_notice_flash { I18n.t("auth.rodauth.flash.login_success") }
+    login_error_flash { I18n.t("auth.rodauth.flash.login_error") }
     logout_notice_flash { I18n.t("auth.rodauth.flash.logout_success") }
     require_login_error_flash { I18n.t("auth.rodauth.flash.login_required") }
     no_matching_login_message { I18n.t("auth.rodauth.errors.no_matching_login") }

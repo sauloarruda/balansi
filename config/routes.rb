@@ -17,6 +17,10 @@ Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  scope module: :users, path: "user", as: :user do
+    resource :profile, only: [ :show, :update ]
+  end
+
   scope module: :patients, path: "patient", as: :patient do
     resource :personal_profile, only: [ :show, :update ]
     resource :clinical_assessment, only: [ :show, :update ]

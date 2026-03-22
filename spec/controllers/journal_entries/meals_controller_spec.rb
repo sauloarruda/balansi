@@ -63,7 +63,19 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
   end
 
   describe "PATCH #update" do
-    let!(:meal) { Meal.create!(journal: journal, meal_type: "lunch", description: "Arroz e feijão", status: "pending_patient") }
+    let!(:meal) do
+      Meal.create!(
+        journal: journal,
+        meal_type: "lunch",
+        description: "Arroz e feijão",
+        status: "pending_patient",
+        calories: 430,
+        proteins: 18,
+        carbs: 54,
+        fats: 10,
+        gram_weight: 300
+      )
+    end
 
     it "confirms a meal" do
       patch :update, params: {
@@ -84,6 +96,28 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(meal.calories).to eq(450)
     end
 
+    it "saves meal edits without confirming" do
+      patch :update, params: {
+        journal_date: "2026-02-05",
+        id: meal.id,
+        meal: {
+          calories: 470,
+          proteins: 22,
+          carbs: 58,
+          fats: 11,
+          gram_weight: 340
+        }
+      }
+
+      expect(response).to redirect_to(journal_path(date: "2026-02-05"))
+      expect(meal.reload.status.to_s).to eq("pending_patient")
+      expect(meal.calories).to eq(470)
+      expect(meal.proteins).to eq(22)
+      expect(meal.carbs).to eq(58)
+      expect(meal.fats).to eq(11)
+      expect(meal.gram_weight).to eq(340)
+    end
+
     it "reprocesses a meal" do
       interaction_errors = ActiveModel::Errors.new(Meal.new)
       interaction_result = instance_double(ActiveInteraction::Base, valid?: true, errors: interaction_errors)
@@ -98,12 +132,23 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
         reprocess: "1",
         meal: {
           meal_type: "dinner",
-          description: "Frango grelhado"
+          description: "Frango grelhado",
+          calories: 999,
+          proteins: 999,
+          carbs: 999,
+          fats: 999,
+          gram_weight: 999
         }
       }
 
       expect(response).to redirect_to(journal_meal_path(journal_date: "2026-02-05", id: meal.id))
       expect(meal.reload.status.to_s).to eq("pending_patient")
+      expect(meal.meal_type).to eq("dinner")
+      expect(meal.calories).to eq(430)
+      expect(meal.proteins).to eq(18)
+      expect(meal.carbs).to eq(54)
+      expect(meal.fats).to eq(10)
+      expect(meal.gram_weight).to eq(300)
       expect(Journal::AnalyzeMealInteraction).to have_received(:run)
     end
   end

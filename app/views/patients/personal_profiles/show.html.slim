@@ -1,8 +1,22 @@
 - content_for :title, t("patient_personal_profile.show.title")
 
 - if @patient.personal_profile_completed? && params[:edit].blank?
-  # show readonly card when profile is already finished
   = render "patients/personal_profiles/personal_profile_card"
+
+  / User profile (read-only)
+  .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
+    .flex.items-center.justify-between.mb-4.gap-3
+      h3.text-lg.font-semibold.text-gray-900 = t("users.profile.title")
+      = link_to user_profile_path, class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2 whitespace-nowrap" do
+        = t("defaults.actions.edit")
+    - timezone_name = current_user.timezone.present? ? (ActiveSupport::TimeZone.all.find { |tz| tz.tzinfo.identifier == current_user.timezone }&.name || current_user.timezone) : "—"
+    .grid.grid-cols-2.gap-6
+      .mb-4
+        .text-sm.font-medium.text-gray-500 = t("users.profile.language")
+        .text-gray-900 = t("users.profile.language_options.#{current_user.language}", default: current_user.language.to_s.upcase)
+      .mb-4
+        .text-sm.font-medium.text-gray-500 = t("users.profile.timezone")
+        .text-gray-900 = timezone_name
 - else
   - content_for :head do
     = stylesheet_link_tag "css/intlTelInput", "data-turbo-track": "reload"

@@ -53,7 +53,6 @@ RSpec.describe "Journal meal flow", type: :request do
     patch journal_meal_path(journal_date: "2026-02-05", id: meal.id), params: {
       reprocess: "1",
       meal: {
-        meal_type: meal.meal_type,
         description: "Peixe grelhado com legumes"
       }
     }

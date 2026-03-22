@@ -48,6 +48,8 @@ function buildController(overrides = {}) {
 
   controller.hasCurrentDateValue = true
   controller.currentDateValue = overrides.currentDateValue || toIsoDate(new Date())
+  controller.hasUrlTemplateValue = Object.prototype.hasOwnProperty.call(overrides, "urlTemplateValue")
+  controller.urlTemplateValue = overrides.urlTemplateValue || ""
 
   controller.hasCalendarInputTarget = true
   controller.calendarInputTarget = {
@@ -129,6 +131,27 @@ test("previousDay navigates to previous journal date and disables arrow buttons"
   assert.equal(global.window.location.href, `/journals/${toIsoDate(expectedDate)}`)
   assert.equal(previousButton.disabled, true)
   assert.equal(nextButton.disabled, true)
+})
+
+test("previousDay uses provided URL template when navigating", () => {
+  const baseDate = new Date()
+  baseDate.setDate(baseDate.getDate() - 2)
+
+  const { controller } = buildController({
+    currentDateValue: toIsoDate(baseDate),
+    urlTemplateValue: "/professional/patients/6/journal?date=__DATE__"
+  })
+
+  controller.connect()
+  controller.previousDay()
+
+  const expectedDate = new Date(baseDate)
+  expectedDate.setDate(expectedDate.getDate() - 1)
+
+  assert.equal(
+    global.window.location.href,
+    `/professional/patients/6/journal?date=${toIsoDate(expectedDate)}`
+  )
 })
 
 test("nextDay does not navigate when already at today", () => {
