@@ -29,6 +29,19 @@
 
 en:
   hello: "Hello world"
+  users:
+    profile:
+      title: "Profile Settings"
+      navigation:
+        title: "Profile"
+      language: "Language"
+      language_options:
+        en: "English"
+        pt: "Portuguese"
+      timezone: "Timezone"
+      submit: "Save settings"
+      messages:
+        updated: "Profile settings updated successfully."
   errors:
     forbidden:
       title: "403 Access denied"
@@ -103,6 +116,7 @@ en:
   time:
     formats:
       long: "%B %d, %Y %H:%M"
+      profile_updated_at: "%m/%d/%Y %H:%M"
   journals:
     navigation:
       title: "Daily Journal"
@@ -230,10 +244,10 @@ en:
         breadcrumb_profile: "Profile"
         personal_profile: "Personal profile"
         clinical_assessment: "Clinical assessment"
+        profile_completed_at: "Profile completed on %{date}"
+        profile_last_updated_at: "Profile updated on %{date}"
         profile_updated_at: "Profile updated on %{date}"
         assessment_updated_at: "Assessment updated on %{date}"
-        edit_personal_profile: "Edit profile"
-        edit_clinical_assessment: "Edit clinical assessment"
         bmi: "BMI"
         bmi_current_range: "Current range"
         weight_to_lose: "Weight to lose to reach normal range: %{kg} kg"
@@ -320,6 +334,7 @@ en:
       feeling: "Feeling:"
       feeling_positive: "✓ Positive"
       feeling_not_ideal: "✗ Not Ideal"
+      save_changes: "Save Changes"
       confirm: "Confirm Meal"
       edit_description: "Edit Description & Reprocess"
       cancel: "Cancel"
@@ -403,6 +418,7 @@ en:
       flash:
         create_account_success: "Your account was created successfully."
         login_success: "Signed in successfully."
+        login_error: "There was an error logging in."
         logout_success: "Signed out successfully."
         login_required: "Sign in to continue."
         verify_account_success: "Email confirmed successfully. Welcome!"

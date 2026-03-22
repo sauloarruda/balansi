@@ -142,6 +142,13 @@ RSpec.describe JournalsController, type: :controller do
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include(close_journal_path(date: "2026-02-05"))
     end
+
+    it "renders date navigation with patient journal URL template" do
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('data-date-navigator-url-template-value="/journals/__DATE__"')
+    end
   end
 
   describe "authorization without patient" do

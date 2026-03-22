@@ -18,6 +18,7 @@ RSpec.describe Professionals::Patients::JournalsController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(I18n.t("journals.show.breadcrumb_daily_journal"))
+      expect(response.body).to include("data-date-navigator-url-template-value=\"#{journal_professional_patient_path(patient, date: '__DATE__')}\"")
     end
 
     it "returns success for shared professional" do

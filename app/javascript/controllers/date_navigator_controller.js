@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["calendarInput", "previousButton", "nextButton"]
-  static values = { currentDate: String }
+  static values = { currentDate: String, urlTemplate: String }
 
   connect() {
     this.maxDate = this.startOfDay(new Date())
@@ -91,7 +91,15 @@ export default class extends Controller {
   navigateToDate(date) {
     const targetDate = date > this.maxDate ? this.maxDate : date
     const formattedDate = this.toIsoDate(targetDate)
-    window.location.href = `/journals/${formattedDate}`
+    window.location.href = this.buildNavigationUrl(formattedDate)
+  }
+
+  buildNavigationUrl(formattedDate) {
+    if (this.hasUrlTemplateValue && this.urlTemplateValue.includes("__DATE__")) {
+      return this.urlTemplateValue.replace("__DATE__", formattedDate)
+    }
+
+    return `/journals/${formattedDate}`
   }
 
   parseIsoDate(isoDate) {

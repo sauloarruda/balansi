@@ -20,24 +20,6 @@ h1.text-3xl.font-bold.mb-6 = t("meals.edit.heading")
     .mb-6.p-3.bg-blue-50.border.border-blue-200.rounded-lg
       p.text-sm.text-blue-800 = t("meals.edit.info_text")
 
-    .grid.grid-cols-1.md:grid-cols-2.lg:grid-cols-3.gap-4.mb-6
-      .mb-4
-        = f.label :calories, t("meals.edit.calories")
-        = f.number_field :calories, min: 1, max: 50000, step: 1
-      .mb-4
-        = f.label :proteins, t("meals.edit.proteins")
-        = f.number_field :proteins, min: 0, max: 10000, step: 1
-      .mb-4
-        = f.label :carbs, t("meals.edit.carbs")
-        = f.number_field :carbs, min: 0, max: 10000, step: 1
-      .mb-4
-        = f.label :fats, t("meals.edit.fats")
-        = f.number_field :fats, min: 0, max: 10000, step: 1
-      .mb-4
-        = f.label :gram_weight, t("meals.edit.total_weight")
-        = f.number_field :gram_weight, min: 1, max: 100000, step: 1
-
     div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200"
-      = f.submit t("meals.edit.save_changes"), tone: :blue, size: :md, class: "w-full sm:w-auto text-center whitespace-nowrap"
-      = f.submit t("meals.edit.reprocess"), name: "reprocess", tone: :gray, size: :md, class: "w-full sm:w-auto text-center"
+      = f.submit t("meals.edit.reprocess"), name: "reprocess", tone: :pink, size: :md, class: "w-full sm:w-auto text-center whitespace-nowrap"
       = link_to t("meals.edit.cancel"), journal_path(date: @meal.journal.date.iso8601), class: "self-center sm:self-auto text-base text-gray-600 hover:text-gray-800 hover:underline px-1 py-1"

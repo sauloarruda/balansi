@@ -1,0 +1,19 @@
+- content_for :title, t("users.profile.title")
+
+h1.text-3xl.font-bold.mb-6 = t("users.profile.title")
+
+.bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
+  = form_with model: current_user, url: user_profile_path, method: :patch, local: true, class: "space-y-6" do |f|
+    = render "shared/form_error_alert", form: f
+
+    .grid.grid-cols-1.md:grid-cols-2.gap-6
+      div
+        = f.label :language, t("users.profile.language")
+        = f.select :language, options_for_select(User.valid_languages.map { |l| [t("users.profile.language_options.#{l}", default: l.upcase), l] }, current_user.language), {}, { required: true }
+
+      div
+        = f.label :timezone, t("users.profile.timezone")
+        = f.select :timezone, ActiveSupport::TimeZone.all.map { |tz| [tz.name, tz.tzinfo.identifier] }.sort_by(&:first), { selected: current_user.timezone }, { required: true }
+
+    .pt-4.border-t.border-gray-200
+      = f.submit t("users.profile.submit"), tone: :pink, size: :sm, class: "w-full sm:w-auto"

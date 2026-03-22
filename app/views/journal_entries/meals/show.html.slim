@@ -37,6 +37,9 @@ h1.text-3xl.font-bold.mb-6 = t("meals.show.heading")
       .mb-4
         = f.label :gram_weight, t("meals.show.total_weight")
         = f.number_field :gram_weight, min: 1, max: 100000, step: 1
+      .mb-4.flex.items-end
+        = f.submit t("meals.show.save_changes"), tone: :gray, size: :md, class: "w-full sm:w-auto text-center whitespace-nowrap"
+
 
     .mb-6
       = f.label :ai_comment, t("meals.show.ai_comment")
