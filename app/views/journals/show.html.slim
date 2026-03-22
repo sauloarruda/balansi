@@ -23,7 +23,11 @@
       = t("professional.patients.index.profile", default: "Ver perfil")
 
 / Date Navigator
-= render partial: "journals/date_navigator", locals: { journal_date: @journal.date }
+- navigation_url_template = journal_path(date: @journal.date.iso8601).sub(@journal.date.iso8601, "__DATE__")
+- if defined?(current_professional) && current_professional.present? && @patient.present?
+  - navigation_url_template = journal_professional_patient_path(@patient, date: @journal.date.iso8601).sub(@journal.date.iso8601, "__DATE__")
+
+= render partial: "journals/date_navigator", locals: { journal_date: @journal.date, navigation_url_template: navigation_url_template }
 
 / Daily Summary Section
 = render partial: "journals/daily_summary", locals: { journal: @journal, patient: @patient, meals: @meals, exercises: @exercises }

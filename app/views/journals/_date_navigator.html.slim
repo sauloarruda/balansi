@@ -1,5 +1,6 @@
 / Date Navigator
-.bg-pink-50.border.border-pink-200.rounded-base.p-4.mb-6 data-controller="date-navigator" data-date-navigator-current-date-value=journal_date.iso8601
+- navigation_url_template ||= journal_path(date: journal_date.iso8601).sub(journal_date.iso8601, "__DATE__")
+.bg-pink-50.border.border-pink-200.rounded-base.p-4.mb-6 data-controller="date-navigator" data-date-navigator-current-date-value=journal_date.iso8601 data-date-navigator-url-template-value=navigation_url_template
   / Hidden native date input (used to open calendar picker)
   input#datepicker-input.absolute.opacity-0.pointer-events-none.w-0.h-0 type="date" value=journal_date.iso8601 data-date-navigator-target="calendarInput" data-action="change->date-navigator#onCalendarChange"
   .flex.items-center.justify-center.gap-4

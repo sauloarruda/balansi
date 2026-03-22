@@ -3,5 +3,8 @@
     "Ruby LSP RSpec": {
       "rspecCommand": "bundle exec rspec"
     }
+  },
+  "chat.tools.terminal.autoApprove": {
+    "bundle": true
   }
 }

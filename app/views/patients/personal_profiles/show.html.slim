@@ -3,27 +3,6 @@
 - if @patient.personal_profile_completed? && params[:edit].blank?
   = render "patients/personal_profiles/personal_profile_card"
 
-  / Professional-filled profile (read-only)
-  .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6.mb-6
-    .flex.items-center.justify-between.mb-4
-      h3.text-lg.font-semibold.text-gray-900 = t("professional.patients.show.clinical_assessment")
-    .grid.grid-cols-2.gap-6
-      .mb-4
-        .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:daily_calorie_goal)
-        .text-gray-900 = @patient.daily_calorie_goal.present? ? @patient.daily_calorie_goal : "—"
-      .mb-4
-        .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:bmr)
-        .text-gray-900 = @patient.bmr.present? ? @patient.bmr : "—"
-      .mb-4
-        .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:steps_goal)
-        .text-gray-900 = @patient.steps_goal.present? ? @patient.steps_goal : "—"
-      .mb-4
-        .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:hydration_goal)
-        .text-gray-900 = @patient.hydration_goal.present? ? @patient.hydration_goal : "—"
-    - if @patient.clinical_assessment_last_updated_at.present?
-      .mt-4.pt-4.border-t.border-gray-200.text-xs.text-gray-500
-        = t("professional.patients.show.assessment_updated_at", date: l(@patient.clinical_assessment_last_updated_at, format: :profile_updated_at))
-
   / User profile (read-only)
   .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
     .flex.items-center.justify-between.mb-4.gap-3
