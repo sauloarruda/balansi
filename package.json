@@ -9,6 +9,6 @@
   "dependencies": {
     "flowbite": "^4.0.1",
     "imask": "^7.6.1",
-    "intl-tel-input": "^26.7.5"
+    "intl-tel-input": "^26.9.2"
   }
 }
