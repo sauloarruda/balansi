@@ -10,19 +10,16 @@
       = meal.status_text
   
   - if status == "confirmed"
-    .flex.flex-wrap.gap-4.mb-4.p-4.bg-pink-50.border.border-pink-100.rounded-base
-      span.text-sm.font-medium.text-pink-800
-        strong.text-pink-900 = "#{meal.calories} "
-        = t("defaults.kcal")
-      span.text-sm.font-medium.text-pink-800
-        strong.text-pink-900 = "#{meal.proteins}g "
-        = t("defaults.protein")
-      span.text-sm.font-medium.text-pink-800
-        strong.text-pink-900 = "#{meal.carbs}g "
-        = t("defaults.carbs")
-      span.text-sm.font-medium.text-pink-800
-        strong.text-pink-900 = "#{meal.fats}g "
-        = t("defaults.fats")
+    .flex.items-center.gap-3.mb-4.px-3.py-2.bg-pink-50.border.border-pink-100.rounded-base
+      .shrink-0
+        span.text-base.font-bold.text-pink-900 = meal.calories
+        span.text-xs.text-pink-600.ml-0.5 = t("defaults.kcal")
+      - if meal.gram_weight.to_f > 0
+        .w-px.h-7.bg-pink-200.shrink-0
+        .shrink-0
+          span.text-base.font-bold.text-gray-600 = "#{meal.gram_weight.round}g"
+      .w-px.h-7.bg-pink-200.shrink-0
+      = render "shared/macro_circles", carbs: meal.carbs.to_f, proteins: meal.proteins.to_f, fats: meal.fats.to_f, size: :sm
   
   .flex.gap-2.mt-4
     - if meal.pending? && (journal.closed_at.nil? || journal.editable?)

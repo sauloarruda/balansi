@@ -1,0 +1,36 @@
+/ Locals: carbs (Numeric g), proteins (Numeric g), fats (Numeric g), size (:sm or :md)
+- total       = carbs.to_f + proteins.to_f + fats.to_f
+- svg_size    = size == :md ? 64 : 44
+- font_size   = size == :md ? "7" : "7.5"
+- label_cls   = size == :md ? "text-sm font-semibold" : "text-xs font-semibold"
+- carbs_pct   = total > 0 ? [(carbs.to_f   / total * 100).round, 99].min : 0
+- protein_pct = total > 0 ? [(proteins.to_f / total * 100).round, 99].min : 0
+- fat_pct     = total > 0 ? [(fats.to_f     / total * 100).round, 99].min : 0
+
+.flex.items-center.gap-3
+  .flex.items-center.gap-1.5
+    svg width=svg_size height=svg_size viewBox="0 0 36 36"
+      g transform="rotate(-90 18 18)"
+        circle.macro-ring-bg cx="18" cy="18" r="15.9"
+        circle.macro-ring.ring-carbs cx="18" cy="18" r="15.9" stroke-dasharray="#{carbs_pct} #{100 - carbs_pct}"
+      text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#92400e"
+        = "#{carbs.to_i}g"
+    span class=label_cls style="color:#d97706;" Carbs
+
+  .flex.items-center.gap-1.5
+    svg width=svg_size height=svg_size viewBox="0 0 36 36"
+      g transform="rotate(-90 18 18)"
+        circle.macro-ring-bg cx="18" cy="18" r="15.9"
+        circle.macro-ring.ring-protein cx="18" cy="18" r="15.9" stroke-dasharray="#{protein_pct} #{100 - protein_pct}"
+      text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#1e3a8a"
+        = "#{proteins.to_i}g"
+    span class=label_cls style="color:#2563eb;" Prot.
+
+  .flex.items-center.gap-1.5
+    svg width=svg_size height=svg_size viewBox="0 0 36 36"
+      g transform="rotate(-90 18 18)"
+        circle.macro-ring-bg cx="18" cy="18" r="15.9"
+        circle.macro-ring.ring-fat cx="18" cy="18" r="15.9" stroke-dasharray="#{fat_pct} #{100 - fat_pct}"
+      text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#9d174d"
+        = "#{fats.to_i}g"
+    span class=label_cls style="color:#db2777;" Gord.

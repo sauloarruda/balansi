@@ -3,3 +3,9 @@
 @import "tailwindcss";
 @plugin "flowbite/plugin";
 @source "../../../node_modules/flowbite";
+
+.macro-ring-bg { fill: none; stroke: #e5e7eb; stroke-width: 4; }
+.macro-ring    { fill: none; stroke-width: 4; stroke-linecap: round; }
+.ring-carbs    { stroke: #f59e0b; }
+.ring-protein  { stroke: #3b82f6; }
+.ring-fat      { stroke: #f472b6; }
