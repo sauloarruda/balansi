@@ -39,10 +39,12 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
       end
 
       Rails.logger.error("Meal analysis transient failure user_id=#{user_id} meal_id=#{meal.id}: #{e.class}: #{e.message}")
+      Sentry.capture_exception(e, tags: { meal_id: meal.id, user_id: user_id, reason: "transient_max_retries" })
       errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
       nil
     rescue StandardError => e
       Rails.logger.error("Meal analysis failure user_id=#{user_id} meal_id=#{meal.id}: #{e.class}: #{e.message}")
+      Sentry.capture_exception(e, tags: { meal_id: meal.id, user_id: user_id, reason: "unexpected_error" })
       errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
       nil
     end
@@ -75,17 +77,18 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
 
   def normalize_response(raw_response)
     response = raw_response.respond_to?(:deep_symbolize_keys) ? raw_response.deep_symbolize_keys : {}
+    missing_keys = %i[p c f cal gw cmt feel].reject { |key| response.key?(key) }
+    return report_missing_keys(missing_keys) if missing_keys.any?
 
-    required_keys = %i[p c f cal gw cmt feel]
-    missing_keys = required_keys.reject { |key| response.key?(key) }
+    normalized = cast_response(response)
+    return normalized if valid_ranges?(normalized)
 
-    if missing_keys.any?
-      errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
-      Rails.logger.warn("Meal analysis invalid response: missing_keys=#{missing_keys.join(',')} meal_id=#{meal.id} user_id=#{user_id}")
-      return nil
-    end
+    report_invalid_values
+    nil
+  end
 
-    normalized = {
+  def cast_response(response)
+    {
       p: response[:p].to_i,
       c: response[:c].to_i,
       f: response[:f].to_i,
@@ -94,11 +97,18 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
       cmt: response[:cmt].to_s.strip,
       feel: response[:feel].to_i
     }
+  end
 
-    return normalized if valid_ranges?(normalized)
-
+  def report_missing_keys(missing_keys)
     errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
+    Rails.logger.warn("Meal analysis invalid response: missing_keys=#{missing_keys.join(',')} meal_id=#{meal.id} user_id=#{user_id}")
+    Sentry.capture_message("Meal analysis invalid LLM response", level: :error, tags: { meal_id: meal.id, user_id: user_id, missing_keys: missing_keys.join(",") })
     nil
+  end
+
+  def report_invalid_values
+    errors.add(:base, I18n.t("journal.errors.llm_unavailable", locale: user_language))
+    Sentry.capture_message("Meal analysis invalid LLM response values", level: :error, tags: { meal_id: meal.id, user_id: user_id })
   end
 
   def valid_ranges?(normalized)

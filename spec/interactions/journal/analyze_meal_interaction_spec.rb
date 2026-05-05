@@ -62,6 +62,46 @@ RSpec.describe Journal::AnalyzeMealInteraction, type: :interaction do
       expect(meal.reload.status.to_s).to eq("pending_llm")
     end
 
+    it "reports to Sentry when response is malformed" do
+      client = instance_double(Journal::MealAnalysisClient)
+      allow(client).to receive(:analyze).and_return({ p: 10 })
+      allow_any_instance_of(described_class).to receive(:llm_client).and_return(client)
+      allow(Sentry).to receive(:capture_message)
+
+      described_class.run(
+        meal: meal,
+        user_id: user.id,
+        description: meal.description,
+        meal_type: meal.meal_type,
+        user_language: user.language
+      )
+
+      expect(Sentry).to have_received(:capture_message).with(
+        "Meal analysis invalid LLM response",
+        hash_including(level: :error, tags: hash_including(meal_id: meal.id, user_id: user.id))
+      )
+    end
+
+    it "reports to Sentry when StandardError is raised" do
+      client = instance_double(Journal::MealAnalysisClient)
+      allow(client).to receive(:analyze).and_raise(StandardError, "boom")
+      allow_any_instance_of(described_class).to receive(:llm_client).and_return(client)
+      allow(Sentry).to receive(:capture_exception)
+
+      described_class.run(
+        meal: meal,
+        user_id: user.id,
+        description: meal.description,
+        meal_type: meal.meal_type,
+        user_language: user.language
+      )
+
+      expect(Sentry).to have_received(:capture_exception).with(
+        an_instance_of(StandardError),
+        hash_including(tags: hash_including(meal_id: meal.id, user_id: user.id, reason: "unexpected_error"))
+      )
+    end
+
     it "retries transient failures up to success" do
       client = instance_double(Journal::MealAnalysisClient)
       call_count = 0
