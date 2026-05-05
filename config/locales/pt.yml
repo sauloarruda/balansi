@@ -90,6 +90,7 @@ pt:
       review: "Revisar"
       edit: "Editar"
       delete: "Excluir"
+      retry: "Tentar Novamente"
       add: "Adicionar %{model}"
       no_items: "Nenhum %{model} registrado ainda."
       add_first: "Adicione seu primeiro %{model}"

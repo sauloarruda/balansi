@@ -121,6 +121,26 @@ RSpec.describe JournalsController, type: :controller do
       expect(response.body).to include("data-turbo-confirm=")
     end
 
+    it "shows retry button for pending_llm meals" do
+      journal = create(:journal)
+      pending_llm_meal = Meal.create!(
+        journal: journal,
+        meal_type: "lunch",
+        description: "Refeição sem análise",
+        status: "pending_llm"
+      )
+
+      get :show, params: { date: "2026-02-05" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("reprocess")
+      expect(response.body).to include("Tentar Novamente")
+      expect(response.body).to include(%(action="/journals/2026-02-05/meals/#{pending_llm_meal.id}"))
+      expect(response.body).to include("submit-lock")
+      expect(response.body).to include("submit-&gt;submit-lock#disable")
+      expect(response.body).to include("click-&gt;submit-lock#disable")
+    end
+
     it "uses effective_calories_burned in daily summary" do
       journal = create(:journal)
       Exercise.create!(

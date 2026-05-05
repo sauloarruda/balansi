@@ -21,11 +21,17 @@
       .w-px.h-7.bg-pink-200.shrink-0
       = render "shared/macro_circles", carbs: meal.carbs.to_f, proteins: meal.proteins.to_f, fats: meal.fats.to_f, size: :sm
   
-  .flex.gap-2.mt-4
+  .flex.gap-2.mt-4 data-controller="submit-lock"
     - if meal.pending? && (journal.closed_at.nil? || journal.editable?)
       - if status == "pending_patient"
         = link_to t("defaults.actions.review"), journal_meal_path(journal_date: journal_date.to_s, id: meal.id), class: "inline-flex items-center text-white bg-pink-600 hover:bg-pink-700 box-border border border-transparent focus:ring-4 focus:ring-pink-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
-      = link_to t("defaults.actions.delete"), journal_meal_path(journal_date: journal_date.to_s, id: meal.id), data: { turbo_method: :delete, turbo_confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
+      - if status == "pending_llm"
+        = form_with scope: :meal, url: journal_meal_path(journal_date: journal_date.to_s, id: meal.id), method: :patch, data: { action: "submit->submit-lock#disable" } do |f|
+          = f.hidden_field :meal_type, value: meal.meal_type
+          = f.hidden_field :description, value: meal.description
+          = hidden_field_tag :reprocess, "1"
+          = f.submit t("defaults.actions.retry"), data: { submit_lock_target: "submit" }, class: "inline-flex items-center text-white bg-yellow-500 hover:bg-yellow-600 box-border border border-transparent focus:ring-4 focus:ring-yellow-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none cursor-pointer"
+      = link_to t("defaults.actions.delete"), journal_meal_path(journal_date: journal_date.to_s, id: meal.id), data: { turbo_method: :delete, turbo_confirm: t("defaults.confirm_delete"), action: "click->submit-lock#disable", submit_lock_target: "submit" }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
     - elsif status == "confirmed" && (journal.closed_at.nil? || journal.editable?)
       = link_to t("defaults.actions.edit"), journal_meal_path(journal_date: journal_date.to_s, id: meal.id), class: "inline-flex items-center text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2 focus:outline-none"
       = link_to t("defaults.actions.delete"), journal_meal_path(journal_date: journal_date.to_s, id: meal.id), data: { turbo_method: :delete, turbo_confirm: t("defaults.confirm_delete") }, class: "inline-flex items-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-300 shadow-xs font-medium rounded-base text-sm px-4 py-2 focus:outline-none"
