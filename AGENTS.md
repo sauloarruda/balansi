@@ -66,6 +66,7 @@ Append `?test_user_id=<id>` to any GET request in development to auto-sign-in as
 
 - Follow rubocop-rails-omakase style
 - Use ActiveInteraction for any non-trivial business logic
+- Use Rails i18n for all user-facing copy. Do not hardcode literal strings in views, controllers, services, or flashes; use `t(...)` / `I18n.t(...)` and update `config/locales/pt.yml` and `config/locales/en.yml` together.
 - Slim templates (not ERB)
 - Prefer Hotwire (Turbo Frames/Streams) over full-page renders for interactivity
 - Test with RSpec + FactoryBot; system tests use Capybara
