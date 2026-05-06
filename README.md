@@ -6,6 +6,11 @@ A fast, lightweight, feedback-oriented nutrition and training journal. Users log
 
 v1 focuses on **log**, **calculate**, and **evaluate**. The goal is to create an "evaluative daily journal" that users can complete in seconds and trust. See [`doc/PITCH-v1.md`](doc/PITCH-v1.md) for the complete vision and scope.
 
+### Localization
+
+- All user-facing copy must use Rails i18n. Do not hardcode literal strings in views, controllers, services, or flash/error messages.
+- Keep `config/locales/pt.yml` and `config/locales/en.yml` in sync for any new or changed text.
+
 ## Technologies
 
 - **Ruby on Rails 8.1** - Web framework

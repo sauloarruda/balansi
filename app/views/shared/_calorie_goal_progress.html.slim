@@ -1,0 +1,78 @@
+/ Locals: consumed (Numeric kcal), goal (Numeric kcal)
+- goal_balance = consumed - goal
+- goal_balance_pct = goal.to_f.positive? ? ((goal_balance.to_f / goal.to_f) * 100).round : 0
+- current_percentage = goal.to_f.positive? ? ((consumed.to_f / goal.to_f) * 100).round : 0
+
+/ Determine visual status and calculate indicator position (same limits as balance_visual_status helper)
+- if goal_balance_pct > 10
+  - status = "positive"
+  - status_color = "red"
+  - status_label = t("journals.daily_summary.daily_goal_progress_above")
+  / Vermelho segment: 80-100% of bar (input > 10)
+  - normalized = [goal_balance_pct - 10, 0].max
+  - indicator_position = 80 + [normalized * 2, 20].min.to_i
+- elsif goal_balance_pct < -20
+  - status = "low_severe"
+  - status_color = "orange"
+  - status_label = t("journals.daily_summary.daily_goal_progress_very_below")
+  / Laranja segment: 0-20% of bar (input < -20)
+  - normalized = [goal_balance_pct / -20, 1].min
+  - indicator_position = (normalized * 20)
+- elsif goal_balance_pct < -10
+  - status = "low_moderate"
+  - status_color = "green"
+  - status_label = t("journals.daily_summary.daily_goal_progress_below")
+  / Verde segment: 20-30% of bar (input -20 to -10)
+  - normalized = (goal_balance_pct - (-20)) / 10
+  - indicator_position = 20 + (normalized * 10)
+- else
+  - status = "balanced"
+  - status_color = "blue"
+  - status_label = t("journals.daily_summary.daily_goal_progress_balanced")
+  / Azul segment: 30-80% of bar (input -10 to 10)
+  - normalized = (goal_balance_pct - (-10)) / 20
+  - indicator_position = 30 + (normalized * 50)
+
+.flex.flex-col.gap-2
+  / Header with percentage
+  .flex.justify-between.items-center
+    h5.text-sm.font-semibold.text-heading = t("journals.daily_summary.daily_goal_progress")
+    span.text-sm.font-bold style="color: #{status_color == 'red' ? '#dc2626' : status_color == 'orange' ? '#ea580c' : status_color == 'green' ? '#16a34a' : '#2563eb'}"
+      = "#{current_percentage}% (#{goal_balance_pct >= 0 ? '+' : ''}#{goal_balance_pct}%)"
+
+  / Segmented progress bar with indicator
+  .relative.pt-6
+    / Position indicator (arrow) - positioned above bar
+    .absolute style="left: #{indicator_position.round}%; top: 0; transform: translateX(-50%);"
+      / Triangle pointing down
+      .flex.flex-col.items-center
+        .w-0.h-0 style="border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #{status_color == 'red' ? '#dc2626' : status_color == 'orange' ? '#ea580c' : status_color == 'green' ? '#16a34a' : '#2563eb'};"
+    
+    / Bar segments
+    .w-full.bg-gray-200.rounded-full.h-4.overflow-visible.flex.shadow-sm
+      / Laranja: < -20%
+      .flex-none class="#{goal_balance_pct < -20 ? 'ring-2 ring-orange-600 ring-inset' : ''}" style="background-color: #ea580c; width: 20%;"
+      
+      / Verde: -20% até -10%
+      .flex-none class="#{goal_balance_pct >= -20 && goal_balance_pct < -10 ? 'ring-2 ring-green-600 ring-inset' : ''}" style="background-color: #16a34a; width: 10%;"
+      
+      / Azul: -10% até 10%
+      .flex-none class="#{goal_balance_pct >= -10 && goal_balance_pct <= 10 ? 'ring-2 ring-blue-600 ring-inset' : ''}" style="background-color: #2563eb; width: 50%;"
+      
+      / Vermelho: > 10%
+      .flex-none class="#{goal_balance_pct > 10 ? 'ring-2 ring-red-600 ring-inset' : ''}" style="background-color: #dc2626; width: 20%;"
+
+  / Legend
+  .grid.grid-cols-4.gap-2.text-xs.font-medium.mt-3
+    .flex.items-center.gap-1
+      .w-3.h-3.rounded-full style="background-color: #ea580c;"
+      span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_very_below")
+    .flex.items-center.gap-1
+      .w-3.h-3.rounded-full style="background-color: #16a34a;"
+      span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_below")
+    .flex.items-center.gap-1
+      .w-3.h-3.rounded-full style="background-color: #2563eb;"
+      span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_balanced")
+    .flex.items-center.gap-1
+      .w-3.h-3.rounded-full style="background-color: #dc2626;"
+      span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_above")

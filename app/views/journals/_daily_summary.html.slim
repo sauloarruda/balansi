@@ -6,8 +6,15 @@
 - balance = journal.effective_balance
 - balance_status = journal.balance_status
 - calorie_goal = patient.daily_calorie_goal
-- balance_percentage = calorie_goal.to_f.positive? ? (balance.to_f / calorie_goal.to_f) * 100 : nil
-- balance_visual_status = if balance_percentage.nil? then (balance_status == "negative" ? "low_severe" : "balanced") elsif balance_percentage > 10 then "positive" elsif balance_percentage < -20 then "low_severe" elsif balance_percentage < -10 then "low_moderate" else "balanced" end
+- goal_balance = journal.goal_balance
+- balance_pct = balance_percentage(balance, calorie_goal)
+- goal_balance_pct = balance_percentage(goal_balance, calorie_goal)
+- balance_vis_status = balance_visual_status(balance_pct, balance_status)
+- goal_balance_vis_status = balance_visual_status(goal_balance_pct, nil)
+- balance_style = balance_style_classes(balance_vis_status)
+- goal_balance_style = balance_style_classes(goal_balance_vis_status)
+- balance_message_key_value = balance_message_key(balance_vis_status, balance_pct)
+- goal_balance_message_key_value = balance_message_key(goal_balance_vis_status, goal_balance_pct)
 
 section.mb-8 role="region" aria-label=t(".title")
   .bg-gradient-to-br.from-white.to-brand-softer.border.border-default-medium.rounded-base.shadow-xs.overflow-hidden data-accordion="open"
@@ -51,6 +58,8 @@ section.mb-8 role="region" aria-label=t(".title")
                   = calories_consumed
                   span.text-xl.text-pink-700.ml-1 = t(".kcal")
                 p.text-sm.font-medium.text-pink-800.mt-2
+                  = "#{t('.daily_goal')}: #{calorie_goal} #{t('.kcal')}"
+                p.text-sm.font-medium.text-pink-800.mt-2
                   = "#{t('.meals')}: #{confirmed_meals_count}"
               span.text-2xl(class="text-#{confirmed_meals_count > 0 ? 'green' : 'red'}-600") 🍽️
 
@@ -67,60 +76,27 @@ section.mb-8 role="region" aria-label=t(".title")
               span.text-2xl 🏃
 
           / Balance Card - Featured
-          - if balance_visual_status == "positive"
-            - balance_border_class = "border-red-500"
-            - balance_bg_class = "from-red-50 to-red-100"
-            - balance_text_class = "text-red-800"
-            - balance_value_class = "text-red-900"
-            - balance_unit_class = "text-red-700"
-            - balance_message_class = "text-red-800"
-            - balance_message_key = ".above_goal"
-          - elsif balance_visual_status == "low_moderate"
-            - balance_border_class = "border-green-500"
-            - balance_bg_class = "from-green-50 to-green-100"
-            - balance_text_class = "text-green-800"
-            - balance_value_class = "text-green-900"
-            - balance_unit_class = "text-green-700"
-            - balance_message_class = "text-green-800"
-            - balance_message_key = ".below_goal"
-          - elsif balance_visual_status == "low_severe"
-            - balance_border_class = "border-orange-500"
-            - balance_bg_class = "from-orange-50 to-orange-100"
-            - balance_text_class = "text-orange-800"
-            - balance_value_class = "text-orange-900"
-            - balance_unit_class = "text-orange-700"
-            - balance_message_class = "text-orange-800"
-            - balance_message_key = balance_percentage && balance_percentage < -25 ? ".far_below_goal" : ".below_goal"
-          - else
-            - balance_border_class = "border-blue-500"
-            - balance_bg_class = "from-blue-50 to-blue-100"
-            - balance_text_class = "text-blue-800"
-            - balance_value_class = "text-blue-900"
-            - balance_unit_class = "text-blue-700"
-            - balance_message_class = "text-blue-800"
-            - balance_message_key = ".balanced"
-
-          - balance_card_classes = "bg-gradient-to-br #{balance_bg_class} border-l-4 #{balance_border_class} rounded-base shadow-md p-6"
+          - balance_card_classes = "bg-gradient-to-br #{goal_balance_style[:bg]} border-l-4 #{goal_balance_style[:border]} rounded-base shadow-md p-6"
           div class=balance_card_classes
             .flex.items-start.justify-between.mb-4
               div.flex-1
-                p.text-sm.font-semibold.uppercase.tracking-wide.mb-2 class=balance_text_class
+                p.text-sm.font-semibold.uppercase.tracking-wide.mb-2 class=goal_balance_style[:text]
                   = t(".caloric_balance")
-                p.text-4xl.font-bold class=balance_value_class
-                  - if balance >= 0
+                p.text-4xl.font-bold class=goal_balance_style[:value]
+                  - if goal_balance >= 0
                     | +
-                  = balance
+                  = goal_balance
                   |
-                  span.text-2xl.font-medium.ml-2 class=balance_unit_class
+                  span.text-2xl.font-medium.ml-2 class=goal_balance_style[:unit]
                     = t(".kcal")
               .flex.flex-col.items-center.justify-center.ml-4
-                - if balance_visual_status == "low_moderate"
+                - if goal_balance_vis_status == "low_moderate"
                   svg.w-16.h-16.text-green-600 fill="currentColor" viewBox="0 0 20 20"
                     path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
-                - elsif balance_visual_status == "positive"
+                - elsif goal_balance_vis_status == "positive"
                   svg.w-16.h-16.text-red-600 fill="currentColor" viewBox="0 0 20 20"
                     path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
-                - elsif balance_visual_status == "low_severe"
+                - elsif goal_balance_vis_status == "low_severe"
                   svg.w-16.h-16.text-orange-600 fill="currentColor" viewBox="0 0 20 20"
                     path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
                 - else
@@ -128,38 +104,26 @@ section.mb-8 role="region" aria-label=t(".title")
                     path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
 
             / Balance Status Message
-            - if balance_visual_status == "low_moderate"
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+            - if goal_balance_vis_status == "low_moderate"
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
                 svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
                   path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
-                = t(balance_message_key)
-            - elsif balance_visual_status == "positive"
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+                = t(goal_balance_message_key_value)
+            - elsif goal_balance_vis_status == "positive"
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
                 svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
                   path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
-                = t(balance_message_key)
-            - elsif balance_visual_status == "low_severe"
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+                = t(goal_balance_message_key_value)
+            - elsif goal_balance_vis_status == "low_severe"
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
                 svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
                   path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
-                = t(balance_message_key)
+                = t(goal_balance_message_key_value)
             - else
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=balance_message_class
+              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
                 svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
                   path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
-                = t(balance_message_key)
-
-        / Macronutrients from confirmed meals
-        - confirmed_for_macros = journal.meals.select(&:confirmed?)
-        - if confirmed_for_macros.any?
-          - total_carbs_g    = confirmed_for_macros.sum(&:carbs).to_f
-          - total_proteins_g = confirmed_for_macros.sum(&:proteins).to_f
-          - total_fats_g     = confirmed_for_macros.sum(&:fats).to_f
-          - if (total_carbs_g + total_proteins_g + total_fats_g) > 0
-            .mb-6.px-4.py-3.bg-gray-50.border.border-gray-200.rounded-base
-              p.text-xs.font-semibold.text-gray-500.uppercase.tracking-wide.mb-3 Macronutrientes
-              .flex.justify-around
-                = render "shared/macro_circles", carbs: total_carbs_g, proteins: total_proteins_g, fats: total_fats_g, size: :md
+                = t(goal_balance_message_key_value)
 
         / Progress and Score Footer (if applicable)
         - if patient.daily_calorie_goal || (journal.closed_at && journal.score)
@@ -168,12 +132,7 @@ section.mb-8 role="region" aria-label=t(".title")
             .grid.gap-6 class=footer_grid_class
               / Progress Bar
               - if patient.daily_calorie_goal
-                div
-                  .flex.justify-between.items-center.mb-2
-                    h5.text-sm.font-semibold.text-heading = t(".daily_goal_progress")
-                    span.text-sm.font-bold.text-brand = "#{progress_percentage(calories_consumed, patient.daily_calorie_goal)}%"
-                  .w-full.bg-gray-200.rounded-full.h-3.overflow-hidden
-                    .bg-brand.h-3.rounded-full.transition-all style="width: #{[ progress_percentage(calories_consumed, patient.daily_calorie_goal), 100 ].min}%"
+                = render "shared/calorie_goal_progress", consumed: calories_consumed, goal: patient.daily_calorie_goal
 
               / Score
               - if journal.closed_at && journal.score
@@ -188,3 +147,15 @@ section.mb-8 role="region" aria-label=t(".title")
                           span.text-lg.ml-2 ⭐
                         - elsif score_color_class == "teal"
                           span.text-lg.ml-2 ✨
+
+        / Macronutrients from confirmed meals
+        - confirmed_for_macros = journal.meals.select(&:confirmed?)
+        - if confirmed_for_macros.any?
+          - total_carbs_g    = confirmed_for_macros.sum(&:carbs).to_f
+          - total_proteins_g = confirmed_for_macros.sum(&:proteins).to_f
+          - total_fats_g     = confirmed_for_macros.sum(&:fats).to_f
+          - if (total_carbs_g + total_proteins_g + total_fats_g) > 0
+            .mb-6.px-3.py-3.mt-2
+              p.text-xs.font-semibold.text-gray-500.uppercase.tracking-wide.mb-3.text-center = t(".macronutrients")
+              .flex.justify-around
+                = render "shared/macro_circles", carbs: total_carbs_g, proteins: total_proteins_g, fats: total_fats_g, size: :md
