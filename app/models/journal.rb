@@ -98,6 +98,10 @@ class Journal < ApplicationRecord
     effective_calories_consumed - effective_calories_burned
   end
 
+  def goal_balance
+    effective_calories_consumed - (patient.daily_calorie_goal || 0)
+  end
+
   def balance_status
     return "positive" if effective_balance > 300
     return "negative" if effective_balance < -500
