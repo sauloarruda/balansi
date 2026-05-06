@@ -8,9 +8,9 @@
   - status = "positive"
   - status_color = "red"
   - status_label = t("journals.daily_summary.daily_goal_progress_above")
-  / Vermelho segment: 50%+ of bar (input > 10)
+  / Vermelho segment: 80-100% of bar (input > 10)
   - normalized = [goal_balance_pct - 10, 0].max
-  - indicator_position = 50 + [normalized * 2, 50].min.to_i
+  - indicator_position = 80 + [normalized * 2, 20].min.to_i
 - elsif goal_balance_pct < -20
   - status = "low_severe"
   - status_color = "orange"
@@ -29,9 +29,9 @@
   - status = "balanced"
   - status_color = "blue"
   - status_label = t("journals.daily_summary.daily_goal_progress_balanced")
-  / Azul segment: 30-50% of bar (input -10 to 10)
+  / Azul segment: 30-80% of bar (input -10 to 10)
   - normalized = (goal_balance_pct - (-10)) / 20
-  - indicator_position = 30 + (normalized * 20)
+  - indicator_position = 30 + (normalized * 50)
 
 .flex.flex-col.gap-2
   / Header with percentage
@@ -57,10 +57,10 @@
       .flex-none class="#{goal_balance_pct >= -20 && goal_balance_pct < -10 ? 'ring-2 ring-green-600 ring-inset' : ''}" style="background-color: #16a34a; width: 10%;"
       
       / Azul: -10% até 10%
-      .flex-none class="#{goal_balance_pct >= -10 && goal_balance_pct <= 10 ? 'ring-2 ring-blue-600 ring-inset' : ''}" style="background-color: #2563eb; width: 20%;"
+      .flex-none class="#{goal_balance_pct >= -10 && goal_balance_pct <= 10 ? 'ring-2 ring-blue-600 ring-inset' : ''}" style="background-color: #2563eb; width: 50%;"
       
       / Vermelho: > 10%
-      .flex-1 class="#{goal_balance_pct > 10 ? 'ring-2 ring-red-600 ring-inset' : ''}" style="background-color: #dc2626;"
+      .flex-none class="#{goal_balance_pct > 10 ? 'ring-2 ring-red-600 ring-inset' : ''}" style="background-color: #dc2626; width: 20%;"
 
   / Legend
   .grid.grid-cols-4.gap-2.text-xs.font-medium.mt-3
