@@ -78,6 +78,7 @@ pt:
     kcal: "kcal"
     minutes: "minutos"
     kcal_burned: "kcal queimadas"
+    excess: "excesso"
     item:
       one: "item"
       other: "itens"
@@ -560,6 +561,9 @@ pt:
         bmr: "TMB (kcal)"
         steps_goal: "Meta de passos"
         hydration_goal: "Meta de hidratação (ml)"
+        daily_carbs_goal: "Meta de carboidratos diários (g)"
+        daily_proteins_goal: "Meta de proteínas diárias (g)"
+        daily_fats_goal: "Meta de gorduras diárias (g)"
     errors:
       messages:
         not_in_future: "não pode ser no futuro"

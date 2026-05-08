@@ -135,5 +135,13 @@ RSpec.describe Professional, type: :model do
 
       expect(professional.can_access?(patient)).to be(false)
     end
+
+    it "returns true when the professional user is admin" do
+      admin_user = create(:user, admin: true)
+      professional = create(:professional, user: admin_user)
+      patient = create(:patient)
+
+      expect(professional.can_access?(patient)).to be(true)
+    end
   end
 end

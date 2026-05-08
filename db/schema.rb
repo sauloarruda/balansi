@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_10_230908) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_07_230718) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
@@ -90,6 +90,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_10_230908) do
     t.datetime "clinical_assessment_last_updated_at"
     t.datetime "created_at", null: false
     t.integer "daily_calorie_goal"
+    t.integer "daily_carbs_goal", default: 0, null: false
+    t.integer "daily_fats_goal", default: 0, null: false
+    t.integer "daily_proteins_goal", default: 0, null: false
     t.string "gender"
     t.decimal "height_cm", precision: 5, scale: 2
     t.integer "hydration_goal"
@@ -121,6 +124,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_10_230908) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.boolean "admin"
     t.datetime "created_at", null: false
     t.string "email", limit: 255, null: false
     t.string "language", limit: 10, default: "pt", null: false

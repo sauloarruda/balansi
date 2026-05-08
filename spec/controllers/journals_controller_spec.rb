@@ -169,6 +169,53 @@ RSpec.describe JournalsController, type: :controller do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('data-date-navigator-url-template-value="/journals/__DATE__"')
     end
+
+    it "renders macro circles with goal tooltips when confirmed meals have macros" do
+      patient = Patient.find(2001)
+      journal = Journal.create!(patient: patient, date: Date.new(2026, 2, 6))
+      Meal.create!(
+        journal: journal,
+        meal_type: "lunch",
+        description: "Arroz e frango",
+        calories: 600,
+        carbs: 60,
+        proteins: 40,
+        fats: 20,
+        status: "confirmed"
+      )
+
+      get :show, params: { date: "2026-02-06" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("carboidratos: 60g / 250g (24%)")
+      expect(response.body).to include("proteína: 40g / 150g (27%)")
+      expect(response.body).to include("gorduras: 20g / 70g (29%)")
+    end
+
+    it "renders red excess ring and tooltip when macros exceed goals" do
+      user = create(:user)
+      patient = create(:patient, user: user, daily_carbs_goal: 50, daily_proteins_goal: 30, daily_fats_goal: 10)
+      journal = Journal.create!(patient: patient, date: Date.new(2026, 2, 7))
+      Meal.create!(
+        journal: journal,
+        meal_type: "lunch",
+        description: "Binge meal",
+        calories: 1200,
+        carbs: 120,
+        proteins: 80,
+        fats: 30,
+        status: "confirmed"
+      )
+      session[:user_id] = user.id
+
+      get :show, params: { date: "2026-02-07" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("carboidratos: 120g / 50g (240%, +70g excesso)")
+      expect(response.body).to include("proteína: 80g / 30g (267%, +50g excesso)")
+      expect(response.body).to include("gorduras: 30g / 10g (300%, +20g excesso)")
+      expect(response.body).to include('class="macro-ring-bg over"')
+    end
   end
 
   describe "authorization without patient" do

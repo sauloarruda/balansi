@@ -13,5 +13,8 @@ default_patient:
   bmr: 1700
   steps_goal: 9000
   hydration_goal: 2500
+  daily_carbs_goal: 250
+  daily_proteins_goal: 150
+  daily_fats_goal: 70
   created_at: 2026-02-05 10:00:00
   updated_at: 2026-02-05 10:00:00

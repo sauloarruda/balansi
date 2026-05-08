@@ -1,36 +1,139 @@
 / Locals: carbs (Numeric g), proteins (Numeric g), fats (Numeric g), size (:sm or :md)
+/ Optional: carbs_goal, proteins_goal, fats_goal (Numeric g), hide_labels_mobile (boolean)
 - total       = carbs.to_f + proteins.to_f + fats.to_f
 - svg_size    = size == :md ? 64 : 44
 - font_size   = size == :md ? "7" : "7.5"
 - label_cls   = size == :md ? "text-sm font-semibold" : "text-xs font-semibold"
+- hide_labels_mobile = local_assigns.fetch(:hide_labels_mobile, false)
+- label_visibility_cls = hide_labels_mobile ? "hidden sm:block" : ""
 - carbs_pct   = total > 0 ? [(carbs.to_f   / total * 100).round, 99].min : 0
 - protein_pct = total > 0 ? [(proteins.to_f / total * 100).round, 99].min : 0
 - fat_pct     = total > 0 ? [(fats.to_f     / total * 100).round, 99].min : 0
+- carbs_goal       = local_assigns.fetch(:carbs_goal, nil)
+- proteins_goal    = local_assigns.fetch(:proteins_goal, nil)
+- fats_goal        = local_assigns.fetch(:fats_goal, nil)
+- has_goals        = carbs_goal.present? || proteins_goal.present? || fats_goal.present?
 
-.flex.items-center.gap-3
-  .flex.items-center.gap-1.5
-    svg width=svg_size height=svg_size viewBox="0 0 36 36"
-      g transform="rotate(-90 18 18)"
-        circle.macro-ring-bg cx="18" cy="18" r="15.9"
-        circle.macro-ring.ring-carbs cx="18" cy="18" r="15.9" stroke-dasharray="#{carbs_pct} #{100 - carbs_pct}"
-      text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#92400e"
-        = "#{carbs.to_i}g"
-    span class=label_cls style="color:#d97706;" Carbs
+- if has_goals
+  - carbs_over     = carbs_goal.present? && carbs_goal > 0 && carbs > carbs_goal
+  - carbs_fill_pct = carbs_goal.present? && carbs_goal > 0 ? (carbs.to_f / carbs_goal * 100).round : nil
+  - protein_over     = proteins_goal.present? && proteins_goal > 0 && proteins > proteins_goal
+  - protein_fill_pct = proteins_goal.present? && proteins_goal > 0 ? (proteins.to_f / proteins_goal * 100).round : nil
+  - fat_over     = fats_goal.present? && fats_goal > 0 && fats > fats_goal
+  - fat_fill_pct = fats_goal.present? && fats_goal > 0 ? (fats.to_f / fats_goal * 100).round : nil
 
-  .flex.items-center.gap-1.5
-    svg width=svg_size height=svg_size viewBox="0 0 36 36"
-      g transform="rotate(-90 18 18)"
-        circle.macro-ring-bg cx="18" cy="18" r="15.9"
-        circle.macro-ring.ring-protein cx="18" cy="18" r="15.9" stroke-dasharray="#{protein_pct} #{100 - protein_pct}"
-      text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#1e3a8a"
-        = "#{proteins.to_i}g"
-    span class=label_cls style="color:#2563eb;" Prot.
+  - carbs_display_pct = carbs_fill_pct.present? ? carbs_fill_pct : carbs_pct
+  - protein_display_pct = protein_fill_pct.present? ? protein_fill_pct : protein_pct
+  - fat_display_pct = fat_fill_pct.present? ? fat_fill_pct : fat_pct
 
-  .flex.items-center.gap-1.5
-    svg width=svg_size height=svg_size viewBox="0 0 36 36"
-      g transform="rotate(-90 18 18)"
-        circle.macro-ring-bg cx="18" cy="18" r="15.9"
-        circle.macro-ring.ring-fat cx="18" cy="18" r="15.9" stroke-dasharray="#{fat_pct} #{100 - fat_pct}"
-      text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#9d174d"
-        = "#{fats.to_i}g"
-    span class=label_cls style="color:#db2777;" Gord.
+  - carbs_circle_pct = carbs_fill_pct.present? ? (carbs_over ? (carbs_goal.to_f / carbs * 100).round : carbs_fill_pct) : carbs_pct
+  - protein_circle_pct = protein_fill_pct.present? ? (protein_over ? (proteins_goal.to_f / proteins * 100).round : protein_fill_pct) : protein_pct
+  - fat_circle_pct = fat_fill_pct.present? ? (fat_over ? (fats_goal.to_f / fats * 100).round : fat_fill_pct) : fat_pct
+
+- if has_goals
+  .flex.flex-col.sm:flex-row.items-center.gap-3
+    .flex.items-center.gap-1.5 data-controller="tooltip" data-tooltip-placement="top"
+      svg width=svg_size height=svg_size viewBox="0 0 36 36"
+        g transform="rotate(-90 18 18)"
+          circle.macro-ring-bg cx="18" cy="18" r="15.9" class=(carbs_over ? "over" : nil)
+          - if carbs_fill_pct.present?
+            circle.macro-ring.ring-carbs cx="18" cy="18" r="15.9" stroke-dasharray="#{carbs_circle_pct} #{100 - carbs_circle_pct}"
+          - else
+            circle.macro-ring.ring-carbs cx="18" cy="18" r="15.9" stroke-dasharray="#{carbs_pct} #{100 - carbs_pct}"
+        text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#92400e"
+          = "#{carbs.to_i}g"
+      .flex.flex-col.items-start
+        span class="#{label_cls} #{label_visibility_cls}" style="color:#d97706;" = t("defaults.carbs")
+        - if carbs_goal.present?
+          - pct_color = carbs_display_pct < 80 ? 'text-yellow-800' : carbs_display_pct <= 110 ? 'text-green-600' : 'text-red-600'
+          .flex.items-center.gap-1
+            - if carbs_display_pct < 80
+              span class=pct_color = "▼"
+            - elsif carbs_display_pct <= 110
+              span class=pct_color = "●"
+            - else
+              span class=pct_color = "▲"
+            span.text-xs class=pct_color = "#{carbs_display_pct}% da meta"
+      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-tooltip-target="tip"
+        = macro_tooltip_text(carbs, carbs_goal, t("defaults.carbs"))
+        .tooltip-arrow
+
+    .flex.items-center.gap-1.5 data-controller="tooltip" data-tooltip-placement="top"
+      svg width=svg_size height=svg_size viewBox="0 0 36 36"
+        g transform="rotate(-90 18 18)"
+          circle.macro-ring-bg cx="18" cy="18" r="15.9" class=(protein_over ? "over" : nil)
+          - if protein_fill_pct.present?
+            circle.macro-ring.ring-protein cx="18" cy="18" r="15.9" stroke-dasharray="#{protein_circle_pct} #{100 - protein_circle_pct}"
+          - else
+            circle.macro-ring.ring-protein cx="18" cy="18" r="15.9" stroke-dasharray="#{protein_pct} #{100 - protein_pct}"
+        text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#1e3a8a"
+          = "#{proteins.to_i}g"
+      .flex.flex-col.items-start
+        span class="#{label_cls} #{label_visibility_cls}" style="color:#2563eb;" = t("defaults.protein")
+        - if proteins_goal.present?
+          - pct_color = protein_display_pct < 80 ? 'text-orange-600' : protein_display_pct <= 110 ? 'text-green-600' : 'text-red-600'
+          .flex.items-center.gap-1
+            - if protein_display_pct < 80
+              span class=pct_color = "▼"
+            - elsif protein_display_pct <= 110
+              span class=pct_color = "●"
+            - else
+              span class=pct_color = "▲"
+            span.text-xs class=pct_color = "#{protein_display_pct}% da meta"
+      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-tooltip-target="tip"
+        = macro_tooltip_text(proteins, proteins_goal, t("defaults.protein"))
+        .tooltip-arrow
+
+    .flex.items-center.gap-1.5 data-controller="tooltip" data-tooltip-placement="top"
+      svg width=svg_size height=svg_size viewBox="0 0 36 36"
+        g transform="rotate(-90 18 18)"
+          circle.macro-ring-bg cx="18" cy="18" r="15.9" class=(fat_over ? "over" : nil)
+          - if fat_fill_pct.present?
+            circle.macro-ring.ring-fat cx="18" cy="18" r="15.9" stroke-dasharray="#{fat_circle_pct} #{100 - fat_circle_pct}"
+          - else
+            circle.macro-ring.ring-fat cx="18" cy="18" r="15.9" stroke-dasharray="#{fat_pct} #{100 - fat_pct}"
+        text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#9d174d"
+          = "#{fats.to_i}g"
+      .flex.flex-col.items-start
+        span class="#{label_cls} #{label_visibility_cls}" style="color:#db2777;" = t("defaults.fats")
+        - if fats_goal.present?
+          - pct_color = fat_display_pct < 80 ? 'text-yellow-800' : fat_display_pct <= 110 ? 'text-green-600' : 'text-red-600'
+          .flex.items-center.gap-1
+            - if fat_display_pct < 80
+              span class=pct_color = "▼"
+            - elsif fat_display_pct <= 110
+              span class=pct_color = "●"
+            - else
+              span class=pct_color = "▲"
+            span.text-xs class=pct_color = "#{fat_display_pct}% da meta"
+      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-tooltip-target="tip"
+        = macro_tooltip_text(fats, fats_goal, t("defaults.fats"))
+        .tooltip-arrow
+- else
+  .flex.items-center.gap-3
+    .flex.items-center.gap-1.5
+      svg width=svg_size height=svg_size viewBox="0 0 36 36"
+        g transform="rotate(-90 18 18)"
+          circle.macro-ring-bg cx="18" cy="18" r="15.9"
+          circle.macro-ring.ring-carbs cx="18" cy="18" r="15.9" stroke-dasharray="#{carbs_pct} #{100 - carbs_pct}"
+        text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#92400e"
+          = "#{carbs.to_i}g"
+      span class="#{label_cls} #{label_visibility_cls}" style="color:#d97706;" = t("defaults.carbs")
+
+    .flex.items-center.gap-1.5
+      svg width=svg_size height=svg_size viewBox="0 0 36 36"
+        g transform="rotate(-90 18 18)"
+          circle.macro-ring-bg cx="18" cy="18" r="15.9"
+          circle.macro-ring.ring-protein cx="18" cy="18" r="15.9" stroke-dasharray="#{protein_pct} #{100 - protein_pct}"
+        text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#1e3a8a"
+          = "#{proteins.to_i}g"
+      span class="#{label_cls} #{label_visibility_cls}" style="color:#2563eb;" = t("defaults.protein")
+
+    .flex.items-center.gap-1.5
+      svg width=svg_size height=svg_size viewBox="0 0 36 36"
+        g transform="rotate(-90 18 18)"
+          circle.macro-ring-bg cx="18" cy="18" r="15.9"
+          circle.macro-ring.ring-fat cx="18" cy="18" r="15.9" stroke-dasharray="#{fat_pct} #{100 - fat_pct}"
+        text x="18" y="18" text-anchor="middle" dominant-baseline="middle" font-size=font_size font-weight="700" fill="#9d174d"
+          = "#{fats.to_i}g"
+      span class="#{label_cls} #{label_visibility_cls}" style="color:#db2777;" = t("defaults.fats")

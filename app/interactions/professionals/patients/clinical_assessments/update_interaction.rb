@@ -7,6 +7,9 @@ module Professionals
           bmr
           steps_goal
           hydration_goal
+          daily_carbs_goal
+          daily_proteins_goal
+          daily_fats_goal
         ].freeze
 
         object :patient, class: Patient
@@ -14,7 +17,7 @@ module Professionals
         hash :assessment_params, strip: false
 
         def execute
-          return nil unless professional.owner_of?(patient)
+          return nil unless professional.owner_of?(patient) || professional.admin?
 
           patient.assign_attributes(assessment_params)
           patient.clinical_assessment_last_updated_at = Time.current

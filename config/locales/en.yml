@@ -78,6 +78,7 @@ en:
     kcal: "kcal"
     minutes: "minutes"
     kcal_burned: "kcal burned"
+    excess: "excess"
     item:
       one: "item"
       other: "items"
@@ -512,6 +513,9 @@ en:
         bmr: "BMR (kcal)"
         steps_goal: "Steps goal"
         hydration_goal: "Hydration goal (ml)"
+        daily_carbs_goal: "Daily carbs goal (g)"
+        daily_proteins_goal: "Daily proteins goal (g)"
+        daily_fats_goal: "Daily fats goal (g)"
     errors:
       messages:
         not_in_future: "cannot be in the future"

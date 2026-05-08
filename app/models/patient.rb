@@ -41,6 +41,9 @@ class Patient < ApplicationRecord
   validates :bmr, numericality: { greater_than: 0, less_than: 10_000 }, allow_nil: true
   validates :steps_goal, numericality: { greater_than: 0, less_than: 100_000 }, allow_nil: true
   validates :hydration_goal, numericality: { greater_than: 0, less_than: 20_000 }, allow_nil: true
+  validates :daily_carbs_goal, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true
+  validates :daily_proteins_goal, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true
+  validates :daily_fats_goal, numericality: { greater_than_or_equal_to: 0, less_than: 10_000 }, allow_nil: true
   with_options on: :patient_personal_profile do
     validates :gender, :birth_date, :weight_kg, :height_cm, :phone_e164, presence: true
   end

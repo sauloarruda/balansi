@@ -33,6 +33,15 @@ p.text-gray-600.mb-6 = @patient.user.name
       div
         = f.label :hydration_goal, Patient.human_attribute_name(:hydration_goal)
         = f.number_field :hydration_goal, min: 1, max: 19999, step: 1, class: "mt-1"
+      div
+        = f.label :daily_carbs_goal, Patient.human_attribute_name(:daily_carbs_goal)
+        = f.number_field :daily_carbs_goal, min: 0, max: 9999, step: 1, class: "mt-1"
+      div
+        = f.label :daily_proteins_goal, Patient.human_attribute_name(:daily_proteins_goal)
+        = f.number_field :daily_proteins_goal, min: 0, max: 9999, step: 1, class: "mt-1"
+      div
+        = f.label :daily_fats_goal, Patient.human_attribute_name(:daily_fats_goal)
+        = f.number_field :daily_fats_goal, min: 0, max: 9999, step: 1, class: "mt-1"
 
     .pt-4.border-t.border-gray-200
       = f.submit t("professional.patients.clinical_assessment.edit.submit"), tone: :blue, size: :sm, class: "w-full sm:w-auto"
