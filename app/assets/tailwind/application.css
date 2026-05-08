@@ -5,7 +5,58 @@
 @source "../../../node_modules/flowbite";
 
 .macro-ring-bg { fill: none; stroke: #e5e7eb; stroke-width: 4; }
+.macro-ring-bg.over { stroke: #fecaca; }
 .macro-ring    { fill: none; stroke-width: 4; stroke-linecap: round; }
 .ring-carbs    { stroke: #f59e0b; }
 .ring-protein  { stroke: #3b82f6; }
 .ring-fat      { stroke: #f472b6; }
+
+/* Custom tooltip with arrow */
+.tooltip .tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+}
+.tooltip .tooltip-arrow::before {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #111827;
+  transform: rotate(45deg);
+}
+.tooltip[data-tooltip-placement="top"] .tooltip-arrow,
+.tooltip:not([data-tooltip-placement]) .tooltip-arrow {
+  bottom: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+.tooltip[data-tooltip-placement="top"] .tooltip-arrow::before,
+.tooltip:not([data-tooltip-placement]) .tooltip-arrow::before {
+  bottom: 0;
+}
+.tooltip[data-tooltip-placement="bottom"] .tooltip-arrow {
+  top: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+.tooltip[data-tooltip-placement="bottom"] .tooltip-arrow::before {
+  top: 0;
+}
+.tooltip[data-tooltip-placement="left"] .tooltip-arrow {
+  right: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+.tooltip[data-tooltip-placement="left"] .tooltip-arrow::before {
+  right: 0;
+}
+.tooltip[data-tooltip-placement="right"] .tooltip-arrow {
+  left: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+.tooltip[data-tooltip-placement="right"] .tooltip-arrow::before {
+  left: 0;
+}

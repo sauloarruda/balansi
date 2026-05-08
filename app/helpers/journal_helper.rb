@@ -92,4 +92,31 @@ module JournalHelper
     else "gray"
     end
   end
+
+  def macro_goal_percentage(current, goal)
+    return nil if goal.nil? || goal.zero?
+
+    (current.to_f / goal * 100).round
+  end
+
+  def macro_goal_excess_percentage(current, goal)
+    return nil if goal.nil? || goal.zero?
+
+    raw = (current.to_f / goal * 100).round
+    raw > 100 ? [ raw - 100, 100 ].min : nil
+  end
+
+  def macro_tooltip_text(current, goal, label)
+    pct = macro_goal_percentage(current, goal)
+    if pct.present?
+      if pct > 100
+        excess = current.to_i - goal
+        "#{label}: #{current.to_i}g / #{goal}g (#{pct}%, +#{excess}g #{t('defaults.excess')})"
+      else
+        "#{label}: #{current.to_i}g / #{goal}g (#{pct}%)"
+      end
+    else
+      "#{label}: #{current.to_i}g"
+    end
+  end
 end

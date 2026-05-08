@@ -19,7 +19,7 @@ module Professionals
       end
 
       def authorize_owner!
-        return if current_professional.owner_of?(@patient)
+        return if current_professional.owner_of?(@patient) || current_professional.admin?
 
         render_forbidden
       end

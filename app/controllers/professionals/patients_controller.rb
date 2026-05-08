@@ -4,9 +4,13 @@ module Professionals
     before_action :authorize_access!, only: [ :show ]
 
     def index
-      @patients = current_professional.linked_patients
-        .joins(:user)
-        .order("users.name ASC")
+      @patients = if current_professional.user.admin?
+        Patient.includes(:user).order("users.name ASC")
+      else
+        current_professional.linked_patients
+          .joins(:user)
+          .order("users.name ASC")
+      end
     end
 
     def show

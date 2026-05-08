@@ -25,7 +25,13 @@ class Professional < ApplicationRecord
     patient.professional_id == id
   end
 
+  def admin?
+    user.admin?
+  end
+
   def can_access?(patient)
+    return true if admin?
+
     owner_of?(patient) || shared_patients.exists?(id: patient.id)
   end
 

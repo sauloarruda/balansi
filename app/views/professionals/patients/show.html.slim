@@ -24,7 +24,7 @@ nav.rounded-lg.mb-4 aria-label="Breadcrumb"
 .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
   .flex.items-center.justify-between.mb-4
     h3.text-lg.font-semibold.text-gray-900 = t("professional.patients.show.clinical_assessment")
-    - if current_professional&.owner_of?(@patient)
+    - if current_professional&.owner_of?(@patient) || current_professional&.admin?
       = link_to edit_professional_patient_clinical_assessment_path(@patient), class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
         = t("defaults.actions.edit")
   .grid.grid-cols-1.md:grid-cols-2.gap-6
@@ -40,6 +40,15 @@ nav.rounded-lg.mb-4 aria-label="Breadcrumb"
     .mb-4
       .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:hydration_goal)
       .text-gray-900 = @patient.hydration_goal.present? ? @patient.hydration_goal : "—"
+    .mb-4
+      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:daily_carbs_goal)
+      .text-gray-900 = @patient.daily_carbs_goal.present? ? @patient.daily_carbs_goal : "—"
+    .mb-4
+      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:daily_proteins_goal)
+      .text-gray-900 = @patient.daily_proteins_goal.present? ? @patient.daily_proteins_goal : "—"
+    .mb-4
+      .text-sm.font-medium.text-gray-500 = Patient.human_attribute_name(:daily_fats_goal)
+      .text-gray-900 = @patient.daily_fats_goal.present? ? @patient.daily_fats_goal : "—"
   - if @patient.clinical_assessment_last_updated_at.present?
     .mt-4.pt-4.border-t.border-gray-200.text-xs.text-gray-500
       = t("professional.patients.show.assessment_updated_at", date: l(@patient.clinical_assessment_last_updated_at, format: :profile_updated_at))

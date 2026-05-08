@@ -60,5 +60,17 @@ RSpec.describe Professionals::PatientsController, type: :controller do
 
       expect(response).to have_http_status(:forbidden)
     end
+
+    context "when current professional is admin" do
+      let(:user) { create(:user, admin: true) }
+      let(:patient) { create(:patient) }
+
+      it "allows access to any patient show and displays edit links" do
+        get :show, params: { id: patient.id }
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include(I18n.t("defaults.actions.edit"))
+      end
+    end
   end
 end

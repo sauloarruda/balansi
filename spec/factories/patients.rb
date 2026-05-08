@@ -9,6 +9,9 @@ FactoryBot.define do
     phone_e164 { "+5511999999999" }
     profile_completed_at { Time.current }
     profile_last_updated_at { profile_completed_at }
+    daily_carbs_goal { 250 }
+    daily_proteins_goal { 150 }
+    daily_fats_goal { 70 }
 
     trait :incomplete_profile do
       gender { nil }
