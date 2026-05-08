@@ -211,9 +211,9 @@ RSpec.describe JournalsController, type: :controller do
       get :show, params: { date: "2026-02-07" }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("carboidratos: 120g / 50g (240%, +140% excess)")
-      expect(response.body).to include("proteína: 80g / 30g (267%, +167% excess)")
-      expect(response.body).to include("gorduras: 30g / 10g (300%, +200% excess)")
+      expect(response.body).to include("carboidratos: 120g / 50g (240%, +70g excesso)")
+      expect(response.body).to include("proteína: 80g / 30g (267%, +50g excesso)")
+      expect(response.body).to include("gorduras: 30g / 10g (300%, +20g excesso)")
       expect(response.body).to include('class="macro-ring-bg over"')
     end
   end
