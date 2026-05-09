@@ -67,4 +67,20 @@ Rails.application.configure do
 
   # Only use :id for inspections in staging.
   config.active_record.attributes_for_inspect = [ :id ]
+
+  # Config cloudflare proxy
+
+  # 1. Allow both domains in the Host Authorization middleware
+  config.hosts << "balansi.me"
+  config.hosts << "staging.balansi.me"
+
+  # 2. IMPORTANT: Ensure cookies are shared across subdomains
+  # This allows the login session to persist when switching between domains
+  config.session_store :cookie_store, key: "_balansi_staging_session", domain: :all
+
+  # 3. Disable Origin check (required for the Worker's proxy setup)
+  config.action_controller.forgery_protection_origin_check = false
+
+  # 4. Trust proxy headers sent by Cloudflare
+  config.assume_ssl = true
 end
