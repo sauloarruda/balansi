@@ -99,7 +99,7 @@ class Journal < ApplicationRecord
   end
 
   def goal_balance
-    effective_calories_consumed - (patient.daily_calorie_goal || 0)
+    effective_calories_consumed - (patient.bmr || 0) - exercise_calories_burned
   end
 
   def balance_status
