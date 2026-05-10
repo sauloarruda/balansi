@@ -85,6 +85,12 @@ RSpec.describe Patient, type: :model do
       expect(patient.professional).to be_present
     end
 
+    it "has many recipes" do
+      patient = create(:patient)
+      recipe = create(:recipe, patient: patient)
+      expect(patient.recipes).to include(recipe)
+    end
+
     it "has many shared professionals through accesses" do
       patient = create(:patient)
       shared_professional = create(:professional)

@@ -18,6 +18,7 @@ class Patient < ApplicationRecord
   belongs_to :user
   belongs_to :professional
   has_many :journals, dependent: :destroy
+  has_many :recipes, dependent: :destroy
   has_many :patient_professional_accesses, dependent: :destroy
   has_many :shared_professionals, through: :patient_professional_accesses, source: :professional
 

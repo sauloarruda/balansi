@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_07_230718) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_10_195104) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
@@ -117,6 +117,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_07_230718) do
     t.index [ "user_id" ], name: "index_professionals_on_user_id", unique: true
   end
 
+  create_table "recipes", force: :cascade do |t|
+    t.integer "calories"
+    t.integer "carbs"
+    t.datetime "created_at", null: false
+    t.integer "fats"
+    t.text "ingredients", null: false
+    t.text "instructions"
+    t.string "name", null: false
+    t.integer "patient_id", null: false
+    t.integer "proteins"
+    t.datetime "updated_at", null: false
+    t.integer "yield_portions", null: false
+    t.index [ "patient_id", "name" ], name: "recipes_patient_name_idx"
+    t.index [ "patient_id" ], name: "index_recipes_on_patient_id"
+  end
+
   create_table "user_remember_keys", force: :cascade do |t|
     t.datetime "deadline", null: false
     t.string "key", null: false
@@ -146,5 +162,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_07_230718) do
   add_foreign_key "patients", "professionals"
   add_foreign_key "patients", "users", on_delete: :cascade
   add_foreign_key "professionals", "users", on_delete: :cascade
+  add_foreign_key "recipes", "patients", on_delete: :cascade
   add_foreign_key "user_remember_keys", "users", column: "id"
 end
