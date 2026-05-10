@@ -216,6 +216,17 @@ RSpec.describe JournalsController, type: :controller do
       expect(response.body).to include("gorduras: 30g / 10g (300%, +20g excesso)")
       expect(response.body).to include('class="macro-ring-bg over"')
     end
+
+    it "hides caloric balance card and daily goal progress when there are no meals" do
+      patient = Patient.find(2001)
+      Journal.create!(patient: patient, date: Date.new(2026, 2, 8))
+
+      get :show, params: { date: "2026-02-08" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(I18n.t("journals.daily_summary.caloric_balance"))
+      expect(response.body).not_to include(I18n.t("journals.daily_summary.daily_goal_progress"))
+    end
   end
 
   describe "authorization without patient" do

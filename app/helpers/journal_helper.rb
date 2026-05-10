@@ -16,21 +16,21 @@ module JournalHelper
 
   def balance_visual_status(balance_percentage, balance_status)
     if balance_percentage.nil?
-      balance_status == "negative" ? "low_severe" : "balanced"
+      balance_status == "negative" ? "below_goal" : "maintenance"
     elsif balance_percentage > 10
-      "positive"
+      "weight_gain"
     elsif balance_percentage < -20
-      "low_severe"
+      "below_goal"
     elsif balance_percentage < -10
-      "low_moderate"
+      "weight_loss"
     else
-      "balanced"
+      "maintenance"
     end
   end
 
   def balance_style_classes(balance_visual_status) # rubocop:disable Metrics/MethodLength
     case balance_visual_status
-    when "positive"
+    when "weight_gain"
       {
         border: "border-red-500",
         bg: "from-red-50 to-red-100",
@@ -39,7 +39,7 @@ module JournalHelper
         unit: "text-red-700",
         message: "text-red-800"
       }
-    when "low_moderate"
+    when "weight_loss"
       {
         border: "border-green-500",
         bg: "from-green-50 to-green-100",
@@ -48,7 +48,7 @@ module JournalHelper
         unit: "text-green-700",
         message: "text-green-800"
       }
-    when "low_severe"
+    when "below_goal"
       {
         border: "border-orange-500",
         bg: "from-orange-50 to-orange-100",
@@ -69,16 +69,70 @@ module JournalHelper
     end
   end
 
-  def balance_message_key(balance_visual_status, balance_percentage)
-    return ".far_below_goal" if balance_visual_status == "low_severe" && balance_percentage && balance_percentage < -25
-
+  def balance_message_key(balance_visual_status, _balance_percentage = nil)
     case balance_visual_status
-    when "positive"
-      ".above_goal"
-    when "low_moderate", "low_severe"
+    when "weight_gain"
+      ".weight_gain"
+    when "below_goal"
       ".below_goal"
+    when "weight_loss"
+      ".weight_loss"
     else
-      ".balanced"
+      ".maintenance"
+    end
+  end
+
+  def caloric_balance_visual_status(consumed_calories, burned_calories, calorie_goal)
+    consumed = consumed_calories.to_f
+    bounds = caloric_balance_bounds(burned_calories, calorie_goal)
+
+    return "weight_gain" if consumed >= bounds[:burned_upper]
+    return "below_goal" if below_goal_intake?(consumed, bounds[:goal_lower], calorie_goal)
+
+    return classify_goal_aligned_intake(consumed, bounds) if goal_aligned_intake?(consumed, bounds)
+
+    classify_by_expenditure_range(consumed, bounds)
+  end
+
+  private
+
+  def caloric_balance_bounds(burned_calories, calorie_goal)
+    burned = burned_calories.to_f
+    goal = calorie_goal.to_f
+
+    {
+      goal_lower: goal * 0.90,
+      goal_upper: goal * 1.10,
+      burned_lower: burned * 0.85,
+      burned_upper: burned * 1.15
+    }
+  end
+
+  def below_goal_intake?(consumed, goal_lower_bound, calorie_goal)
+    calorie_goal.to_f.positive? && consumed < goal_lower_bound
+  end
+
+  def goal_aligned_intake?(consumed, bounds)
+    consumed >= bounds[:goal_lower] && consumed <= bounds[:goal_upper]
+  end
+
+  def classify_goal_aligned_intake(consumed, bounds)
+    if consumed >= bounds[:burned_lower] && consumed <= bounds[:burned_upper]
+      "maintenance"
+    elsif consumed < bounds[:burned_lower]
+      "weight_loss"
+    else
+      "weight_gain"
+    end
+  end
+
+  def classify_by_expenditure_range(consumed, bounds)
+    if consumed >= bounds[:burned_lower] && consumed <= bounds[:burned_upper]
+      "maintenance"
+    elsif consumed < bounds[:burned_lower]
+      "weight_loss"
+    else
+      "weight_gain"
     end
   end
 

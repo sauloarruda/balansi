@@ -3,18 +3,18 @@
 - confirmed_exercises_count = journal.confirmed_exercises_count
 - calories_consumed = journal.effective_calories_consumed
 - calories_burned = journal.effective_calories_burned
+- has_registered_meals = meals.any?
 - balance = journal.effective_balance
 - balance_status = journal.balance_status
 - calorie_goal = patient.daily_calorie_goal
 - goal_balance = journal.goal_balance
 - balance_pct = balance_percentage(balance, calorie_goal)
-- goal_balance_pct = balance_percentage(goal_balance, calorie_goal)
 - balance_vis_status = balance_visual_status(balance_pct, balance_status)
-- goal_balance_vis_status = balance_visual_status(goal_balance_pct, nil)
+- goal_balance_vis_status = caloric_balance_visual_status(calories_consumed, calories_burned, calorie_goal)
 - balance_style = balance_style_classes(balance_vis_status)
 - goal_balance_style = balance_style_classes(goal_balance_vis_status)
 - balance_message_key_value = balance_message_key(balance_vis_status, balance_pct)
-- goal_balance_message_key_value = balance_message_key(goal_balance_vis_status, goal_balance_pct)
+- goal_balance_message_key_value = balance_message_key(goal_balance_vis_status)
 
 section.mb-8 role="region" aria-label=t(".title")
   .bg-gradient-to-br.from-white.to-brand-softer.border.border-default-medium.rounded-base.shadow-xs.overflow-hidden data-accordion="open"
@@ -47,7 +47,7 @@ section.mb-8 role="region" aria-label=t(".title")
                         p.text-orange-900 = journal.feedback_improvement
 
         / Calorie Metrics Row
-        - metrics_grid_class = "grid-cols-1 md:grid-cols-3"
+        - metrics_grid_class = has_registered_meals ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"
         .grid.gap-4.mb-6 class=metrics_grid_class
           / Calories Consumed
           .bg-pink-50.border.border-pink-200.rounded-base.p-5.shadow-xs.border-l-4.border-pink-500
@@ -75,55 +75,56 @@ section.mb-8 role="region" aria-label=t(".title")
                   = "#{t('.exercises')}: #{confirmed_exercises_count}"
               span.text-2xl 🏃
 
-          / Balance Card - Featured
-          - balance_card_classes = "bg-gradient-to-br #{goal_balance_style[:bg]} border-l-4 #{goal_balance_style[:border]} rounded-base shadow-md p-6"
-          div class=balance_card_classes
-            .flex.items-start.justify-between.mb-4
-              div.flex-1
-                p.text-sm.font-semibold.uppercase.tracking-wide.mb-2 class=goal_balance_style[:text]
-                  = t(".caloric_balance")
-                p.text-4xl.font-bold class=goal_balance_style[:value]
-                  - if goal_balance >= 0
-                    | +
-                  = goal_balance
-                  |
-                  span.text-2xl.font-medium.ml-2 class=goal_balance_style[:unit]
-                    = t(".kcal")
-              .flex.flex-col.items-center.justify-center.ml-4
-                - if goal_balance_vis_status == "low_moderate"
-                  svg.w-16.h-16.text-green-600 fill="currentColor" viewBox="0 0 20 20"
-                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
-                - elsif goal_balance_vis_status == "positive"
-                  svg.w-16.h-16.text-red-600 fill="currentColor" viewBox="0 0 20 20"
-                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
-                - elsif goal_balance_vis_status == "low_severe"
-                  svg.w-16.h-16.text-orange-600 fill="currentColor" viewBox="0 0 20 20"
-                    path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
-                - else
-                  svg.w-16.h-16.text-blue-600 fill="currentColor" viewBox="0 0 20 20"
-                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
+          - if has_registered_meals
+            / Balance Card - Featured
+            - balance_card_classes = "bg-gradient-to-br #{goal_balance_style[:bg]} border-l-4 #{goal_balance_style[:border]} rounded-base shadow-md p-6"
+            div class=balance_card_classes
+              .flex.items-start.justify-between.mb-4
+                div.flex-1
+                  p.text-sm.font-semibold.uppercase.tracking-wide.mb-2 class=goal_balance_style[:text]
+                    = t(".caloric_balance")
+                  p.text-4xl.font-bold class=goal_balance_style[:value]
+                    - if goal_balance >= 0
+                      | +
+                    = goal_balance
+                    |
+                    span.text-2xl.font-medium.ml-2 class=goal_balance_style[:unit]
+                      = t(".kcal")
+                .flex.flex-col.items-center.justify-center.ml-4
+                  - if goal_balance_vis_status == "weight_loss"
+                    svg.w-16.h-16.text-green-600 fill="currentColor" viewBox="0 0 20 20"
+                      path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
+                  - elsif goal_balance_vis_status == "weight_gain"
+                    svg.w-16.h-16.text-red-600 fill="currentColor" viewBox="0 0 20 20"
+                      path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
+                  - elsif goal_balance_vis_status == "below_goal"
+                    svg.w-16.h-16.text-orange-600 fill="currentColor" viewBox="0 0 20 20"
+                      path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
+                  - else
+                    svg.w-16.h-16.text-blue-600 fill="currentColor" viewBox="0 0 20 20"
+                      path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
 
-            / Balance Status Message
-            - if goal_balance_vis_status == "low_moderate"
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
-                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
-                = t(goal_balance_message_key_value)
-            - elsif goal_balance_vis_status == "positive"
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
-                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
-                = t(goal_balance_message_key_value)
-            - elsif goal_balance_vis_status == "low_severe"
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
-                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
-                = t(goal_balance_message_key_value)
-            - else
-              p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
-                svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
-                  path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
-                = t(goal_balance_message_key_value)
+              / Balance Status Message
+              - if goal_balance_vis_status == "weight_loss"
+                p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
+                  svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"
+                  = t(goal_balance_message_key_value)
+              - elsif goal_balance_vis_status == "weight_gain"
+                p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
+                  svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"
+                  = t(goal_balance_message_key_value)
+              - elsif goal_balance_vis_status == "below_goal"
+                p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
+                  svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.591c.75 1.334-.213 2.99-1.742 2.99H3.48c-1.53 0-2.492-1.656-1.743-2.99L8.257 3.1zM11 7a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"
+                  = t(goal_balance_message_key_value)
+              - else
+                p.text-sm.font-medium.mt-4.flex.items-center.gap-2 class=goal_balance_style[:message]
+                  svg.w-5.h-5 fill="currentColor" viewBox="0 0 20 20"
+                    path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"
+                  = t(goal_balance_message_key_value)
 
         / Progress and Score Footer (if applicable)
         - if patient.daily_calorie_goal || (journal.closed_at && journal.score)
@@ -131,7 +132,7 @@ section.mb-8 role="region" aria-label=t(".title")
             - footer_grid_class = journal.closed_at && journal.score ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
             .grid.gap-6 class=footer_grid_class
               / Progress Bar
-              - if patient.daily_calorie_goal
+              - if patient.daily_calorie_goal && has_registered_meals
                 = render "shared/calorie_goal_progress", consumed: calories_consumed, goal: patient.daily_calorie_goal
 
               / Score

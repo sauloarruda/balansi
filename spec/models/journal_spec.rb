@@ -41,6 +41,11 @@ RSpec.describe Journal, type: :model do
       expect(journal.effective_balance).to eq(-1650)
       expect(journal.balance_status).to eq("negative")
     end
+
+    it "calculates goal_balance as consumed minus bmr minus exercise calories" do
+      expect(patient.bmr).to eq(1700)
+      expect(journal.goal_balance).to eq(-1650)
+    end
   end
 
   describe "#editable?" do
