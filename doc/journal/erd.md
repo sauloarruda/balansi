@@ -38,10 +38,25 @@ The `patients` table is extended with additional fields for journal functionalit
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
+| `birth_date` | DATE | NULL | Patient's birth date |
 | `bmr` | INTEGER | NULL | Basal Metabolic Rate (kcal/day) |
+| `clinical_assessment_last_updated_at` | TIMESTAMP | NULL | Last updated at for clinical assessment |
+| `created_at` | TIMESTAMP | NOT NULL | Record creation timestamp |
 | `daily_calorie_goal` | INTEGER | NULL | Daily calorie goal set by nutritionist (kcal) |
-| `steps_goal` | INTEGER | NULL | Daily steps goal |
+| `daily_carbs_goal` | INTEGER | NOT NULL, DEFAULT 0 | Daily carbs goal set by nutritionist (g) |
+| `daily_fats_goal` | INTEGER | NOT NULL, DEFAULT 0 | Daily fats goal set by nutritionist (g) |
+| `daily_proteins_goal` | INTEGER | NOT NULL, DEFAULT 0 | Daily proteins goal set by nutritionist (g) |
+| `gender` | VARCHAR | NULL | Patient's gender |
+| `height_cm` | DECIMAL(5,2) | NULL | Patient's height in cm |
 | `hydration_goal` | INTEGER | NULL | Daily hydration goal (ml) |
+| `phone_e164` | VARCHAR(20) | NULL | Patient's phone number |
+| `professional_id` | BIGINT | NULL | Foreign key to professionals.id |
+| `profile_completed_at` | TIMESTAMP | NULL | Profile completion timestamp |
+| `profile_last_updated_at` | TIMESTAMP | NULL | Profile last updated timestamp |
+| `steps_goal` | INTEGER | NULL | Daily steps goal |
+| `updated_at` | TIMESTAMP | NOT NULL | Record last update timestamp |
+| `user_id` | INTEGER | NOT NULL | Foreign key to users.id |
+| `weight_kg` | DECIMAL(5,2) | NULL | Patient's weight in kg |
 
 **Notes:**
 - These fields are nullable to allow gradual population as patient profiles are completed
@@ -192,9 +207,12 @@ The `exercises` table stores exercise entries with AI-analyzed metrics.
 │  │ user_id (FK → users.id)                                   │  │
 │  │ professional_id (immutable, for data isolation)            │  │
 │  │ daily_calorie_goal (for progress bar & scoring)           │  │
-│  │ bmr (Basal Metabolic Rate)                                  │  │
+│  │ daily_macros_goal (proteins, carbs, fats)                 │  │
+│  │ bmr (Basal Metabolic Rate)                                │  │
 │  │ steps_goal (daily steps target)                           │  │
-│  │ hydration_goal (daily hydration target in ml)            │  │
+│  │ hydration_goal (daily hydration target in ml)             │  │
+│  │ anthropometrics (height_cm, weight_kg)                    │  │
+│  │ personal_info (birth_date, gender, phone_e164)            │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -262,10 +280,12 @@ The `exercises` table stores exercise entries with AI-analyzed metrics.
 class AddJournalFieldsToPatients < ActiveRecord::Migration[8.1]
   def change
     add_column :patients, :daily_calorie_goal, :integer, null: true
+    add_column :patients, :daily_carbs_goal, :integer, null: false, default: 0
+    add_column :patients, :daily_fats_goal, :integer, null: false, default: 0
+    add_column :patients, :daily_proteins_goal, :integer, null: false, default: 0
     add_column :patients, :bmr, :integer, null: true
     add_column :patients, :steps_goal, :integer, null: true
     add_column :patients, :hydration_goal, :integer, null: true
-
   end
 end
 ```
