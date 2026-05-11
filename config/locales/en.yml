@@ -76,6 +76,7 @@ en:
     carbs: "carbs"
     fats: "fats"
     kcal: "kcal"
+    grams: "g"
     minutes: "minutes"
     kcal_burned: "kcal burned"
     excess: "excess"
@@ -403,22 +404,43 @@ en:
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
   patient:
     recipes:
+      navigation:
+        title: "Recipes"
       index:
         title: "Recipes"
-        empty: "No recipes saved yet."
+        subtitle: "Keep your repeat meals with ingredients, yield, and macro totals in one place."
+        empty_title: "Build your first recipe"
+        empty: "Save recipes you use often so each portion is easier to log later."
         yield:
           one: "%{count} portion"
           other: "%{count} portions"
       new:
         title: "New recipe"
+        subtitle: "Add the ingredients, preparation notes, and total nutrition for the full recipe."
       edit:
         title: "Edit recipe"
+        subtitle: "Update recipe details while keeping portions and macro totals aligned."
       show:
         nutrition: "Nutrition"
+        per_portion: "Per portion"
+      form:
+        nutrition_totals: "Recipe totals"
+        nutrition_hint: "Use the totals for the full recipe. Per-portion values are calculated from the yield."
+      nutrition:
+        calories: "Calories"
+        proteins: "Proteins"
+        carbs: "Carbs"
+        fats: "Fats"
+        calories_per_portion: "Calories per portion"
+        proteins_per_portion: "Protein per portion"
+        carbs_per_portion: "Carbs per portion"
+        fats_per_portion: "Fats per portion"
       actions:
         new: "New recipe"
+        create_first: "Create recipe"
         create: "Create recipe"
         update: "Update recipe"
+        view: "View"
         edit: "Edit"
         delete: "Delete"
         back_to_recipes: "Back to recipes"

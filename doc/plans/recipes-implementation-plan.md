@@ -90,6 +90,8 @@ Estimated size: 150-250 changed lines.
 
 ## Phase 2: Recipe CRUD Backend
 
+Status: Complete.
+
 Purpose: add routes, controller behavior, and authorization boundaries before building the polished UI.
 
 Scope:
@@ -120,9 +122,19 @@ Acceptance criteria:
 - A patient can create, update, view, list, and delete their own recipes through the controller.
 - A patient cannot access recipes owned by another patient.
 
+Implementation status:
+
+- `patient/recipes` routes added.
+- `Patients::RecipesController` handles full CRUD for patient-owned recipes.
+- Recipe lookups are scoped through `current_patient.recipes`.
+- Controller specs cover CRUD behavior and ownership isolation.
+- Flash messages and view copy are translated in English and Portuguese.
+
 Estimated size: 250-400 changed lines.
 
 ## Phase 3: Recipe Library UI
+
+Status: Complete.
 
 Purpose: add the patient-facing recipe management experience without image upload yet.
 
@@ -163,6 +175,14 @@ Acceptance criteria:
 - A patient can navigate to recipes from the app layout.
 - A patient can create, edit, view, and delete recipes from the UI.
 - Views do not hardcode user-facing strings.
+
+Implementation status:
+
+- Recipe library index now renders a patient-facing card grid and translated empty state.
+- Recipe detail page shows ingredients, instructions, total nutrition, and per-portion macros.
+- New and edit views use a structured form with translated helper copy.
+- Application layout includes top-nav and drawer entries for patient recipes.
+- Request/controller specs cover navigation, ownership isolation, CRUD rendering, and per-portion macro display.
 
 Estimated size: 350-500 changed lines.
 

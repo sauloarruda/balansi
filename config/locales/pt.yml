@@ -76,6 +76,7 @@ pt:
     carbs: "carboidratos"
     fats: "gorduras"
     kcal: "kcal"
+    grams: "g"
     minutes: "minutos"
     kcal_burned: "kcal queimadas"
     excess: "excesso"
@@ -451,22 +452,43 @@ pt:
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
   patient:
     recipes:
+      navigation:
+        title: "Receitas"
       index:
         title: "Receitas"
-        empty: "Nenhuma receita salva ainda."
+        subtitle: "Mantenha suas preparações recorrentes com ingredientes, rendimento e macros em um só lugar."
+        empty_title: "Crie sua primeira receita"
+        empty: "Salve receitas que você usa com frequência para facilitar o registro de cada porção depois."
         yield:
           one: "%{count} porção"
           other: "%{count} porções"
       new:
         title: "Nova receita"
+        subtitle: "Adicione ingredientes, modo de preparo e a nutrição total da receita inteira."
       edit:
         title: "Editar receita"
+        subtitle: "Atualize os detalhes mantendo porções e macros totais alinhados."
       show:
         nutrition: "Nutrição"
+        per_portion: "Por porção"
+      form:
+        nutrition_totals: "Totais da receita"
+        nutrition_hint: "Use os totais da receita inteira. Os valores por porção são calculados pelo rendimento."
+      nutrition:
+        calories: "Calorias"
+        proteins: "Proteínas"
+        carbs: "Carboidratos"
+        fats: "Gorduras"
+        calories_per_portion: "Calorias por porção"
+        proteins_per_portion: "Proteínas por porção"
+        carbs_per_portion: "Carboidratos por porção"
+        fats_per_portion: "Gorduras por porção"
       actions:
         new: "Nova receita"
+        create_first: "Criar receita"
         create: "Criar receita"
         update: "Atualizar receita"
+        view: "Ver"
         edit: "Editar"
         delete: "Excluir"
         back_to_recipes: "Voltar para receitas"

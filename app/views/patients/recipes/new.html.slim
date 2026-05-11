@@ -1,5 +1,8 @@
 - content_for :title, t("patient.recipes.new.title")
 
-h1.text-3xl.font-bold.mb-6 = t("patient.recipes.new.title")
+.mb-6
+  = link_to t("patient.recipes.actions.back_to_recipes"), patient_recipes_path, class: "text-sm font-medium text-gray-600 hover:text-gray-900"
+  h1.mt-3.text-3xl.font-bold.text-gray-900 = t("patient.recipes.new.title")
+  p.mt-2.max-w-2xl.text-sm.text-gray-600 = t("patient.recipes.new.subtitle")
 
 = render "form", recipe: @recipe, submit_label: t("patient.recipes.actions.create")

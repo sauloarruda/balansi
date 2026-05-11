@@ -1,39 +1,57 @@
 - content_for :title, @recipe.name
 
-.mb-6.flex.items-center.justify-between
-  h1.text-3xl.font-bold = @recipe.name
+.mb-6.flex.flex-col.gap-4.sm:flex-row.sm:items-start.sm:justify-between
+  div
+    = link_to t("patient.recipes.actions.back_to_recipes"), patient_recipes_path, class: "text-sm font-medium text-gray-600 hover:text-gray-900"
+    h1.mt-3.text-3xl.font-bold.text-gray-900 = @recipe.name
+    p.mt-2.text-sm.text-gray-600 = t("patient.recipes.index.yield", count: @recipe.yield_portions)
   .flex.items-center.gap-3
-    = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(@recipe), class: "text-sm font-medium text-blue-700 hover:text-blue-900"
-    = button_to t("patient.recipes.actions.delete"), patient_recipe_path(@recipe), method: :delete, class: "text-sm font-medium text-red-700 hover:text-red-900", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
+    = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(@recipe), class: "inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-100"
+    = button_to t("patient.recipes.actions.delete"), patient_recipe_path(@recipe), method: :delete, class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
 
-.space-y-6
-  section
-    h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:ingredients)
-    p.mt-2.whitespace-pre-line.text-gray-700 = @recipe.ingredients
+.grid.gap-6 class="lg:grid-cols-[minmax(0,1fr)_20rem]"
+  .space-y-6
+    section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
+      h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:ingredients)
+      p.mt-3.whitespace-pre-line.text-sm.leading-6.text-gray-700 = @recipe.ingredients
 
-  - if @recipe.instructions.present?
-    section
-      h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:instructions)
-      p.mt-2.whitespace-pre-line.text-gray-700 = @recipe.instructions
+    - if @recipe.instructions.present?
+      section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
+        h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:instructions)
+        p.mt-3.whitespace-pre-line.text-sm.leading-6.text-gray-700 = @recipe.instructions
 
-  section
-    h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.nutrition")
-    dl.mt-2.grid.gap-4.md:grid-cols-5
-      div
-        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:yield_portions)
-        dd.font-medium.text-gray-900 = @recipe.yield_portions
-      div
-        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:calories)
-        dd.font-medium.text-gray-900 = @recipe.calories
-      div
-        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:proteins)
-        dd.font-medium.text-gray-900 = number_with_precision(@recipe.proteins, precision: 2, strip_insignificant_zeros: true)
-      div
-        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:carbs)
-        dd.font-medium.text-gray-900 = number_with_precision(@recipe.carbs, precision: 2, strip_insignificant_zeros: true)
-      div
-        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:fats)
-        dd.font-medium.text-gray-900 = number_with_precision(@recipe.fats, precision: 2, strip_insignificant_zeros: true)
+  aside.space-y-6
+    section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
+      h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.nutrition")
+      dl.mt-4.space-y-4
+        .flex.items-center.justify-between.gap-4
+          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:yield_portions)
+          dd.text-sm.font-semibold.text-gray-900 = @recipe.yield_portions
+        .flex.items-center.justify-between.gap-4
+          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:calories)
+          dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.calories, precision: 0)} #{t('defaults.kcal')}"
+        .flex.items-center.justify-between.gap-4
+          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:proteins)
+          dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.proteins, precision: 2)} #{t('defaults.grams')}"
+        .flex.items-center.justify-between.gap-4
+          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:carbs)
+          dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.carbs, precision: 2)} #{t('defaults.grams')}"
+        .flex.items-center.justify-between.gap-4
+          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:fats)
+          dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.fats, precision: 2)} #{t('defaults.grams')}"
 
-.mt-6
-  = link_to t("patient.recipes.actions.back_to_recipes"), patient_recipes_path, class: "text-sm font-medium text-gray-700 hover:text-gray-900"
+    section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
+      h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.per_portion")
+      dl.mt-4.grid.grid-cols-2.gap-3
+        .rounded-lg.bg-gray-50.p-3
+          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.calories")
+          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.calories_per_portion, precision: 0)} #{t('defaults.kcal')}"
+        .rounded-lg.bg-gray-50.p-3
+          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.proteins")
+          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.proteins_per_portion, precision: 2)} #{t('defaults.grams')}"
+        .rounded-lg.bg-gray-50.p-3
+          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.carbs")
+          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.carbs_per_portion, precision: 2)} #{t('defaults.grams')}"
+        .rounded-lg.bg-gray-50.p-3
+          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.fats")
+          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.fats_per_portion, precision: 2)} #{t('defaults.grams')}"
