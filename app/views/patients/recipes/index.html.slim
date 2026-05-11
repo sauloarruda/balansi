@@ -1,19 +1,20 @@
 - content_for :title, t("patient.recipes.index.title")
 
-.flex.items-center.justify-between.mb-6
-  h1.text-3xl.font-bold = t("patient.recipes.index.title")
-  = link_to t("patient.recipes.actions.new"), new_patient_recipe_path, class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
+.mb-6.flex.flex-col.gap-4.sm:flex-row.sm:items-start.sm:justify-between
+  div
+    h1.text-3xl.font-bold.text-gray-900 = t("patient.recipes.index.title")
+    p.mt-2.max-w-2xl.text-sm.text-gray-600 = t("patient.recipes.index.subtitle")
+  = link_to new_patient_recipe_path, class: "inline-flex items-center justify-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-200" do
+    = heroicon "plus", variant: :solid, options: { class: "h-4 w-4" }
+    = t("patient.recipes.actions.new")
 
 - if @recipes.empty?
-  p.text-gray-500 = t("patient.recipes.index.empty")
+  .rounded-lg.border.border-dashed.border-gray-300.bg-white.p-8.text-center
+    .mx-auto.flex.h-12.w-12.items-center.justify-center.rounded-full.bg-pink-50.text-pink-700
+      = heroicon "rectangle-stack", variant: :outline, options: { class: "h-6 w-6" }
+    h2.mt-4.text-lg.font-semibold.text-gray-900 = t("patient.recipes.index.empty_title")
+    p.mt-2.text-sm.text-gray-600 = t("patient.recipes.index.empty")
+    = link_to t("patient.recipes.actions.create_first"), new_patient_recipe_path, class: "mt-5 inline-flex items-center justify-center rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-200"
 - else
-  .bg-white.border.border-gray-200.rounded-lg.shadow-sm
-    ul.divide-y.divide-gray-200
-      - @recipes.each do |recipe|
-        li.p-4.flex.items-center.justify-between.gap-4
-          div
-            = link_to recipe.name, patient_recipe_path(recipe), class: "font-medium text-gray-900 hover:text-blue-700"
-            .text-sm.text-gray-500 = t("patient.recipes.index.yield", count: recipe.yield_portions)
-          .flex.items-center.gap-3
-            = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(recipe), class: "text-sm font-medium text-blue-700 hover:text-blue-900"
-            = button_to t("patient.recipes.actions.delete"), patient_recipe_path(recipe), method: :delete, class: "text-sm font-medium text-red-700 hover:text-red-900", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
+  .grid.gap-4.md:grid-cols-2.xl:grid-cols-3
+    = render partial: "recipe_card", collection: @recipes, as: :recipe

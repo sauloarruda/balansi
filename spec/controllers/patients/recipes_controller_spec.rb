@@ -17,6 +17,9 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include(recipe.name)
+      expect(response.body).to include(I18n.t("patient.recipes.nutrition.calories_per_portion"))
+      expect(response.body).to include("400 kcal")
+      expect(response.body).to include("30,25 g")
       expect(response.body).not_to include(other_recipe.name)
     end
 
@@ -24,7 +27,9 @@ RSpec.describe Patients::RecipesController, type: :controller do
       get :index
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include(I18n.t("patient.recipes.index.empty_title"))
       expect(response.body).to include(I18n.t("patient.recipes.index.empty"))
+      expect(response.body).to include(I18n.t("patient.recipes.actions.create_first"))
     end
   end
 
@@ -40,6 +45,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response.body).to include("12,25")
       expect(response.body).to include("30,5")
       expect(response.body).to include("8,75")
+      expect(response.body).to include(I18n.t("patient.recipes.show.per_portion"))
+      expect(response.body).to include("6,13 g")
     end
 
     it "does not show recipes owned by another patient" do

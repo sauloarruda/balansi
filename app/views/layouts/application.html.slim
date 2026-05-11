@@ -30,6 +30,7 @@ html
         - journals_active = current_patient.present? && current_page?(today_journals_path)
         - journal_entry_active = controller_path.start_with?("journal_entries/")
         - journals_active = current_patient.present? && (current_page?(today_journals_path) || controller_name == "journals" || journal_entry_active)
+        - recipes_active = current_patient.present? && controller_path == "patients/recipes"
         - accesses_active = current_patient.present? && current_user&.professional.blank? && current_page?(patient_professional_accesses_path)
         - profile_path = current_patient.present? ? patient_personal_profile_path : user_profile_path
         - profile_active = current_user.present? && current_page?(profile_path)
@@ -49,6 +50,10 @@ html
             - journals_top_icon_class = journals_active ? "w-5 h-5" : "w-5 h-5"
             = link_to today_journals_path, class: journals_top_button_class, title: t("journals.navigation.title"), aria: { label: t("journals.navigation.title"), current: (journals_active ? "page" : nil) } do
               = heroicon "book-open", variant: :outline, options: { class: journals_top_icon_class }
+          - if current_patient.present?
+            - recipes_top_button_class = recipes_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            = link_to patient_recipes_path, class: recipes_top_button_class, title: t("patient.recipes.navigation.title"), aria: { label: t("patient.recipes.navigation.title"), current: (recipes_active ? "page" : nil) } do
+              = heroicon "clipboard-document-list", variant: :outline, options: { class: "w-5 h-5" }
           - if current_patient.present? && current_user&.professional.blank?
             - accesses_top_button_class = accesses_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
             = link_to patient_professional_accesses_path, class: accesses_top_button_class, title: t("patient.professional_accesses.navigation.title"), aria: { label: t("patient.professional_accesses.navigation.title"), current: (accesses_active ? "page" : nil) } do
@@ -87,6 +92,13 @@ html
               = link_to today_journals_path, class: journals_drawer_link_class, aria: { current: (journals_active ? "page" : nil) } do
                 = heroicon "book-open", variant: :outline, options: { class: journals_drawer_icon_class }
                 span.ml-3 = t("journals.navigation.title")
+          li
+            - if current_patient.present?
+              - recipes_drawer_link_class = recipes_active ? "flex items-center p-2 text-pink-700 bg-pink-50 rounded-lg group" : "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
+              - recipes_drawer_icon_class = recipes_active ? "w-5 h-5 text-pink-700 transition duration-75" : "w-5 h-5 text-gray-500 transition duration-75 group-hover:text-gray-900"
+              = link_to patient_recipes_path, class: recipes_drawer_link_class, aria: { current: (recipes_active ? "page" : nil) } do
+                = heroicon "clipboard-document-list", variant: :outline, options: { class: recipes_drawer_icon_class }
+                span.ml-3 = t("patient.recipes.navigation.title")
           - if current_user.present?
             li
               - profile_drawer_link_class = profile_active ? "flex items-center p-2 text-pink-700 bg-pink-50 rounded-lg group" : "flex items-center p-2 text-gray-900 rounded-lg hover:bg-gray-100 group"
