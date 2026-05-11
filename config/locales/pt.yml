@@ -553,6 +553,9 @@ pt:
       exercise:
         one: "Exercício"
         other: "Exercícios"
+      recipe:
+        one: "Receita"
+        other: "Receitas"
     attributes:
       patient:
         gender: "Gênero"
@@ -567,6 +570,15 @@ pt:
         daily_carbs_goal: "Meta de carboidratos diários (g)"
         daily_proteins_goal: "Meta de proteínas diárias (g)"
         daily_fats_goal: "Meta de gorduras diárias (g)"
+      recipe:
+        name: "Nome"
+        ingredients: "Ingredientes"
+        instructions: "Modo de preparo"
+        yield_portions: "Porções"
+        calories: "Calorias (kcal)"
+        proteins: "Proteínas (g)"
+        carbs: "Carboidratos (g)"
+        fats: "Gorduras (g)"
     errors:
       messages:
         not_in_future: "não pode ser no futuro"

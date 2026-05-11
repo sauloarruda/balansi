@@ -505,6 +505,9 @@ en:
       exercise:
         one: "Exercise"
         other: "Exercises"
+      recipe:
+        one: "Recipe"
+        other: "Recipes"
     attributes:
       patient:
         gender: "Gender"
@@ -519,6 +522,15 @@ en:
         daily_carbs_goal: "Daily carbs goal (g)"
         daily_proteins_goal: "Daily proteins goal (g)"
         daily_fats_goal: "Daily fats goal (g)"
+      recipe:
+        name: "Name"
+        ingredients: "Ingredients"
+        instructions: "Instructions"
+        yield_portions: "Yield portions"
+        calories: "Calories (kcal)"
+        proteins: "Proteins (g)"
+        carbs: "Carbs (g)"
+        fats: "Fats (g)"
     errors:
       messages:
         not_in_future: "cannot be in the future"

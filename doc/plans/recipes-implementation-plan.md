@@ -8,6 +8,28 @@ Implement private recipe management, recipe image handling, meal journal recipe 
 
 Target pull request size: approximately 500 changed lines or less per PR.
 
+## Branch And PR Workflow
+
+Branch naming pattern:
+
+```text
+BAL-22.${phase}-${description}
+```
+
+Rules:
+
+- `phase` is the two-digit PR number: `01`, `02`, `03`, and so on.
+- `description` is a short hyphen-separated summary of the phase, for example `model-migration`, `crud-backend`, or `recipe-library-ui`.
+- Each phase should be implemented on its own branch.
+- After implementation is complete for a phase, review the full code diff before creating the pull request.
+- Only create the pull request after the review is complete and any requested fixes are applied.
+
+Examples:
+
+- `BAL-22.01-model-migration`
+- `BAL-22.02-crud-backend`
+- `BAL-22.03-recipe-library-ui`
+
 ## Technical Direction
 
 - Model recipes as patient-owned records: `Recipe belongs_to :patient`.
@@ -30,6 +52,7 @@ Scope:
 - Add validations:
   - `name` required.
   - `ingredients` required.
+  - `instructions` optional.
   - `yield_portions` required and greater than or equal to 1.
   - macro fields numeric when present.
 - Add per-portion helper methods:
@@ -461,17 +484,17 @@ Estimated size: split into multiple PRs if this exceeds 500 changed lines.
 
 ## Recommended PR Sequence
 
-1. `BAL-xxx-recipe-model`
-2. `BAL-xxx-recipe-crud-backend`
-3. `BAL-xxx-recipe-library-ui`
-4. `BAL-xxx-recipe-images`
-5. `BAL-xxx-recipe-nutrition-analysis`
-6. `BAL-xxx-recipe-search-endpoint`
-7. `BAL-xxx-meal-recipe-mentions-ui`
-8. `BAL-xxx-meal-recipe-references`
-9. `BAL-xxx-meal-analysis-recipe-context`
-10. `BAL-xxx-professional-recipe-visibility`
-11. `BAL-xxx-recipes-polish-system-tests`
+1. `BAL-22.01-model-migration`
+2. `BAL-22.02-crud-backend`
+3. `BAL-22.03-recipe-library-ui`
+4. `BAL-22.04-recipe-images`
+5. `BAL-22.05-nutrition-analysis`
+6. `BAL-22.06-search-endpoint`
+7. `BAL-22.07-mentions-ui`
+8. `BAL-22.08-meal-recipe-references`
+9. `BAL-22.09-meal-analysis-context`
+10. `BAL-22.10-professional-visibility`
+11. `BAL-22.11-polish-system-tests`
 
 ## Main Risks
 
