@@ -42,6 +42,8 @@ Examples:
 
 ## Phase 1: Recipe Data Model
 
+Status: Complete.
+
 Purpose: create the persistence foundation with no UI.
 
 Scope:

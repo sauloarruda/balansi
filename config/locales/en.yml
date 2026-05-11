@@ -402,6 +402,30 @@ en:
       exercise_llm_unavailable: "We could not analyze your exercise right now. Please try again."
       rate_limit_exceeded: "You exceeded your AI usage limit in the last few minutes. Please try again later."
   patient:
+    recipes:
+      index:
+        title: "Recipes"
+        empty: "No recipes saved yet."
+        yield:
+          one: "%{count} portion"
+          other: "%{count} portions"
+      new:
+        title: "New recipe"
+      edit:
+        title: "Edit recipe"
+      show:
+        nutrition: "Nutrition"
+      actions:
+        new: "New recipe"
+        create: "Create recipe"
+        update: "Update recipe"
+        edit: "Edit"
+        delete: "Delete"
+        back_to_recipes: "Back to recipes"
+      messages:
+        created: "Recipe created successfully."
+        updated: "Recipe updated successfully."
+        deleted: "Recipe deleted successfully."
     professional_accesses:
       navigation:
         title: "Sharing"
@@ -533,4 +557,5 @@ en:
         fats: "Fats (g)"
     errors:
       messages:
+        max_two_decimal_places: "must have at most 2 decimal places"
         not_in_future: "cannot be in the future"

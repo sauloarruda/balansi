@@ -1,0 +1,5 @@
+- content_for :title, t("patient.recipes.new.title")
+
+h1.text-3xl.font-bold.mb-6 = t("patient.recipes.new.title")
+
+= render "form", recipe: @recipe, submit_label: t("patient.recipes.actions.create")

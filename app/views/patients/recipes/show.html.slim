@@ -1,0 +1,39 @@
+- content_for :title, @recipe.name
+
+.mb-6.flex.items-center.justify-between
+  h1.text-3xl.font-bold = @recipe.name
+  .flex.items-center.gap-3
+    = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(@recipe), class: "text-sm font-medium text-blue-700 hover:text-blue-900"
+    = button_to t("patient.recipes.actions.delete"), patient_recipe_path(@recipe), method: :delete, class: "text-sm font-medium text-red-700 hover:text-red-900", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
+
+.space-y-6
+  section
+    h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:ingredients)
+    p.mt-2.whitespace-pre-line.text-gray-700 = @recipe.ingredients
+
+  - if @recipe.instructions.present?
+    section
+      h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:instructions)
+      p.mt-2.whitespace-pre-line.text-gray-700 = @recipe.instructions
+
+  section
+    h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.nutrition")
+    dl.mt-2.grid.gap-4.md:grid-cols-5
+      div
+        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:yield_portions)
+        dd.font-medium.text-gray-900 = @recipe.yield_portions
+      div
+        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:calories)
+        dd.font-medium.text-gray-900 = @recipe.calories
+      div
+        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:proteins)
+        dd.font-medium.text-gray-900 = number_with_precision(@recipe.proteins, precision: 2, strip_insignificant_zeros: true)
+      div
+        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:carbs)
+        dd.font-medium.text-gray-900 = number_with_precision(@recipe.carbs, precision: 2, strip_insignificant_zeros: true)
+      div
+        dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:fats)
+        dd.font-medium.text-gray-900 = number_with_precision(@recipe.fats, precision: 2, strip_insignificant_zeros: true)
+
+.mt-6
+  = link_to t("patient.recipes.actions.back_to_recipes"), patient_recipes_path, class: "text-sm font-medium text-gray-700 hover:text-gray-900"
