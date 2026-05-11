@@ -1,0 +1,19 @@
+- content_for :title, t("patient.recipes.index.title")
+
+.flex.items-center.justify-between.mb-6
+  h1.text-3xl.font-bold = t("patient.recipes.index.title")
+  = link_to t("patient.recipes.actions.new"), new_patient_recipe_path, class: "inline-flex items-center justify-center text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2"
+
+- if @recipes.empty?
+  p.text-gray-500 = t("patient.recipes.index.empty")
+- else
+  .bg-white.border.border-gray-200.rounded-lg.shadow-sm
+    ul.divide-y.divide-gray-200
+      - @recipes.each do |recipe|
+        li.p-4.flex.items-center.justify-between.gap-4
+          div
+            = link_to recipe.name, patient_recipe_path(recipe), class: "font-medium text-gray-900 hover:text-blue-700"
+            .text-sm.text-gray-500 = t("patient.recipes.index.yield", count: recipe.yield_portions)
+          .flex.items-center.gap-3
+            = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(recipe), class: "text-sm font-medium text-blue-700 hover:text-blue-900"
+            = button_to t("patient.recipes.actions.delete"), patient_recipe_path(recipe), method: :delete, class: "text-sm font-medium text-red-700 hover:text-red-900", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }

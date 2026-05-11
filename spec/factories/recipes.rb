@@ -6,8 +6,8 @@ FactoryBot.define do
     instructions { "Grill the chicken and serve it with rice, beans, lettuce, and tomato." }
     yield_portions { 2 }
     calories { 800 }
-    proteins { 60 }
-    carbs { 90 }
-    fats { 24 }
+    proteins { 60.5 }
+    carbs { 90.25 }
+    fats { 24.75 }
   end
 end

@@ -66,6 +66,21 @@ RSpec.describe Recipe, type: :model do
       expect(recipe.errors[:carbs]).to be_present
       expect(recipe.errors[:fats]).to be_present
     end
+
+    it "allows recipe macros with up to two decimal places" do
+      recipe = build(:recipe, proteins: 10.25, carbs: 20.5, fats: 3.75)
+
+      expect(recipe).to be_valid
+    end
+
+    it "rejects recipe macros with more than two decimal places" do
+      recipe = build(:recipe, proteins: "10.255", carbs: "20.555", fats: "3.755")
+
+      expect(recipe).not_to be_valid
+      expect(recipe.errors[:proteins]).to include(I18n.t("activerecord.errors.messages.max_two_decimal_places"))
+      expect(recipe.errors[:carbs]).to include(I18n.t("activerecord.errors.messages.max_two_decimal_places"))
+      expect(recipe.errors[:fats]).to include(I18n.t("activerecord.errors.messages.max_two_decimal_places"))
+    end
   end
 
   describe "per-portion helpers" do
@@ -73,14 +88,14 @@ RSpec.describe Recipe, type: :model do
       recipe = build(:recipe,
         yield_portions: 4,
         calories: 1_000,
-        proteins: 80,
-        carbs: 120,
-        fats: 40)
+        proteins: 80.5,
+        carbs: 120.25,
+        fats: 40.75)
 
       expect(recipe.calories_per_portion).to eq(250.0)
-      expect(recipe.proteins_per_portion).to eq(20.0)
-      expect(recipe.carbs_per_portion).to eq(30.0)
-      expect(recipe.fats_per_portion).to eq(10.0)
+      expect(recipe.proteins_per_portion).to eq(20.125)
+      expect(recipe.carbs_per_portion).to eq(30.0625)
+      expect(recipe.fats_per_portion).to eq(10.1875)
     end
 
     it "returns nil for missing macro totals" do

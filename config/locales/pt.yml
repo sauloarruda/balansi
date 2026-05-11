@@ -450,6 +450,30 @@ pt:
       exercise_llm_unavailable: "Não foi possível analisar seu exercício agora. Tente novamente."
       rate_limit_exceeded: "Você excedeu seu limite de uso de IA nos últimos minutos. Tente novamente mais tarde."
   patient:
+    recipes:
+      index:
+        title: "Receitas"
+        empty: "Nenhuma receita salva ainda."
+        yield:
+          one: "%{count} porção"
+          other: "%{count} porções"
+      new:
+        title: "Nova receita"
+      edit:
+        title: "Editar receita"
+      show:
+        nutrition: "Nutrição"
+      actions:
+        new: "Nova receita"
+        create: "Criar receita"
+        update: "Atualizar receita"
+        edit: "Editar"
+        delete: "Excluir"
+        back_to_recipes: "Voltar para receitas"
+      messages:
+        created: "Receita criada com sucesso."
+        updated: "Receita atualizada com sucesso."
+        deleted: "Receita excluída com sucesso."
     professional_accesses:
       navigation:
         title: "Compartilhamento"
@@ -581,4 +605,5 @@ pt:
         fats: "Gorduras (g)"
     errors:
       messages:
+        max_two_decimal_places: "deve ter no máximo 2 casas decimais"
         not_in_future: "não pode ser no futuro"
