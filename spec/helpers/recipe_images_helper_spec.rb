@@ -10,6 +10,9 @@ RSpec.describe RecipeImagesHelper, type: :helper do
       expect(tag).to include("image-processing")
       expect(tag).to include(%(alt="#{I18n.t('patient.recipes.images.processing')}"))
       expect(tag).to include(%(class="recipe-image"))
+      expect(tag).to include(%(data-controller="processing-image"))
+      expect(tag).to include("data-processing-image-src-value=")
+      expect(tag).to include(%(data-processing-image-interval-value="3000"))
     end
 
     it "renders the processed variant when it is ready" do
