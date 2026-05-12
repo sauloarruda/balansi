@@ -1,9 +1,45 @@
 .flex.h-full.flex-col.justify-between.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
   div
+    - if recipe.images.any?
+      - if recipe.images.one?
+        - image = recipe.images.first
+        - modal_id = dom_id(image, :preview_modal)
+        button.mb-4.block.w-full.cursor-zoom-in.overflow-hidden.rounded-lg.bg-gray-100 type="button" data-modal-target=modal_id data-modal-toggle=modal_id aria-label=t("patient.recipes.actions.view_image")
+          = recipe_image_tag recipe.images.first, :standard, alt: recipe.name, class: "h-36 w-full object-contain"
+      - else
+        - carousel_id = dom_id(recipe, :images_carousel)
+        div id=carousel_id class="relative mb-4 overflow-hidden rounded-lg bg-gray-100" data-carousel="static"
+          .relative.h-36.overflow-hidden
+            - recipe.images.each_with_index do |image, index|
+              - modal_id = dom_id(image, :preview_modal)
+              div class=(index.zero? ? "duration-700 ease-in-out" : "hidden duration-700 ease-in-out") data-carousel-item=(index.zero? ? "active" : "")
+                button.block.h-full.w-full.cursor-zoom-in type="button" data-modal-target=modal_id data-modal-toggle=modal_id aria-label=t("patient.recipes.actions.view_image")
+                  = recipe_image_tag image, :standard, alt: recipe.name, class: "absolute left-1/2 top-1/2 h-36 w-full -translate-x-1/2 -translate-y-1/2 object-contain"
+          button.absolute.left-0.top-0.z-30.flex.h-full.cursor-pointer.items-center.justify-center.px-2.focus:outline-none type="button" data-carousel-prev=""
+            span.inline-flex.h-8.w-8.items-center.justify-center.rounded-full.bg-white/50.text-gray-700.hover:bg-white
+              = heroicon "chevron-left", variant: :outline, options: { class: "h-4 w-4" }
+              span.sr-only = t("patient.recipes.images.previous")
+          button.absolute.right-0.top-0.z-30.flex.h-full.cursor-pointer.items-center.justify-center.px-2.focus:outline-none type="button" data-carousel-next=""
+            span.inline-flex.h-8.w-8.items-center.justify-center.rounded-full.bg-white/50.text-gray-700.hover:bg-white
+              = heroicon "chevron-right", variant: :outline, options: { class: "h-4 w-4" }
+              span.sr-only = t("patient.recipes.images.next")
+      - recipe.images.each do |image|
+        - modal_id = dom_id(image, :preview_modal)
+        div id=modal_id tabindex="-1" aria-hidden="true" class="fixed left-0 right-0 top-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-y-auto overflow-x-hidden p-4 md:inset-0"
+          .relative.max-h-full.w-full.max-w-4xl
+            .relative.rounded-lg.bg-white.shadow
+              .flex.items-center.justify-between.border-b.border-gray-200.p-4
+                h3.text-base.font-semibold.text-gray-900 = recipe.name
+                button.inline-flex.h-8.w-8.items-center.justify-center.rounded-lg.text-gray-500.hover:bg-gray-100.hover:text-gray-900 type="button" data-modal-hide=modal_id
+                  = heroicon "x-mark", variant: :outline, options: { class: "h-5 w-5" }
+                  span.sr-only = t("patient.recipes.images.close")
+              .p-4
+                = recipe_image_tag image, :large, alt: recipe.name, class: "mx-auto max-h-[80vh] w-full object-contain"
+
     .flex.items-start.justify-between.gap-4
       div
         = link_to recipe.name, patient_recipe_path(recipe), class: "text-lg font-semibold text-gray-900 hover:text-pink-700"
-        p.mt-1.text-sm.text-gray-500 = t("patient.recipes.index.yield", count: recipe.yield_portions)
+        p.mt-1.text-sm.text-gray-500 = t("patient.recipes.index.portion_size", grams: localized_decimal(recipe.portion_size_grams, precision: 2))
       .shrink-0.rounded-full.bg-pink-50.p-2.text-pink-700
         = heroicon "clipboard-document-list", variant: :outline, options: { class: "h-5 w-5" }
 

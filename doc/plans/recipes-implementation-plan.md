@@ -35,7 +35,7 @@ Examples:
 - Model recipes as patient-owned records: `Recipe belongs_to :patient`.
 - Keep recipes private in v1. A patient can manage only their own recipes.
 - Use `ActiveStorage` for recipe images.
-- Store recipe macro totals on the recipe and derive per-portion values from `yield_portions`.
+- Store recipe macro values per portion on the recipe and use `portion_size_grams` to calculate proportional values by gram amount.
 - Do not rely only on meal description text for historical accuracy. Persist recipe references used by meals with a snapshot of the recipe nutrition data at logging time.
 - Inject recipe context into meal LLM analysis only when the meal description references recipes.
 - Preserve Rails i18n rules by updating `config/locales/pt.yml` and `config/locales/en.yml` together for all user-facing copy.
@@ -55,8 +55,8 @@ Scope:
   - `name` required.
   - `ingredients` required.
   - `instructions` optional.
-  - `yield_portions` required and greater than or equal to 1.
-  - macro fields numeric when present.
+  - `portion_size_grams` required and greater than 0.
+  - macro fields numeric when present, representing one portion.
 - Add per-portion helper methods:
   - `calories_per_portion`
   - `proteins_per_portion`
@@ -83,8 +83,8 @@ bundle exec rspec spec/models/recipe_spec.rb
 Acceptance criteria:
 
 - A valid recipe belongs to a patient.
-- A recipe without name, ingredients, or valid yield is invalid.
-- Per-portion macros are calculated from total macros and yield.
+- A recipe without name, ingredients, or valid portion size is invalid.
+- Recipe macros represent one portion and gram-based helpers calculate proportional values from `portion_size_grams`.
 
 Estimated size: 150-250 changed lines.
 
@@ -148,7 +148,7 @@ Scope:
   - `_form`
   - `_recipe_card`
 - Add a recipe navigation entry to the application layout.
-- Show macros per portion and recipe yield.
+- Show macros per portion and portion size in grams.
 - Add an empty state.
 - Keep all user-facing copy in i18n.
 
@@ -179,7 +179,7 @@ Acceptance criteria:
 Implementation status:
 
 - Recipe library index now renders a patient-facing card grid and translated empty state.
-- Recipe detail page shows ingredients, instructions, total nutrition, and per-portion macros.
+- Recipe detail page shows ingredients, instructions, portion size, and nutrition per portion.
 - New and edit views use a structured form with translated helper copy.
 - Application layout includes top-nav and drawer entries for patient recipes.
 - Request/controller specs cover navigation, ownership isolation, CRUD rendering, and per-portion macro display.
@@ -188,13 +188,16 @@ Estimated size: 350-500 changed lines.
 
 ## Phase 4: Recipe Images With ActiveStorage
 
-Purpose: add cover image upload and optimized variants independently from the base CRUD.
+Status: Complete.
+
+Purpose: add recipe image upload and optimized variants independently from the base CRUD.
 
 Scope:
 
 - Add ActiveStorage migrations if not already installed.
-- Add `Recipe has_one_attached :image`.
-- Permit image upload in recipe forms.
+- Add `Image` model with ActiveStorage attachment variants.
+- Add `Recipe has_many :images`.
+- Permit multiple image uploads in recipe forms.
 - Display image variants:
   - thumbnail, approximately 100x100 cropped square.
   - standard, approximately 600x400.
@@ -221,22 +224,32 @@ bundle exec rspec spec/requests/patient_recipes_spec.rb
 
 Acceptance criteria:
 
-- A patient can upload a cover image for a recipe.
+- A patient can upload images for a recipe.
 - Recipe list and detail pages display optimized image variants.
 - Test environment stores uploads on disk.
+
+Implementation status:
+
+- ActiveStorage tables added through the Rails-generated migration.
+- `Image` stores the ActiveStorage attachment and thumbnail, standard, and large variants.
+- `Recipe` owns many images.
+- Recipe forms permit and upload multiple images.
+- Recipe cards render thumbnail carousels and detail pages render standard images linked to the large variant.
+- Test, local, staging, and production storage remain on disk, matching the existing Kamal persistent volume setup.
+- Model and controller specs cover image attachment, upload, and rendered image variants.
 
 Estimated size: 250-450 changed lines.
 
 ## Phase 5: Recipe Nutrition Analysis
 
-Purpose: calculate recipe macro totals from ingredients through AI, while allowing manual override.
+Purpose: calculate recipe macro values per portion from ingredients and portion size through AI, while allowing manual override.
 
 Scope:
 
 - Add recipe nutrition analysis interaction.
 - Add recipe nutrition analysis client, following the existing meal analysis client pattern.
 - Skip AI analysis when all macro fields were manually provided before save.
-- Save total calories, proteins, carbs, and fats on the recipe.
+- Save per-portion calories, proteins, carbs, and fats on the recipe.
 - Keep manual edits possible after AI analysis.
 - Add retry/error handling consistent with meal analysis.
 - Add specs with mocked client responses.
@@ -280,7 +293,7 @@ Scope:
   - `name`
   - `thumbnail_url`
   - per-portion macros
-  - `yield_portions`
+  - `portion_size_grams`
 - Search by recipe name.
 - Limit results, for example to 10.
 - Add request specs for ownership isolation and JSON shape.
@@ -365,11 +378,11 @@ Scope:
 - Store recipe snapshot fields:
   - `recipe_id`
   - `recipe_name`
-  - `yield_portions`
-  - `total_calories`
-  - `total_proteins`
-  - `total_carbs`
-  - `total_fats`
+  - `portion_size_grams`
+  - `calories_per_portion`
+  - `proteins_per_portion`
+  - `carbs_per_portion`
+  - `fats_per_portion`
   - `portion_quantity`
 - Add parser or interaction to extract `@[Name](recipe:id)` references.
 - Resolve references only through the current patient's recipes.
@@ -408,8 +421,7 @@ Scope:
 - Update `Journal::MealAnalysisClient#analyze` to accept optional recipe context.
 - Add prompt content with:
   - recipe name
-  - total yield portions
-  - total macros
+  - portion size in grams
   - per-portion macros
   - referenced portion quantity when available
 - Preserve existing behavior when no recipe references exist.

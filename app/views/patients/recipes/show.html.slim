@@ -4,13 +4,30 @@
   div
     = link_to t("patient.recipes.actions.back_to_recipes"), patient_recipes_path, class: "text-sm font-medium text-gray-600 hover:text-gray-900"
     h1.mt-3.text-3xl.font-bold.text-gray-900 = @recipe.name
-    p.mt-2.text-sm.text-gray-600 = t("patient.recipes.index.yield", count: @recipe.yield_portions)
+    p.mt-2.text-sm.text-gray-600 = t("patient.recipes.index.portion_size", grams: localized_decimal(@recipe.portion_size_grams, precision: 2))
   .flex.items-center.gap-3
     = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(@recipe), class: "inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-100"
     = button_to t("patient.recipes.actions.delete"), patient_recipe_path(@recipe), method: :delete, class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
 
 .grid.gap-6 class="lg:grid-cols-[minmax(0,1fr)_20rem]"
   .space-y-6
+    - if @recipe.images.any?
+      .grid.gap-3 class="sm:grid-cols-2"
+        - @recipe.images.each do |image|
+          - modal_id = dom_id(image, :show_preview_modal)
+          button.block.w-full.cursor-zoom-in.overflow-hidden.rounded-lg.border.border-gray-200.bg-gray-100.shadow-sm type="button" data-modal-target=modal_id data-modal-toggle=modal_id aria-label=t("patient.recipes.actions.view_image")
+            = recipe_image_tag image, :standard, alt: @recipe.name, class: "h-auto w-full object-contain"
+          div id=modal_id tabindex="-1" aria-hidden="true" class="fixed left-0 right-0 top-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-y-auto overflow-x-hidden p-4 md:inset-0"
+            .relative.max-h-full.w-full.max-w-4xl
+              .relative.rounded-lg.bg-white.shadow
+                .flex.items-center.justify-between.border-b.border-gray-200.p-4
+                  h3.text-base.font-semibold.text-gray-900 = @recipe.name
+                  button.inline-flex.h-8.w-8.items-center.justify-center.rounded-lg.text-gray-500.hover:bg-gray-100.hover:text-gray-900 type="button" data-modal-hide=modal_id
+                    = heroicon "x-mark", variant: :outline, options: { class: "h-5 w-5" }
+                    span.sr-only = t("patient.recipes.images.close")
+                .p-4
+                  = recipe_image_tag image, :large, alt: @recipe.name, class: "mx-auto max-h-[80vh] w-full object-contain"
+
     section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
       h2.text-lg.font-semibold.text-gray-900 = Recipe.human_attribute_name(:ingredients)
       p.mt-3.whitespace-pre-line.text-sm.leading-6.text-gray-700 = @recipe.ingredients
@@ -22,11 +39,11 @@
 
   aside.space-y-6
     section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
-      h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.nutrition")
+      h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.nutrition_per_portion")
       dl.mt-4.space-y-4
         .flex.items-center.justify-between.gap-4
-          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:yield_portions)
-          dd.text-sm.font-semibold.text-gray-900 = @recipe.yield_portions
+          dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:portion_size_grams)
+          dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.portion_size_grams, precision: 2)} #{t('defaults.grams')}"
         .flex.items-center.justify-between.gap-4
           dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:calories)
           dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.calories, precision: 0)} #{t('defaults.kcal')}"
@@ -39,19 +56,3 @@
         .flex.items-center.justify-between.gap-4
           dt.text-sm.text-gray-500 = Recipe.human_attribute_name(:fats)
           dd.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.fats, precision: 2)} #{t('defaults.grams')}"
-
-    section.rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
-      h2.text-lg.font-semibold.text-gray-900 = t("patient.recipes.show.per_portion")
-      dl.mt-4.grid.grid-cols-2.gap-3
-        .rounded-lg.bg-gray-50.p-3
-          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.calories")
-          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.calories_per_portion, precision: 0)} #{t('defaults.kcal')}"
-        .rounded-lg.bg-gray-50.p-3
-          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.proteins")
-          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.proteins_per_portion, precision: 2)} #{t('defaults.grams')}"
-        .rounded-lg.bg-gray-50.p-3
-          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.carbs")
-          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.carbs_per_portion, precision: 2)} #{t('defaults.grams')}"
-        .rounded-lg.bg-gray-50.p-3
-          dt.text-xs.font-medium.text-gray-500 = t("patient.recipes.nutrition.fats")
-          dd.mt-1.text-sm.font-semibold.text-gray-900 = "#{localized_decimal(@recipe.fats_per_portion, precision: 2)} #{t('defaults.grams')}"

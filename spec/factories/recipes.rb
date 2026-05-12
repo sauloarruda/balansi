@@ -4,10 +4,10 @@ FactoryBot.define do
     name { "Chicken bowl" }
     ingredients { "Chicken breast, rice, beans, lettuce, tomato" }
     instructions { "Grill the chicken and serve it with rice, beans, lettuce, and tomato." }
-    yield_portions { 2 }
-    calories { 800 }
-    proteins { 60.5 }
-    carbs { 90.25 }
-    fats { 24.75 }
+    portion_size_grams { 200 }
+    calories { 400 }
+    proteins { 30.25 }
+    carbs { 45.12 }
+    fats { 12.38 }
   end
 end

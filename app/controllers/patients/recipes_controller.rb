@@ -3,7 +3,7 @@ module Patients
     before_action :set_recipe, only: [ :show, :edit, :update, :destroy ]
 
     def index
-      @recipes = current_patient.recipes.order(created_at: :desc)
+      @recipes = current_patient.recipes.includes(images: image_includes).order(created_at: :desc)
     end
 
     def show; end
@@ -16,6 +16,7 @@ module Patients
       @recipe = current_patient.recipes.build(recipe_params)
 
       if @recipe.save
+        attach_images
         redirect_to patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created")
       else
         render :new, status: :unprocessable_entity
@@ -26,6 +27,7 @@ module Patients
 
     def update
       if @recipe.update(recipe_params)
+        attach_images
         redirect_to patient_recipe_path(@recipe), notice: t("patient.recipes.messages.updated")
       else
         render :edit, status: :unprocessable_entity
@@ -43,7 +45,11 @@ module Patients
     private
 
     def set_recipe
-      @recipe = current_patient.recipes.find(params[:id])
+      @recipe = current_patient.recipes.includes(images: image_includes).find(params[:id])
+    end
+
+    def image_includes
+      { file_attachment: { blob: { variant_records: { image_attachment: :blob } } } }
     end
 
     def recipe_params
@@ -51,12 +57,18 @@ module Patients
         :name,
         :ingredients,
         :instructions,
-        :yield_portions,
+        :portion_size_grams,
         :calories,
         :proteins,
         :carbs,
         :fats
       )
+    end
+
+    def attach_images
+      Array(params.dig(:recipe, :images)).compact_blank.each.with_index(@recipe.images.count) do |uploaded_file, position|
+        @recipe.images.create!(file: uploaded_file, position: position)
+      end
     end
   end
 end
