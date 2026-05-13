@@ -64,7 +64,7 @@ module Patients
     end
 
     def save_recipe
-      result = Recipes::SaveInteraction.run(
+      result = ::Recipes::SaveInteraction.run(
         recipe: @recipe,
         user: current_user,
         attributes: recipe_params,

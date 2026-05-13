@@ -26,6 +26,10 @@ Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
     resource :clinical_assessment, only: [ :show, :update ]
     resources :professional_accesses, only: [ :index, :create, :destroy ]
     resources :recipes do
+      collection do
+        get :search, to: "recipes/search#index"
+      end
+
       resources :images, only: [ :destroy ], controller: "recipe_images"
     end
   end

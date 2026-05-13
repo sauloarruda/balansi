@@ -65,7 +65,7 @@ Append `?test_user_id=<id>` to any GET request in development to auto-sign-in as
 ## Conventions
 
 - Follow rubocop-rails-omakase style
-- Use ActiveInteraction for any non-trivial business logic
+- Use ActiveInteraction for any non-trivial business logic. Keep controllers thin: they should handle HTTP concerns such as authentication context, params, redirects/renders, status codes, and response serialization. Move filtering/search rules, persistence workflows, authorization-adjacent scoping, AI orchestration, calculations, and multi-step decisions into `app/interactions/` before adding or expanding controller actions. Prefer adding focused interaction specs instead of burying this behavior in controller/request specs only.
 - Use Rails i18n for all user-facing copy. Do not hardcode literal strings in views, controllers, services, or flashes; use `t(...)` / `I18n.t(...)` and update `config/locales/pt.yml` and `config/locales/en.yml` together.
 - Slim templates (not ERB)
 - Prefer Hotwire (Turbo Frames/Streams) over full-page renders for interactivity
