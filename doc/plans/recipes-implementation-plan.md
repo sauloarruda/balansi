@@ -86,6 +86,14 @@ Acceptance criteria:
 - A recipe without name, ingredients, or valid portion size is invalid.
 - Recipe macros represent one portion and gram-based helpers calculate proportional values from `portion_size_grams`.
 
+Implementation status:
+
+- `recipes` table and decimal macro migrations are in place.
+- `Recipe` belongs to `Patient`; `Patient` owns dependent recipes.
+- Recipe validations cover required name, ingredients, portion size, macro ranges, and decimal precision.
+- Per-portion and gram-proportional nutrition helpers are implemented on `Recipe`.
+- Factory and model specs cover associations, validations, optional instructions, optional macros, and proportional macro calculations.
+
 Estimated size: 150-250 changed lines.
 
 ## Phase 2: Recipe CRUD Backend
@@ -242,6 +250,8 @@ Estimated size: 250-450 changed lines.
 
 ## Phase 5: Recipe Nutrition Analysis
 
+Status: Complete.
+
 Purpose: calculate recipe macro values per portion from ingredients and portion size through AI, while allowing manual override.
 
 Scope:
@@ -277,6 +287,16 @@ Acceptance criteria:
 - A recipe with manually provided macros does not trigger AI analysis.
 - Users can edit AI-generated macros manually.
 - AI failures are surfaced through translated errors without corrupting the recipe.
+
+Implementation status:
+
+- `Recipes::NutritionAnalysisClient` follows the existing chat-completion client pattern and sends recipe name, ingredients, instructions, portion size, and language context.
+- `Recipes::AnalyzeNutritionInteraction` handles AI calls, response normalization, retry behavior, rate limiting, Sentry reporting, translated errors, and per-portion nutrition assignment.
+- `Recipes::SaveInteraction` owns recipe assignment, validation, AI analysis orchestration, transaction handling, and image attachment.
+- Patient recipe create/update runs AI analysis only when one or more nutrition fields are blank.
+- Recipes with all nutrition fields supplied manually skip AI analysis, including later manual edits.
+- Recipe create rolls back cleanly when AI analysis fails, so partial recipes are not persisted.
+- Specs cover successful analysis, manual skip, unsaved assignment for controller transactions, malformed responses, unexpected errors, retries, rate limits, client payload behavior, and controller integration.
 
 Estimated size: 300-500 changed lines.
 

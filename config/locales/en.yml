@@ -424,6 +424,7 @@ en:
         nutrition_per_portion: "Nutrition per portion"
       form:
         nutrition_per_portion: "Nutrition per portion"
+        calculate_macros_with_ai: "Calculate macros using AI"
         nutrition_hint: "Use the nutrition values for one portion of the size above."
         portion_size_hint: "Define how many grams count as one portion, for example 200 g."
         images_label: "Recipe images"
@@ -458,6 +459,8 @@ en:
         updated: "Recipe updated successfully."
         deleted: "Recipe deleted successfully."
         image_deleted: "Recipe image deleted successfully."
+      errors:
+        nutrition_analysis_unavailable: "We could not analyze this recipe right now. Please enter the nutrition values manually or try again."
     professional_accesses:
       navigation:
         title: "Sharing"

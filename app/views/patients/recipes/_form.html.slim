@@ -5,6 +5,10 @@
       - recipe.errors.full_messages.each do |message|
         li = message
 
+- calculate_macros_with_ai = params.dig(:recipe, :calculate_macros_with_ai)
+- calculate_macros_with_ai = recipe.new_record? if calculate_macros_with_ai.nil?
+- calculate_macros_with_ai = ActiveModel::Type::Boolean.new.cast(calculate_macros_with_ai)
+
 .rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
   = form_with model: recipe, url: recipe.persisted? ? patient_recipe_path(recipe) : patient_recipes_path, local: true, class: "space-y-6" do |f|
     .grid.gap-6 class="lg:grid-cols-[minmax(0,1fr)_18rem]"
@@ -38,21 +42,28 @@
           = f.number_field :portion_size_grams, min: 0.01, step: 0.01, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", required: true
           p.mt-2.text-xs.text-gray-500 = t("patient.recipes.form.portion_size_hint")
 
-        fieldset.space-y-4
+        fieldset.space-y-4 data-controller="recipe-nutrition-fields"
           legend.text-sm.font-semibold.text-gray-900 = t("patient.recipes.form.nutrition_per_portion")
-          p.text-xs.text-gray-500 = t("patient.recipes.form.nutrition_hint")
-          div
-            = f.label :calories, class: "block mb-1 text-sm font-medium text-gray-700"
-            = f.number_field :calories, min: 0, step: 1, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500"
-          div
-            = f.label :proteins, class: "block mb-1 text-sm font-medium text-gray-700"
-            = f.number_field :proteins, min: 0, step: 0.01, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500"
-          div
-            = f.label :carbs, class: "block mb-1 text-sm font-medium text-gray-700"
-            = f.number_field :carbs, min: 0, step: 0.01, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500"
-          div
-            = f.label :fats, class: "block mb-1 text-sm font-medium text-gray-700"
-            = f.number_field :fats, min: 0, step: 0.01, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500"
+          .flex.items-center.justify-between.gap-4.rounded-lg.border.border-gray-200.bg-gray-50.p-3
+            = label_tag "recipe_calculate_macros_with_ai", t("patient.recipes.form.calculate_macros_with_ai"), class: "text-sm font-medium text-gray-800"
+            label.relative.inline-flex.cursor-pointer.items-center
+              = check_box_tag "recipe[calculate_macros_with_ai]", "1", calculate_macros_with_ai, id: "recipe_calculate_macros_with_ai", class: "peer sr-only", data: { recipe_nutrition_fields_target: "toggle", action: "recipe-nutrition-fields#update" }, aria: { controls: "recipe_manual_nutrition_fields" }
+              div class="h-6 w-11 rounded-full bg-gray-300 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pink-600 peer-checked:after:translate-x-full peer-checked:after:border-white"
+              span.sr-only = t("patient.recipes.form.calculate_macros_with_ai")
+          #recipe_manual_nutrition_fields.space-y-4 hidden=calculate_macros_with_ai data-recipe-nutrition-fields-target="manualFields"
+            p.text-xs.text-gray-500 = t("patient.recipes.form.nutrition_hint")
+            div
+              = f.label :calories, class: "block mb-1 text-sm font-medium text-gray-700"
+              = f.number_field :calories, min: 0, step: 1, disabled: calculate_macros_with_ai, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", data: { recipe_nutrition_fields_target: "manualInput" }
+            div
+              = f.label :proteins, class: "block mb-1 text-sm font-medium text-gray-700"
+              = f.number_field :proteins, min: 0, step: 0.01, disabled: calculate_macros_with_ai, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", data: { recipe_nutrition_fields_target: "manualInput" }
+            div
+              = f.label :carbs, class: "block mb-1 text-sm font-medium text-gray-700"
+              = f.number_field :carbs, min: 0, step: 0.01, disabled: calculate_macros_with_ai, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", data: { recipe_nutrition_fields_target: "manualInput" }
+            div
+              = f.label :fats, class: "block mb-1 text-sm font-medium text-gray-700"
+              = f.number_field :fats, min: 0, step: 0.01, disabled: calculate_macros_with_ai, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", data: { recipe_nutrition_fields_target: "manualInput" }
 
     .flex.items-center.gap-3.border-t.border-gray-100.pt-5
       = f.submit submit_label, class: "inline-flex items-center justify-center rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-200"
