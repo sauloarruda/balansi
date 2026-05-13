@@ -1,13 +1,16 @@
 class Recipe < ApplicationRecord
   CALORIES_MAX = 50_000
   MACROS_MAX = 10_000
+  PORTION_SIZE_GRAMS_MAX = 50_000
   MACRO_ATTRIBUTES = %i[proteins carbs fats].freeze
 
   belongs_to :patient
+  has_many :images, -> { order(:position, :id) }, dependent: :destroy
 
   validates :name, presence: true
   validates :ingredients, presence: true
-  validates :yield_portions, numericality: { greater_than_or_equal_to: 1 }
+  validates :portion_size_grams,
+    numericality: { greater_than: 0, less_than: PORTION_SIZE_GRAMS_MAX }
   validates :calories,
     numericality: { greater_than_or_equal_to: 0, less_than: CALORIES_MAX },
     allow_nil: true
@@ -19,27 +22,47 @@ class Recipe < ApplicationRecord
   validate :macro_decimal_places
 
   def calories_per_portion
-    per_portion(calories)
+    normalized_macro(calories)
   end
 
   def proteins_per_portion
-    per_portion(proteins)
+    normalized_macro(proteins)
   end
 
   def carbs_per_portion
-    per_portion(carbs)
+    normalized_macro(carbs)
   end
 
   def fats_per_portion
-    per_portion(fats)
+    normalized_macro(fats)
+  end
+
+  def calories_for_grams(grams)
+    macro_for_grams(calories, grams)
+  end
+
+  def proteins_for_grams(grams)
+    macro_for_grams(proteins, grams)
+  end
+
+  def carbs_for_grams(grams)
+    macro_for_grams(carbs, grams)
+  end
+
+  def fats_for_grams(grams)
+    macro_for_grams(fats, grams)
   end
 
   private
 
-  def per_portion(total)
-    return nil if total.nil? || yield_portions.blank? || yield_portions.zero?
+  def normalized_macro(value)
+    value&.to_f
+  end
 
-    total.to_f / yield_portions
+  def macro_for_grams(total, grams)
+    return nil if total.nil? || grams.blank? || portion_size_grams.blank? || portion_size_grams.zero?
+
+    total.to_f * grams.to_f / portion_size_grams.to_f
   end
 
   def macro_decimal_places

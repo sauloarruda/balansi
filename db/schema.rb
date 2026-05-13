@@ -10,11 +10,39 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_11_134353) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_11_180500) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
     t.datetime "requested_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+  end
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.index [ "blob_id" ], name: "index_active_storage_attachments_on_blob_id"
+    t.index [ "record_type", "record_id", "name", "blob_id" ], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.string "filename", null: false
+    t.string "key", null: false
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.index [ "key" ], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index [ "blob_id", "variation_digest" ], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
   create_table "exercises", force: :cascade do |t|
@@ -29,6 +57,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_134353) do
     t.datetime "updated_at", null: false
     t.index [ "journal_id", "status" ], name: "exercises_journal_status_idx"
     t.index [ "journal_id" ], name: "index_exercises_on_journal_id"
+  end
+
+  create_table "images", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "recipe_id", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "recipe_id", "position" ], name: "images_recipe_position_idx"
+    t.index [ "recipe_id" ], name: "index_images_on_recipe_id"
   end
 
   create_table "journals", force: :cascade do |t|
@@ -126,9 +163,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_134353) do
     t.text "instructions"
     t.string "name", null: false
     t.integer "patient_id", null: false
+    t.decimal "portion_size_grams", precision: 8, scale: 2, null: false
     t.decimal "proteins", precision: 8, scale: 2
     t.datetime "updated_at", null: false
-    t.integer "yield_portions", null: false
     t.index [ "patient_id", "name" ], name: "recipes_patient_name_idx"
     t.index [ "patient_id" ], name: "index_recipes_on_patient_id"
   end
@@ -152,8 +189,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_134353) do
     t.index [ "email" ], name: "index_users_on_email", unique: true
   end
 
-  add_foreign_key "account_verification_keys", "users", column: "id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "exercises", "journals", on_delete: :cascade
+  add_foreign_key "images", "recipes", on_delete: :cascade
   add_foreign_key "journals", "patients", on_delete: :cascade
   add_foreign_key "meals", "journals", on_delete: :cascade
   add_foreign_key "patient_professional_accesses", "patients", on_delete: :cascade

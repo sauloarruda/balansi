@@ -110,3 +110,4 @@ gem "bcrypt", "~> 3.1", require: false
 gem "sequel-activerecord_connection", "~> 2.0", require: false
 gem "sentry-ruby"
 gem "sentry-rails"
+gem "aws-sdk-s3", require: false

@@ -25,7 +25,9 @@ Rails.application.routes.draw do # rubocop:disable Metrics/BlockLength
     resource :personal_profile, only: [ :show, :update ]
     resource :clinical_assessment, only: [ :show, :update ]
     resources :professional_accesses, only: [ :index, :create, :destroy ]
-    resources :recipes
+    resources :recipes do
+      resources :images, only: [ :destroy ], controller: "recipe_images"
+    end
   end
 
   scope path: "professional", module: "professionals", as: "professional" do

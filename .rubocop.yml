@@ -41,3 +41,4 @@ Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
     - "db/schema.rb"
+    - "db/*_schema.rb"

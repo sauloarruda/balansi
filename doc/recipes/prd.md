@@ -18,10 +18,10 @@ In v1, the module introduces:
 
 ### 2.1 Goals
 
-- Allow users to create private recipes with a name, instructions, list of ingredients, and portion yield.
+- Allow users to create private recipes with a name, instructions, list of ingredients, and portion size in grams.
 - Allow users to upload and manage recipe images (stored in S3 with optimized variants).
 - Enable quick logging of recipes in the meal journal using an `@` mention autocomplete picker.
-- Automatically calculate the nutritional value of logged portions (e.g., if a recipe yields 4 portions and the user logs 1 portion, the system logs 25% of the total macros).
+- Automatically calculate the nutritional value of logged portions or gram amounts (e.g., if one yogurt portion is 200 g and the user logs 150 g, the system applies 75% of the portion macros).
 - Provide a responsive grid UI to manage the personal recipe library.
 - **Long-term Vision (Food Database):** Serve as a foundational building block for a tagged food database. By collecting user descriptions, macro information, and high-quality images, this module will gradually build a dataset to train future ML models for automated food image recognition.
 
@@ -52,7 +52,7 @@ In v1, the module introduces:
 
 ### 4.1 In Scope
 
-- **Recipe Management (CRUD):** Name, Description/Instructions, Ingredients (free text), Yield (number of portions), macros per portion.
+- **Recipe Management (CRUD):** Name, Description/Instructions, Ingredients (free text), portion size in grams, macros per portion.
 - **Image Management:** Upload to S3 via ActiveStorage, displaying optimized variants.
 - **Journal Integration:** `@` mention picker in the `meal_description` text area on the "New Meal" form.
 - **Automated Calculation:** AI and system logic to parse "@My Recipe (1 portion)" and accurately map the correct macros.
@@ -65,14 +65,14 @@ In v1, the module introduces:
 ### 5.1 Recipe CRUD
 
 - **FR-REC-01:** A user must be able to create, read, update, and delete their own recipes.
-- **FR-REC-02:** A recipe must include: `name` (required), `ingredients` (required), `instructions` (optional), `yield_portions` (required, min 1), `image` (optional).
-- **FR-REC-03:** The system must calculate the total nutritional value (Calories, Protein, Carbs, Fat) of the recipe upon creation via AI analysis of the ingredients.
+- **FR-REC-02:** A recipe must include: `name` (required), `ingredients` (required), `instructions` (optional), `portion_size_grams` (required, greater than 0), `image` (optional).
+- **FR-REC-03:** The system must calculate the nutritional value for one portion (Calories, Protein, Carbs, Fat) of the recipe upon creation via AI analysis of the ingredients and portion size.
   - If the user has already manually filled out the macros before saving, the AI analysis must be skipped.
   - The user must always be able to manually edit and override the AI-calculated macros after the analysis is complete.
 
 ### 5.2 Image Management
 
-- **FR-IMG-01:** Users can upload a cover image for their recipe.
+- **FR-IMG-01:** Users can upload multiple images for their recipe.
 - **FR-IMG-02:** The system must upload the image to an S3 bucket.
 - **FR-IMG-03:** The system must generate optimized variants for different UI contexts:
   - **Thumbnail (Search/Picker):** e.g., 100x100px (cropped/square) for the `@` mention dropdown and small list views.
@@ -84,7 +84,7 @@ In v1, the module introduces:
 - **FR-JNL-01:** The "New Meal" form (`meal_description` textarea) must support an autocomplete trigger using the `@` character.
 - **FR-JNL-02:** Typing `@` followed by text must search the user's private recipes and display a dropdown/picker.
 - **FR-JNL-03:** Selecting a recipe from the picker must insert a structured reference (e.g., `@[Recipe Name](id)`) into the text.
-- **FR-JNL-04:** When processing the meal log via AI, the system must explicitly inject the recipe's contextual data (total yield portions and total macros) into the LLM prompt. This ensures the LLM understands the exact nutritional value to apply proportionally based on the user's logged amount.
+- **FR-JNL-04:** When processing the meal log via AI, the system must explicitly inject the recipe's contextual data (portion size in grams and per-portion macros) into the LLM prompt. This ensures the LLM understands the exact nutritional value to apply proportionally based on the user's logged amount.
 
 ---
 
@@ -95,9 +95,9 @@ In v1, the module introduces:
 1. User navigates to the "Recipes" section from the sidebar.
 2. User clicks "New Recipe".
 3. System displays the recipe form.
-4. User enters name, ingredients, instructions, yield portions, and uploads an image.
+4. User enters name, ingredients, instructions, portion size in grams, and uploads an image.
 5. User clicks "Save".
-6. System analyzes the ingredients to calculate total macros, uploads the image to S3, and saves the recipe.
+6. System analyzes the ingredients to calculate macros for one portion, uploads the image to S3, and saves the recipe.
 7. User sees the new recipe in their grid view.
 
 ### 6.2 Flow: Log a Meal using a Recipe
@@ -108,7 +108,7 @@ In v1, the module introduces:
 4. User selects "Bolo de Banana". The text area updates to "Eu comi 1 porção de @Bolo de Banana".
 5. User clicks "Analisar com IA".
 6. System parses the text, recognizes the recipe reference and the "1 porção" quantity.
-7. System calculates the macros (1 / total yield * total macros) and presents the review screen.
+7. System calculates the macros from the logged amount and the recipe's portion size, then presents the review screen.
 8. User confirms and the meal is logged.
 
 ---
@@ -126,7 +126,7 @@ In v1, the module introduces:
 |  | [ Image ]      |  | [ Image ]      |                 |
 |  | Bolo de Banana |  | Frango Fit     |                 |
 |  | 200 kcal/porç  |  | 350 kcal/porç  |                 |
-|  | 4 porções      |  | 2 porções      |                 |
+|  | 200 g/porção   |  | 180 g/porção   |                 |
 |  +----------------+  +----------------+                 |
 |                                                         |
 +---------------------------------------------------------+
@@ -174,7 +174,7 @@ In v1, the module introduces:
 - A user can create a recipe with an image and view it on a dedicated recipes page.
 - Images are correctly uploaded to S3 and served via optimized variants.
 - On the New Meal form, typing `@` triggers a dropdown of the user's saved recipes.
-- Logging a meal with a recipe reference correctly calculates the macros based on the fraction of portions consumed.
+- Logging a meal with a recipe reference correctly calculates the macros based on portions or gram amounts consumed.
 - Professionals can view the recipe details when reviewing a patient's meal log.
 
 ---

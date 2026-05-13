@@ -408,24 +408,31 @@ en:
         title: "Recipes"
       index:
         title: "Recipes"
-        subtitle: "Keep your repeat meals with ingredients, yield, and macro totals in one place."
+        subtitle: "Keep your repeat meals with ingredients, portion size, and macros in one place."
         empty_title: "Build your first recipe"
         empty: "Save recipes you use often so each portion is easier to log later."
-        yield:
-          one: "%{count} portion"
-          other: "%{count} portions"
+        portion_size: "%{grams} g per portion"
       new:
         title: "New recipe"
-        subtitle: "Add the ingredients, preparation notes, and total nutrition for the full recipe."
+        subtitle: "Add the ingredients, preparation notes, portion size, and nutrition for one portion."
       edit:
         title: "Edit recipe"
-        subtitle: "Update recipe details while keeping portions and macro totals aligned."
+        subtitle: "Update recipe details while keeping portion size and nutrition aligned."
       show:
         nutrition: "Nutrition"
         per_portion: "Per portion"
+        nutrition_per_portion: "Nutrition per portion"
       form:
-        nutrition_totals: "Recipe totals"
-        nutrition_hint: "Use the totals for the full recipe. Per-portion values are calculated from the yield."
+        nutrition_per_portion: "Nutrition per portion"
+        nutrition_hint: "Use the nutrition values for one portion of the size above."
+        portion_size_hint: "Define how many grams count as one portion, for example 200 g."
+        images_label: "Recipe images"
+        images_hint: "PNG, JPG, or WebP. Images appear in your recipe library and recipe details."
+      images:
+        previous: "Previous image"
+        next: "Next image"
+        close: "Close image"
+        processing: "Image processing"
       nutrition:
         calories: "Calories"
         proteins: "Proteins"
@@ -443,11 +450,14 @@ en:
         view: "View"
         edit: "Edit"
         delete: "Delete"
+        delete_image: "Delete image"
         back_to_recipes: "Back to recipes"
+        view_image: "View full recipe image"
       messages:
         created: "Recipe created successfully."
         updated: "Recipe updated successfully."
         deleted: "Recipe deleted successfully."
+        image_deleted: "Recipe image deleted successfully."
     professional_accesses:
       navigation:
         title: "Sharing"
@@ -572,7 +582,8 @@ en:
         name: "Name"
         ingredients: "Ingredients"
         instructions: "Instructions"
-        yield_portions: "Yield portions"
+        portion_size_grams: "Portion size (g)"
+        images: "Recipe images"
         calories: "Calories (kcal)"
         proteins: "Proteins (g)"
         carbs: "Carbs (g)"

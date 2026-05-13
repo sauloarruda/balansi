@@ -6,6 +6,13 @@ RSpec.describe Recipe, type: :model do
       recipe = create(:recipe)
       expect(recipe.patient).to be_present
     end
+
+    it "has many images" do
+      recipe = create(:recipe)
+      image = create(:image, recipe: recipe)
+
+      expect(recipe.images).to include(image)
+    end
   end
 
   describe "validations" do
@@ -32,13 +39,13 @@ RSpec.describe Recipe, type: :model do
       expect(recipe.errors[:ingredients]).to be_present
     end
 
-    it "requires yield portions greater than or equal to one" do
-      recipe = build(:recipe, yield_portions: 0)
+    it "requires portion size greater than zero" do
+      recipe = build(:recipe, portion_size_grams: 0)
       expect(recipe).not_to be_valid
-      expect(recipe.errors[:yield_portions]).to be_present
+      expect(recipe.errors[:portion_size_grams]).to be_present
     end
 
-    it "allows recipes without macro totals" do
+    it "allows recipes without macro values" do
       recipe = build(:recipe,
         calories: nil,
         proteins: nil,
@@ -53,7 +60,7 @@ RSpec.describe Recipe, type: :model do
       expect(recipe).to be_valid
     end
 
-    it "validates macro totals are non-negative when present" do
+    it "validates macro values are non-negative when present" do
       recipe = build(:recipe,
         calories: -1,
         proteins: -1,
@@ -84,21 +91,35 @@ RSpec.describe Recipe, type: :model do
   end
 
   describe "per-portion helpers" do
-    it "calculates macro values from totals and yield" do
+    it "returns the macro values stored for one portion" do
       recipe = build(:recipe,
-        yield_portions: 4,
-        calories: 1_000,
+        portion_size_grams: 200,
+        calories: 500,
         proteins: 80.5,
         carbs: 120.25,
         fats: 40.75)
 
-      expect(recipe.calories_per_portion).to eq(250.0)
-      expect(recipe.proteins_per_portion).to eq(20.125)
-      expect(recipe.carbs_per_portion).to eq(30.0625)
-      expect(recipe.fats_per_portion).to eq(10.1875)
+      expect(recipe.calories_per_portion).to eq(500.0)
+      expect(recipe.proteins_per_portion).to eq(80.5)
+      expect(recipe.carbs_per_portion).to eq(120.25)
+      expect(recipe.fats_per_portion).to eq(40.75)
     end
 
-    it "returns nil for missing macro totals" do
+    it "calculates macro values proportionally for a gram amount" do
+      recipe = build(:recipe,
+        portion_size_grams: 200,
+        calories: 300,
+        proteins: 20,
+        carbs: 30,
+        fats: 10)
+
+      expect(recipe.calories_for_grams(150)).to eq(225.0)
+      expect(recipe.proteins_for_grams(150)).to eq(15.0)
+      expect(recipe.carbs_for_grams(150)).to eq(22.5)
+      expect(recipe.fats_for_grams(150)).to eq(7.5)
+    end
+
+    it "returns nil for missing macro values" do
       recipe = build(:recipe,
         calories: nil,
         proteins: nil,
@@ -109,6 +130,7 @@ RSpec.describe Recipe, type: :model do
       expect(recipe.proteins_per_portion).to be_nil
       expect(recipe.carbs_per_portion).to be_nil
       expect(recipe.fats_per_portion).to be_nil
+      expect(recipe.calories_for_grams(150)).to be_nil
     end
   end
 end

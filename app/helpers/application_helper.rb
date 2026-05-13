@@ -1,5 +1,6 @@
 module ApplicationHelper
   include HeroiconHelper
+  include RecipeImagesHelper
   include ActionView::Helpers::NumberHelper
 
   def localized_decimal(value, precision: 1)

@@ -456,24 +456,31 @@ pt:
         title: "Receitas"
       index:
         title: "Receitas"
-        subtitle: "Mantenha suas preparações recorrentes com ingredientes, rendimento e macros em um só lugar."
+        subtitle: "Mantenha suas preparações recorrentes com ingredientes, tamanho de porção e macros em um só lugar."
         empty_title: "Crie sua primeira receita"
         empty: "Salve receitas que você usa com frequência para facilitar o registro de cada porção depois."
-        yield:
-          one: "%{count} porção"
-          other: "%{count} porções"
+        portion_size: "%{grams} g por porção"
       new:
         title: "Nova receita"
-        subtitle: "Adicione ingredientes, modo de preparo e a nutrição total da receita inteira."
+        subtitle: "Adicione ingredientes, modo de preparo, tamanho da porção e nutrição de uma porção."
       edit:
         title: "Editar receita"
-        subtitle: "Atualize os detalhes mantendo porções e macros totais alinhados."
+        subtitle: "Atualize os detalhes mantendo tamanho da porção e nutrição alinhados."
       show:
         nutrition: "Nutrição"
         per_portion: "Por porção"
+        nutrition_per_portion: "Nutrição por porção"
       form:
-        nutrition_totals: "Totais da receita"
-        nutrition_hint: "Use os totais da receita inteira. Os valores por porção são calculados pelo rendimento."
+        nutrition_per_portion: "Nutrição por porção"
+        nutrition_hint: "Use os valores nutricionais de uma porção do tamanho informado acima."
+        portion_size_hint: "Defina quantos gramas contam como uma porção, por exemplo 200 g."
+        images_label: "Imagens da receita"
+        images_hint: "PNG, JPG ou WebP. As imagens aparecem na biblioteca e nos detalhes da receita."
+      images:
+        previous: "Imagem anterior"
+        next: "Próxima imagem"
+        close: "Fechar imagem"
+        processing: "Imagem em processamento"
       nutrition:
         calories: "Calorias"
         proteins: "Proteínas"
@@ -491,11 +498,14 @@ pt:
         view: "Ver"
         edit: "Editar"
         delete: "Excluir"
+        delete_image: "Excluir imagem"
         back_to_recipes: "Voltar para receitas"
+        view_image: "Ver imagem completa da receita"
       messages:
         created: "Receita criada com sucesso."
         updated: "Receita atualizada com sucesso."
         deleted: "Receita excluída com sucesso."
+        image_deleted: "Imagem da receita excluída com sucesso."
     professional_accesses:
       navigation:
         title: "Compartilhamento"
@@ -620,7 +630,8 @@ pt:
         name: "Nome"
         ingredients: "Ingredientes"
         instructions: "Modo de preparo"
-        yield_portions: "Porções"
+        portion_size_grams: "Tamanho da porção (g)"
+        images: "Imagens da receita"
         calories: "Calorias (kcal)"
         proteins: "Proteínas (g)"
         carbs: "Carboidratos (g)"
