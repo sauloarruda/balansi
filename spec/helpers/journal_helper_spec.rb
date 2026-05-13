@@ -35,10 +35,9 @@ RSpec.describe JournalHelper, type: :helper do
     it "renders recipe mentions as visual chips" do
       patient = create(:patient)
       recipe = create(:recipe, patient: patient, name: "Bolo de banana", portion_size_grams: 180)
-      html = helper.format_meal_description(
-        "Comi @[Bolo de banana](recipe:#{recipe.id}) hoje",
-        recipe_scope: patient.recipes
-      )
+      allow(helper).to receive(:current_patient_recipes).and_return(patient.recipes)
+
+      html = helper.format_meal_description("Comi @[Bolo de banana](recipe:#{recipe.id}) hoje")
 
       expect(html).to include("Comi ")
       expect(html).to include("Bolo de banana (180g)")
@@ -65,13 +64,31 @@ RSpec.describe JournalHelper, type: :helper do
       patient = create(:patient)
       recipe = create(:recipe, patient: patient, name: "Iogurte", portion_size_grams: 200)
       create(:recipe, name: "Private", portion_size_grams: 300)
+      allow(helper).to receive(:current_patient_recipes).and_return(patient.recipes)
 
-      data = helper.meal_recipe_mention_data(
-        "Comi @[Iogurte](recipe:#{recipe.id})",
-        recipe_scope: patient.recipes
-      )
+      data = helper.meal_recipe_mention_data("Comi @[Iogurte](recipe:#{recipe.id})")
 
       expect(data).to eq([ { id: recipe.id, portion_size_grams: 200.0 } ])
+    end
+
+    it "does not return portion metadata for recipes owned by another patient" do
+      patient = create(:patient)
+      other_patient = create(:patient)
+      other_recipe = create(:recipe, patient: other_patient, name: "Iogurte", portion_size_grams: 200)
+      allow(helper).to receive(:current_patient_recipes).and_return(patient.recipes)
+
+      data = helper.meal_recipe_mention_data("Comi @[Iogurte](recipe:#{other_recipe.id})")
+
+      expect(data).to eq([])
+    end
+
+    it "returns no portion metadata without a current patient" do
+      recipe = create(:recipe, name: "Iogurte", portion_size_grams: 200)
+      allow(helper).to receive(:current_patient_recipes).and_return(Recipe.none)
+
+      data = helper.meal_recipe_mention_data("Comi @[Iogurte](recipe:#{recipe.id})")
+
+      expect(data).to eq([])
     end
   end
 end

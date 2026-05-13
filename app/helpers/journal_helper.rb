@@ -3,13 +3,13 @@ module JournalHelper
     I18n.l(date, format: :long)
   end
 
-  def format_meal_description(description, recipe_scope: nil)
+  def format_meal_description(description)
     return "" if description.blank?
 
     nodes = []
     text = description.to_s
     last_index = 0
-    portions_by_recipe_id = meal_recipe_portions_by_id(text, recipe_scope)
+    portions_by_recipe_id = meal_recipe_portions_by_id(text)
 
     text.to_enum(:scan, meal_recipe_mention_pattern).each do
       match = Regexp.last_match
@@ -22,11 +22,11 @@ module JournalHelper
     safe_join(nodes)
   end
 
-  def meal_recipe_mention_data(description, recipe_scope:)
+  def meal_recipe_mention_data(description)
     recipe_ids = meal_recipe_mention_ids(description)
-    return [] if recipe_ids.empty? || recipe_scope.nil?
+    return [] if recipe_ids.empty?
 
-    recipe_scope
+    current_patient_recipes
       .where(id: recipe_ids)
       .pluck(:id, :portion_size_grams)
       .map do |id, portion_size_grams|
@@ -216,11 +216,11 @@ module JournalHelper
     description.to_s.scan(meal_recipe_mention_pattern).map { |_name, id| id }.uniq
   end
 
-  def meal_recipe_portions_by_id(description, recipe_scope)
+  def meal_recipe_portions_by_id(description)
     recipe_ids = meal_recipe_mention_ids(description)
-    return {} if recipe_ids.empty? || recipe_scope.nil?
+    return {} if recipe_ids.empty?
 
-    recipe_scope
+    current_patient_recipes
       .where(id: recipe_ids)
       .pluck(:id, :portion_size_grams)
       .to_h
@@ -245,5 +245,11 @@ module JournalHelper
 
     portion = number_with_precision(portion_size_grams, precision: 2, strip_insignificant_zeros: true)
     "#{name} (#{portion}g)"
+  end
+
+  def current_patient_recipes
+    return Recipe.none unless respond_to?(:current_patient)
+
+    current_patient&.recipes || Recipe.none
   end
 end
