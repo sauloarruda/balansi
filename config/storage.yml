@@ -33,4 +33,4 @@ tigris:
   region: <%= ENV['AWS_REGION'] || 'auto' %>
   bucket: <%= ENV['BUCKET_NAME'] %>
   endpoint: https://fly.storage.tigris.dev
-  force_path_style: true # Necessário para compatibilidade com Tigris
+  force_path_style: true

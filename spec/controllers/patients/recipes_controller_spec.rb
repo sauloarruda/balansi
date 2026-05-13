@@ -186,6 +186,16 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(recipe.images.first.file.blob.content_type).to eq("image/png")
     end
 
+    it "rolls back the recipe when image upload fails" do
+      allow(controller).to receive(:attach_images).and_raise(StandardError, "attach failed")
+
+      expect do
+        expect do
+          post :create, params: { recipe: valid_params.merge(images: [ uploaded_recipe_image ]) }
+        end.to raise_error(StandardError, "attach failed")
+      end.not_to change { patient.recipes.count }
+    end
+
     it "re-renders the form when validation fails" do
       expect do
         post :create, params: { recipe: valid_params.merge(name: "") }
@@ -253,6 +263,24 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to redirect_to(patient_recipe_path(recipe))
       expect(recipe.reload.images.count).to eq(1)
       expect(recipe.images.first.file).to be_attached
+    end
+
+    it "rolls back recipe updates when image upload fails" do
+      allow(controller).to receive(:attach_images).and_raise(StandardError, "attach failed")
+
+      expect do
+        expect do
+          patch :update, params: {
+            id: recipe.id,
+            recipe: {
+              name: "Updated name",
+              ingredients: recipe.ingredients,
+              portion_size_grams: recipe.portion_size_grams,
+              images: [ uploaded_recipe_image ]
+            }
+          }
+        end.to raise_error(StandardError, "attach failed")
+      end.not_to change { recipe.reload.name }
     end
 
     it "re-renders the edit form when validation fails" do
