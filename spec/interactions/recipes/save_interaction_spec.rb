@@ -97,7 +97,10 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
   it "does not persist a new recipe when AI nutrition analysis fails" do
     recipe = patient.recipes.build
     analysis_errors = ActiveModel::Errors.new(Recipe.new)
-    analysis_errors.add(:base, I18n.t("patient.recipes.errors.nutrition_analysis_unavailable"))
+    analysis_errors.add(
+      :base,
+      I18n.t("patient.recipes.errors.nutrition_analysis_unavailable", locale: user.language)
+    )
     allow(Recipes::AnalyzeNutritionInteraction).to receive(:run).and_return(
       instance_double(ActiveInteraction::Base, valid?: false, errors: analysis_errors)
     )
