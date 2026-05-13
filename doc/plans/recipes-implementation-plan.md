@@ -302,6 +302,8 @@ Estimated size: 300-500 changed lines.
 
 ## Phase 6: Recipe Search Endpoint
 
+Status: Complete.
+
 Purpose: provide a small backend API for the meal mention picker.
 
 Scope:
@@ -335,6 +337,14 @@ Acceptance criteria:
 - Search returns only recipes owned by the current patient.
 - Search response contains only the fields needed by the picker.
 - Search has an index strategy suitable for `patient_id` and `name`.
+
+Implementation status:
+
+- `GET /patient/recipes/search?q=...` returns JSON picker payloads for current patient recipes only.
+- `Recipes::SearchInteraction` owns the patient-scoped name-prefix search, ordering, image preloading, and 10-result limit.
+- Response payload is limited to recipe id, name, thumbnail URL, per-portion nutrition, and portion size.
+- The existing `recipes_patient_name_idx` composite index supports patient-scoped name search.
+- Interaction and request specs cover ownership isolation, JSON shape, result limit, ordering, and blank queries.
 
 Estimated size: 150-300 changed lines.
 
