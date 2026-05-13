@@ -13,9 +13,9 @@ module Patients
     end
 
     def create
-      @recipe = current_patient.recipes.build(recipe_params)
+      @recipe = current_patient.recipes.build
 
-      if save_recipe_with_images
+      if save_recipe
         redirect_to patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created")
       else
         render :new, status: :unprocessable_entity
@@ -25,9 +25,7 @@ module Patients
     def edit; end
 
     def update
-      @recipe.assign_attributes(recipe_params)
-
-      if save_recipe_with_images
+      if save_recipe
         redirect_to patient_recipe_path(@recipe), notice: t("patient.recipes.messages.updated")
       else
         render :edit, status: :unprocessable_entity
@@ -65,18 +63,24 @@ module Patients
       )
     end
 
-    def attach_images
-      Array(params.dig(:recipe, :images)).compact_blank.each.with_index(@recipe.images.count) do |uploaded_file, position|
-        @recipe.images.create!(file: uploaded_file, position: position)
-      end
+    def save_recipe
+      result = Recipes::SaveInteraction.run(
+        recipe: @recipe,
+        user: current_user,
+        attributes: recipe_params,
+        images: recipe_images,
+        calculate_macros_with_ai: calculate_macros_with_ai?
+      )
+
+      result.valid?
     end
 
-    def save_recipe_with_images
-      Recipe.transaction do
-        @recipe.save.tap do |saved|
-          attach_images if saved
-        end
-      end
+    def recipe_images
+      Array(params.dig(:recipe, :images)).compact_blank
+    end
+
+    def calculate_macros_with_ai?
+      ActiveModel::Type::Boolean.new.cast(params.dig(:recipe, :calculate_macros_with_ai))
     end
   end
 end

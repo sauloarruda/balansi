@@ -472,6 +472,7 @@ pt:
         nutrition_per_portion: "Nutrição por porção"
       form:
         nutrition_per_portion: "Nutrição por porção"
+        calculate_macros_with_ai: "Calcular macros usando AI"
         nutrition_hint: "Use os valores nutricionais de uma porção do tamanho informado acima."
         portion_size_hint: "Defina quantos gramas contam como uma porção, por exemplo 200 g."
         images_label: "Imagens da receita"
@@ -506,6 +507,8 @@ pt:
         updated: "Receita atualizada com sucesso."
         deleted: "Receita excluída com sucesso."
         image_deleted: "Imagem da receita excluída com sucesso."
+      errors:
+        nutrition_analysis_unavailable: "Não foi possível analisar esta receita agora. Informe os valores nutricionais manualmente ou tente novamente."
     professional_accesses:
       navigation:
         title: "Compartilhamento"

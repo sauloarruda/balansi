@@ -142,6 +142,13 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("recipe[name]")
+      expect(response.body).to include(I18n.t("patient.recipes.form.calculate_macros_with_ai"))
+      expect(response.body).to include(%(name="recipe[calculate_macros_with_ai]"))
+      expect(response.body).to include(%(checked="checked"))
+      expect(response.body).to include(%(id="recipe_manual_nutrition_fields"))
+      expect(response.body).to include(%(hidden=""))
+      expect(response.body).to include(%(name="recipe[calories]"))
+      expect(response.body).to include(%(disabled="disabled"))
       expect(response.body).to include(I18n.t("patient.recipes.actions.create"))
     end
   end
@@ -161,6 +168,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
     end
 
     it "creates a recipe for the current patient" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+
       expect do
         post :create, params: { recipe: valid_params }
       end.to change { patient.recipes.count }.by(1)
@@ -173,6 +182,50 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(recipe.fats).to eq(9.38)
       expect(response).to redirect_to(patient_recipe_path(recipe))
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
+      expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "creates a recipe with AI nutrition when macro values are missing" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+        recipe.assign_attributes(calories: 430, proteins: 25.5, carbs: 56.25, fats: 10.75)
+        instance_double(ActiveInteraction::Base, valid?: true)
+      end
+
+      expect do
+        post :create, params: {
+          recipe: valid_params.except(:calories, :proteins, :carbs, :fats).merge(calculate_macros_with_ai: "1")
+        }
+      end.to change { patient.recipes.count }.by(1)
+
+      recipe = patient.recipes.last
+      expect(recipe.calories).to eq(430)
+      expect(recipe.proteins).to eq(25.5)
+      expect(recipe.carbs).to eq(56.25)
+      expect(recipe.fats).to eq(10.75)
+      expect(response).to redirect_to(patient_recipe_path(recipe))
+      expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+        recipe: an_instance_of(Recipe),
+        user_id: patient_user.id,
+        user_language: patient_user.language,
+        persist: false
+      )
+    end
+
+    it "re-renders the form without creating the recipe when AI nutrition fails" do
+      errors = ActiveModel::Errors.new(Recipe.new)
+      errors.add(:base, I18n.t("patient.recipes.errors.nutrition_analysis_unavailable"))
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run).and_return(
+        instance_double(ActiveInteraction::Base, valid?: false, errors: errors)
+      )
+
+      expect do
+        post :create, params: {
+          recipe: valid_params.except(:calories, :proteins, :carbs, :fats).merge(calculate_macros_with_ai: "1")
+        }
+      end.not_to change { patient.recipes.count }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include(I18n.t("patient.recipes.errors.nutrition_analysis_unavailable"))
     end
 
     it "uploads images for the recipe" do
@@ -187,7 +240,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
     end
 
     it "rolls back the recipe when image upload fails" do
-      allow(controller).to receive(:attach_images).and_raise(StandardError, "attach failed")
+      allow_any_instance_of(Recipes::SaveInteraction).to receive(:attach_images).and_raise(StandardError, "attach failed")
 
       expect do
         expect do
@@ -234,6 +287,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
     let!(:recipe) { create(:recipe, patient: patient, name: "Original name") }
 
     it "updates a recipe owned by the current patient" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+
       patch :update, params: {
         id: recipe.id,
         recipe: {
@@ -247,6 +302,31 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.updated"))
       expect(recipe.reload.name).to eq("Updated name")
       expect(recipe.portion_size_grams).to eq(150)
+      expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "allows manual edits to AI-generated nutrition values without reanalysis" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+
+      patch :update, params: {
+        id: recipe.id,
+        recipe: {
+          name: recipe.name,
+          ingredients: recipe.ingredients,
+          portion_size_grams: recipe.portion_size_grams,
+          calories: 510,
+          proteins: 31.5,
+          carbs: 62.25,
+          fats: 14.75
+        }
+      }
+
+      expect(response).to redirect_to(patient_recipe_path(recipe))
+      expect(recipe.reload.calories).to eq(510)
+      expect(recipe.proteins).to eq(31.5)
+      expect(recipe.carbs).to eq(62.25)
+      expect(recipe.fats).to eq(14.75)
+      expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
     end
 
     it "adds recipe images" do
@@ -266,7 +346,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
     end
 
     it "rolls back recipe updates when image upload fails" do
-      allow(controller).to receive(:attach_images).and_raise(StandardError, "attach failed")
+      allow_any_instance_of(Recipes::SaveInteraction).to receive(:attach_images).and_raise(StandardError, "attach failed")
 
       expect do
         expect do
