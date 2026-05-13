@@ -123,3 +123,28 @@ test("updateCounter does not fail when counter span is missing", () => {
   assert.doesNotThrow(() => controller.updateCounter())
   assert.equal(counterTarget.classList.contains("warning"), false)
 })
+
+test("updateCounter supports contenteditable targets", () => {
+  const CharacterCounterController = loadControllerClass()
+  const controller = new CharacterCounterController()
+  const span = { textContent: "" }
+  const counterTarget = {
+    classList: createClassList(),
+    querySelector(selector) {
+      return selector === "span" ? span : null
+    }
+  }
+
+  controller.hasInputTarget = true
+  controller.hasCounterTarget = true
+  controller.inputTarget = {
+    textContent: "0123456789",
+    dataset: { maxLength: "10" }
+  }
+  controller.counterTarget = counterTarget
+
+  controller.updateCounter()
+
+  assert.equal(span.textContent, 10)
+  assert.equal(counterTarget.classList.contains("warning"), true)
+})

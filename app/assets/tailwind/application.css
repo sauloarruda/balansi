@@ -11,6 +11,21 @@
 .ring-protein  { stroke: #3b82f6; }
 .ring-fat      { stroke: #f472b6; }
 
+.recipe-mention-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-inline: 0.125rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  background-color: #fdf2f8;
+  box-shadow: inset 0 0 0 1px #fbcfe8;
+  color: #9d174d;
+  font-size: 0.875rem;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
 /* Custom tooltip with arrow */
 .tooltip .tooltip-arrow {
   position: absolute;

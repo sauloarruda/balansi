@@ -13,6 +13,15 @@ RSpec.describe Recipes::SearchInteraction, type: :interaction do
     expect(result).to contain_exactly(matching_recipe)
   end
 
+  it "returns current patient recipes matching any part of the name" do
+    matching_recipe = create(:recipe, patient: patient, name: "Carne com legumes")
+    create(:recipe, patient: patient, name: "Carne assada")
+
+    result = described_class.run!(patient: patient, query: "legumes")
+
+    expect(result).to contain_exactly(matching_recipe)
+  end
+
   it "strips blank space around the query" do
     recipe = create(:recipe, patient: patient, name: "Bolo de cenoura")
 
@@ -39,5 +48,18 @@ RSpec.describe Recipes::SearchInteraction, type: :interaction do
     result = described_class.run!(patient: patient, query: "")
 
     expect(result).to be_empty
+  end
+
+  it "returns five recently updated recipes for explicit recent blank searches" do
+    older_recipe = create(:recipe, patient: patient, name: "Older")
+    recipes = 6.times.map do |index|
+      create(:recipe, patient: patient, name: "Recent #{index}", updated_at: index.minutes.from_now)
+    end
+    create(:recipe, name: "Other patient", updated_at: 1.hour.from_now)
+
+    result = described_class.run!(patient: patient, query: "", recent: true)
+
+    expect(result).to eq(recipes.last(5).reverse)
+    expect(result).not_to include(older_recipe)
   end
 end

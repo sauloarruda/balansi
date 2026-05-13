@@ -21,6 +21,23 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
     end
   end
 
+  describe "GET #edit" do
+    it "renders the recipe mention editor with the saved description" do
+      meal = Meal.create!(
+        journal: journal,
+        meal_type: "lunch",
+        description: "Comi @[Carne com legumes](recipe:6)",
+        status: "pending_patient"
+      )
+
+      get :edit, params: { journal_date: "2026-02-05", id: meal.id }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('data-recipe-mentions-target="editor"')
+      expect(response.body).to include('value="Comi @[Carne com legumes](recipe:6)"')
+    end
+  end
+
   describe "POST #create" do
     it "creates meal and auto-creates journal when needed" do
       interaction_errors = ActiveModel::Errors.new(Meal.new)

@@ -3,6 +3,40 @@ module JournalHelper
     I18n.l(date, format: :long)
   end
 
+  def format_meal_description(description, recipe_scope: nil)
+    return "" if description.blank?
+
+    nodes = []
+    text = description.to_s
+    last_index = 0
+    portions_by_recipe_id = meal_recipe_portions_by_id(text, recipe_scope)
+
+    text.to_enum(:scan, meal_recipe_mention_pattern).each do
+      match = Regexp.last_match
+      nodes.concat(meal_description_text_nodes(text[last_index...match.begin(0)]))
+      nodes << meal_recipe_chip(match[:name], portions_by_recipe_id[match[:id]])
+      last_index = match.end(0)
+    end
+
+    nodes.concat(meal_description_text_nodes(text[last_index..]))
+    safe_join(nodes)
+  end
+
+  def meal_recipe_mention_data(description, recipe_scope:)
+    recipe_ids = meal_recipe_mention_ids(description)
+    return [] if recipe_ids.empty? || recipe_scope.nil?
+
+    recipe_scope
+      .where(id: recipe_ids)
+      .pluck(:id, :portion_size_grams)
+      .map do |id, portion_size_grams|
+        {
+          id: id,
+          portion_size_grams: portion_size_grams.to_f
+        }
+      end
+  end
+
   def progress_percentage(consumed, goal)
     return 0 if goal.nil? || goal.zero?
     [ (consumed.to_f / goal * 100).round, 100 ].min
@@ -172,5 +206,44 @@ module JournalHelper
     else
       "#{label}: #{current.to_i}g"
     end
+  end
+
+  def meal_recipe_mention_pattern
+    /@\[ (?<name>[^\]]+) \]\(recipe:(?<id>\d+)\)/x
+  end
+
+  def meal_recipe_mention_ids(description)
+    description.to_s.scan(meal_recipe_mention_pattern).map { |_name, id| id }.uniq
+  end
+
+  def meal_recipe_portions_by_id(description, recipe_scope)
+    recipe_ids = meal_recipe_mention_ids(description)
+    return {} if recipe_ids.empty? || recipe_scope.nil?
+
+    recipe_scope
+      .where(id: recipe_ids)
+      .pluck(:id, :portion_size_grams)
+      .to_h
+      .transform_keys(&:to_s)
+  end
+
+  def meal_description_text_nodes(text)
+    text.to_s.split("\n", -1).flat_map.with_index do |line, index|
+      index.zero? ? [ line ] : [ tag.br, line ]
+    end
+  end
+
+  def meal_recipe_chip(name, portion_size_grams = nil)
+    tag.span(
+      meal_recipe_chip_label(name, portion_size_grams),
+      class: "recipe-mention-chip"
+    )
+  end
+
+  def meal_recipe_chip_label(name, portion_size_grams)
+    return name if portion_size_grams.blank?
+
+    portion = number_with_precision(portion_size_grams, precision: 2, strip_insignificant_zeros: true)
+    "#{name} (#{portion}g)"
   end
 end

@@ -30,4 +30,48 @@ RSpec.describe JournalHelper, type: :helper do
       expect(helper.balance_message_key("below_goal")).to eq(".below_goal")
     end
   end
+
+  describe "#format_meal_description" do
+    it "renders recipe mentions as visual chips" do
+      patient = create(:patient)
+      recipe = create(:recipe, patient: patient, name: "Bolo de banana", portion_size_grams: 180)
+      html = helper.format_meal_description(
+        "Comi @[Bolo de banana](recipe:#{recipe.id}) hoje",
+        recipe_scope: patient.recipes
+      )
+
+      expect(html).to include("Comi ")
+      expect(html).to include("Bolo de banana (180g)")
+      expect(html).to include("recipe-mention-chip")
+      expect(html).to include(" hoje")
+      expect(html).not_to include("@[Bolo de banana](recipe:#{recipe.id})")
+    end
+
+    it "escapes plain text and recipe names" do
+      html = helper.format_meal_description("<script>x</script> @[Bolo <caseiro>](recipe:123)")
+
+      expect(html).to include("&lt;script&gt;x&lt;/script&gt;")
+      expect(html).to include("Bolo &lt;caseiro&gt;")
+      expect(html).not_to include("<script>")
+    end
+
+    it "keeps descriptions without recipe mentions readable" do
+      expect(helper.format_meal_description("Arroz e feijão")).to eq("Arroz e feijão")
+    end
+  end
+
+  describe "#meal_recipe_mention_data" do
+    it "returns portion metadata for mentioned recipes in scope" do
+      patient = create(:patient)
+      recipe = create(:recipe, patient: patient, name: "Iogurte", portion_size_grams: 200)
+      create(:recipe, name: "Private", portion_size_grams: 300)
+
+      data = helper.meal_recipe_mention_data(
+        "Comi @[Iogurte](recipe:#{recipe.id})",
+        recipe_scope: patient.recipes
+      )
+
+      expect(data).to eq([ { id: recipe.id, portion_size_grams: 200.0 } ])
+    end
+  end
 end

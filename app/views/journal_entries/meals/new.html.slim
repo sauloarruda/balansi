@@ -14,12 +14,7 @@ h1.text-3xl.font-bold.mb-6 = t("meals.new.heading")
       = f.label :meal_type, t("meals.new.meal_type")
       = f.select :meal_type, options_for_select([[t("defaults.meal_type.breakfast"), "breakfast"], [t("defaults.meal_type.lunch"), "lunch"], [t("defaults.meal_type.snack"), "snack"], [t("defaults.meal_type.dinner"), "dinner"]], @meal.meal_type), {}, { required: true }
 
-    .mb-6 data-controller="character-counter"
-      = f.label :description, t("meals.new.description")
-      = f.text_area :description, placeholder: t("meals.new.description_placeholder"), maxlength: 500, rows: 8, required: true, data: { target: "character-counter.input" }
-      .text-right.text-sm.text-gray-600.mt-1 data-character-counter-target="counter"
-        span 0
-        = " #{t("meals.new.characters")}"
+    = render "description_editor", form: f, label_text: t("meals.new.description"), placeholder: t("meals.new.description_placeholder"), characters_text: t("meals.new.characters")
 
     div class="flex flex-col sm:flex-row sm:items-center gap-2 pt-4 border-t border-gray-200"
       = f.submit t("meals.new.analyze"), tone: :pink, size: :sm, class: "w-full sm:w-auto", data: { "submit-lock-target": "submit" }

@@ -10,12 +10,7 @@ h1.text-3xl.font-bold.mb-6 = t("meals.edit.heading")
       = f.label :meal_type, t("meals.edit.meal_type")
       = f.select :meal_type, options_for_select([[t("defaults.meal_type.breakfast"), "breakfast"], [t("defaults.meal_type.lunch"), "lunch"], [t("defaults.meal_type.snack"), "snack"], [t("defaults.meal_type.dinner"), "dinner"]], @meal.meal_type), {}, { required: true }
 
-    .mb-6 data-controller="character-counter"
-      = f.label :description, t("meals.edit.description")
-      = f.text_area :description, placeholder: t("meals.edit.description_placeholder"), maxlength: 500, rows: 8, required: true, data: { target: "character-counter.input" }
-      .text-right.text-sm.text-gray-600.mt-1 data-character-counter-target="counter"
-        span 0
-        = " #{t("meals.edit.characters")}"
+    = render "description_editor", form: f, label_text: t("meals.edit.description"), placeholder: t("meals.edit.description_placeholder"), characters_text: t("meals.edit.characters")
 
     .mb-6.p-3.bg-blue-50.border.border-blue-200.rounded-lg
       p.text-sm.text-blue-800 = t("meals.edit.info_text")
