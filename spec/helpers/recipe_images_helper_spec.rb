@@ -17,7 +17,7 @@ RSpec.describe RecipeImagesHelper, type: :helper do
 
     it "renders the processed variant when it is ready" do
       image = create(:image)
-      image.file.variant(:standard).processed
+      mark_variant_processed(image, :standard)
 
       tag = helper.recipe_image_tag(image, :standard, alt: "Recipe", class: "recipe-image")
 

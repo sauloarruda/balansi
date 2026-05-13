@@ -42,8 +42,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
     it "renders recipe images with high-resolution modals" do
       recipe = create(:recipe, patient: patient, name: "Recipe with image")
       image = create(:image, recipe: recipe)
-      image.file.variant(:standard).processed
-      image.file.variant(:large).processed
+      mark_variant_processed(image, :standard)
+      mark_variant_processed(image, :large)
 
       get :index
 
@@ -112,8 +112,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
     it "shows the standard recipe image with a high-resolution modal" do
       recipe = create(:recipe, patient: patient, name: "Recipe with image")
       image = create(:image, recipe: recipe)
-      image.file.variant(:standard).processed
-      image.file.variant(:large).processed
+      mark_variant_processed(image, :standard)
+      mark_variant_processed(image, :large)
 
       get :show, params: { id: recipe.id }
 

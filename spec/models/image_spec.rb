@@ -52,7 +52,7 @@ RSpec.describe Image, type: :model do
 
       expect(image.variant_ready?(:standard)).to be false
 
-      image.file.variant(:standard).processed
+      mark_variant_processed(image, :standard)
 
       expect(image.variant_ready?(:standard)).to be true
     end
