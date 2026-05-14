@@ -10,8 +10,13 @@ module Patients
       def search_results
         ::Recipes::SearchInteraction.run!(
           patient: current_patient,
-          query: params[:q].to_s
+          query: params[:q].to_s,
+          recent: recent_results?
         )
+      end
+
+      def recent_results?
+        ActiveModel::Type::Boolean.new.cast(params[:recent])
       end
 
       def recipe_payload(recipe)

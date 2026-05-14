@@ -65,7 +65,9 @@ Append `?test_user_id=<id>` to any GET request in development to auto-sign-in as
 ## Conventions
 
 - Follow rubocop-rails-omakase style
+- Write all project documentation, commit messages, pull request titles, and pull request descriptions in English. This applies even when the conversation or implementation notes are in another language.
 - Use ActiveInteraction for any non-trivial business logic. Keep controllers thin: they should handle HTTP concerns such as authentication context, params, redirects/renders, status codes, and response serialization. Move filtering/search rules, persistence workflows, authorization-adjacent scoping, AI orchestration, calculations, and multi-step decisions into `app/interactions/` before adding or expanding controller actions. Prefer adding focused interaction specs instead of burying this behavior in controller/request specs only.
+- Always scope queries for models that have `patient_id` or `user_id` through the current authenticated owner before fetching records. Prefer association-scoped lookups such as `current_patient.recipes.find(params[:id])`, `current_user.records.find(...)`, or explicit filters like `Recipe.where(patient_id: current_patient.id, id: ids)`. Never resolve these records by global `id` alone, including in helpers, interactions, background jobs, JSON endpoints, and view support code; professional access flows must use their existing patient authorization scope.
 - Use Rails i18n for all user-facing copy. Do not hardcode literal strings in views, controllers, services, or flashes; use `t(...)` / `I18n.t(...)` and update `config/locales/pt.yml` and `config/locales/en.yml` together.
 - Slim templates (not ERB)
 - Prefer Hotwire (Turbo Frames/Streams) over full-page renders for interactivity

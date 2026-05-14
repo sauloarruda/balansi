@@ -20,8 +20,8 @@ export default class extends Controller {
 
   updateCounter() {
     if (this.hasInputTarget && this.hasCounterTarget) {
-      const length = this.inputTarget.value.length
-      const maxLength = this.inputTarget.maxLength || 140
+      const length = this.inputLength()
+      const maxLength = this.maxLength()
       const counterSpan = this.counterTarget.querySelector("span")
 
       if (counterSpan) {
@@ -35,5 +35,19 @@ export default class extends Controller {
         this.counterTarget.classList.remove("warning")
       }
     }
+  }
+
+  inputLength() {
+    if (typeof this.inputTarget.value === "string") {
+      return this.inputTarget.value.length
+    }
+
+    return this.inputTarget.textContent.length
+  }
+
+  maxLength() {
+    const maxLength = Number(this.inputTarget.maxLength || this.inputTarget.dataset.maxLength)
+
+    return Number.isFinite(maxLength) && maxLength > 0 ? maxLength : 140
   }
 }

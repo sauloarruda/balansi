@@ -5,7 +5,7 @@
   .flex.justify-between.items-start.mb-4
     div.flex-1
       h5.text-xl.font-semibold.tracking-tight.text-heading.leading-8.mb-2 = t("defaults.meal_type.#{meal.meal_type}")
-      p.text-body = meal.description
+      p.text-body = format_meal_description(meal.description)
     span.inline-flex.items-center.px-3.py-1.text-xs.font-bold.rounded-full class="#{status == 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}"
       = meal.status_text
   

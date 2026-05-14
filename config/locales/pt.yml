@@ -424,6 +424,10 @@ pt:
       characters: "/500 caracteres"
       analyze: "Analisar com IA"
       cancel: "Cancelar"
+    recipe_mentions:
+      loading: "Buscando..."
+      no_results: "Nenhuma receita encontrada"
+      error: "Não foi possível carregar receitas"
   meal:
     status:
       pending_llm: "Aguardando IA"

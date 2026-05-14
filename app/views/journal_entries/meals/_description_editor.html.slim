@@ -1,0 +1,14 @@
+- results_id = "meal_recipe_mentions_results"
+- initial_recipes = meal_recipe_mention_data(form.object.description)
+
+.mb-6 data-controller="character-counter recipe-mentions" data-recipe-mentions-search-url-value=search_patient_recipes_path data-recipe-mentions-loading-text-value=t("meals.recipe_mentions.loading") data-recipe-mentions-no-results-text-value=t("meals.recipe_mentions.no_results") data-recipe-mentions-error-text-value=t("meals.recipe_mentions.error") data-recipe-mentions-kcal-text-value=t("defaults.kcal") data-recipe-mentions-grams-text-value=t("defaults.grams") data-recipe-mentions-initial-recipes-value=initial_recipes.to_json
+  = form.label :description, label_text
+  .relative
+    = form.hidden_field :description, data: { recipe_mentions_target: "field" }
+    div class="min-h-44 w-full whitespace-pre-wrap rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm leading-6 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 empty:before:text-gray-400 empty:before:content-[attr(data-placeholder)]" contenteditable="true" role="textbox" aria-autocomplete="list" aria-controls=results_id aria-expanded="false" aria-multiline="true" data-placeholder=placeholder data-max-length="500" data-character-counter-target="input" data-recipe-mentions-target="editor" data-action="input->recipe-mentions#input keydown->recipe-mentions#keydown paste->recipe-mentions#paste blur->recipe-mentions#blur"
+    div id=results_id class="absolute left-0 right-0 z-20 mt-2 hidden max-h-72 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2 shadow-lg" data-recipe-mentions-target="panel" data-action="mousedown->recipe-mentions#keepFocus"
+      .space-y-1 data-recipe-mentions-target="list" role="listbox"
+      .hidden.px-3.py-2.text-sm.text-gray-600 data-recipe-mentions-target="status"
+  .text-right.text-sm.text-gray-600.mt-1 data-character-counter-target="counter"
+    span 0
+    = " #{characters_text}"

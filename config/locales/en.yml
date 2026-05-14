@@ -376,6 +376,10 @@ en:
       characters: "/500 characters"
       analyze: "Analyze with AI"
       cancel: "Cancel"
+    recipe_mentions:
+      loading: "Searching..."
+      no_results: "No matching recipes"
+      error: "Could not load recipes"
   meal:
     status:
       pending_llm: "Waiting for AI"
