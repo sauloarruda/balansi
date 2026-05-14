@@ -77,6 +77,27 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(flash[:error]).to include("LLM indisponível")
       expect(response).to redirect_to(journal_meal_path(journal_date: "2026-02-06", id: Meal.last.id))
     end
+
+    it "creates recipe reference snapshots from owned recipe mentions" do
+      recipe = create(:recipe, patient: patient, name: "Carne com legumes", calories: 510)
+      interaction_errors = ActiveModel::Errors.new(Meal.new)
+      interaction_result = instance_double(ActiveInteraction::Base, valid?: true, errors: interaction_errors)
+      allow(Journal::AnalyzeMealInteraction).to receive(:run).and_return(interaction_result)
+
+      post :create, params: {
+        journal_date: "2026-02-06",
+        meal: {
+          date: "2026-02-06",
+          meal_type: "dinner",
+          description: "Jantar com @[Carne com legumes](recipe:#{recipe.id})"
+        }
+      }
+
+      reference = Meal.last.meal_recipe_references.sole
+      expect(reference.recipe).to eq(recipe)
+      expect(reference.recipe_name).to eq("Carne com legumes")
+      expect(reference.calories_per_portion).to eq(510)
+    end
   end
 
   describe "PATCH #update" do
@@ -167,6 +188,29 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(meal.fats).to eq(10)
       expect(meal.gram_weight).to eq(300)
       expect(Journal::AnalyzeMealInteraction).to have_received(:run)
+    end
+
+    it "refreshes recipe references when reprocessing" do
+      old_recipe = create(:recipe, patient: patient, name: "Arroz antigo")
+      new_recipe = create(:recipe, patient: patient, name: "Frango novo")
+      create(:meal_recipe_reference, meal: meal, recipe: old_recipe)
+      interaction_errors = ActiveModel::Errors.new(Meal.new)
+      interaction_result = instance_double(ActiveInteraction::Base, valid?: true, errors: interaction_errors)
+      allow(Journal::AnalyzeMealInteraction).to receive(:run).and_return(interaction_result)
+
+      patch :update, params: {
+        journal_date: "2026-02-05",
+        id: meal.id,
+        reprocess: "1",
+        meal: {
+          meal_type: "dinner",
+          description: "Jantar com @[Frango novo](recipe:#{new_recipe.id})"
+        }
+      }
+
+      reference = meal.reload.meal_recipe_references.sole
+      expect(reference.recipe).to eq(new_recipe)
+      expect(reference.recipe_name).to eq("Frango novo")
     end
   end
 

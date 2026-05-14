@@ -3,9 +3,14 @@ class Recipe < ApplicationRecord
   MACROS_MAX = 10_000
   PORTION_SIZE_GRAMS_MAX = 50_000
   MACRO_ATTRIBUTES = %i[proteins carbs fats].freeze
+  MENTION_PREFIX = "@["
+  MENTION_MIDDLE = "](recipe:"
+  MENTION_SUFFIX = ")"
+  MENTION_PATTERN = /@\[(?<name>[^\]]+)\]\(recipe:(?<id>\d+)\)/
 
   belongs_to :patient
   has_many :images, -> { order(:position, :id) }, dependent: :destroy
+  has_many :meal_recipe_references, dependent: :nullify
 
   validates :name, presence: true
   validates :ingredients, presence: true

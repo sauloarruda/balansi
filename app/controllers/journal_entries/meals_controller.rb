@@ -3,7 +3,6 @@ module JournalEntries
     include JournalEntries::GenderedFlashMessages
 
     before_action :set_journal_date
-    before_action :set_journal, only: [ :create ]
     before_action :set_meal, only: [ :show, :edit, :update, :destroy ]
 
     def new
@@ -11,21 +10,27 @@ module JournalEntries
     end
 
     def create
-      @meal = @journal.meals.build(create_meal_params)
-      @meal.status = :pending_llm
+      result = Journal::CreateMealInteraction.run(
+        patient: current_patient,
+        user: current_user,
+        journal_date: @journal_date,
+        attributes: create_meal_params
+      )
 
-      unless @meal.save
+      @meal = result.result&.meal || Meal.new(create_meal_params)
+
+      unless result.valid?
         render :new, status: :unprocessable_entity
         return
       end
 
-      if analyze_meal(@meal)
+      if result.result.analysis_errors.blank?
         flash[:notice] = success_message_for(action: :create, model_key: :meal, gender: :female)
       else
-        flash[:error] = analysis_error_message
+        flash[:error] = analysis_error_message(result.result.analysis_errors)
       end
 
-      redirect_to journal_meal_path(journal_date: @journal.date.iso8601, id: @meal.id)
+      redirect_to journal_meal_path(journal_date: @meal.journal.date.iso8601, id: @meal.id)
     end
 
     def show; end
@@ -38,9 +43,15 @@ module JournalEntries
         return
       end
 
-      if @meal.update(update_meal_params)
-        @meal.confirm! if params[:confirm].present?
+      result = Journal::UpdateMealInteraction.run(
+        meal: @meal,
+        patient: current_patient,
+        user: current_user,
+        attributes: update_meal_params,
+        confirm: params[:confirm].present?
+      )
 
+      if result.valid?
         flash[:notice] = success_message_for(action: :update, model_key: :meal, gender: :female)
         redirect_to journal_path(date: @meal.journal.date.iso8601)
       else
@@ -80,15 +91,19 @@ module JournalEntries
     end
 
     def reprocess_meal
-      previous_status = @meal.status
+      result = Journal::UpdateMealInteraction.run(
+        meal: @meal,
+        patient: current_patient,
+        user: current_user,
+        attributes: reprocess_meal_params,
+        reprocess: true
+      )
 
-      if @meal.update(reprocess_meal_params)
-        @meal.update!(status: :pending_llm)
-
-        if analyze_meal(@meal, previous_status: previous_status)
+      if result.valid?
+        if result.result.analysis_errors.blank?
           flash[:notice] = success_message_for(action: :reprocess, model_key: :meal, gender: :female)
         else
-          flash[:error] = analysis_error_message
+          flash[:error] = analysis_error_message(result.result.analysis_errors)
         end
 
         redirect_to journal_meal_path(journal_date: @meal.journal.date.iso8601, id: @meal.id)
@@ -97,26 +112,8 @@ module JournalEntries
       end
     end
 
-    def analyze_meal(meal, previous_status: nil)
-      result = Journal::AnalyzeMealInteraction.run(
-        meal: meal,
-        user_id: current_user.id,
-        description: meal.description,
-        meal_type: meal.meal_type,
-        user_language: current_user.language
-      )
-
-      @analysis_errors = result.errors
-      if result.valid?
-        true
-      else
-        meal.update!(status: previous_status) if previous_status.present?
-        false
-      end
-    end
-
-    def analysis_error_message
-      @analysis_errors&.full_messages&.to_sentence.presence ||
+    def analysis_error_message(analysis_errors)
+      analysis_errors&.full_messages&.to_sentence.presence ||
         I18n.t("journal.errors.llm_unavailable", locale: current_user.language)
     end
 

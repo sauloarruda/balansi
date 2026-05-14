@@ -1,7 +1,7 @@
 - results_id = "meal_recipe_mentions_results"
 - initial_recipes = meal_recipe_mention_data(form.object.description)
 
-.mb-6 data-controller="character-counter recipe-mentions" data-recipe-mentions-search-url-value=search_patient_recipes_path data-recipe-mentions-loading-text-value=t("meals.recipe_mentions.loading") data-recipe-mentions-no-results-text-value=t("meals.recipe_mentions.no_results") data-recipe-mentions-error-text-value=t("meals.recipe_mentions.error") data-recipe-mentions-kcal-text-value=t("defaults.kcal") data-recipe-mentions-grams-text-value=t("defaults.grams") data-recipe-mentions-initial-recipes-value=initial_recipes.to_json
+.mb-6 data=recipe_mentions_controller_data(initial_recipes)
   = form.label :description, label_text
   .relative
     = form.hidden_field :description, data: { recipe_mentions_target: "field" }
