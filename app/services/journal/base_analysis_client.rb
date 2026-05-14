@@ -74,7 +74,6 @@ class Journal::BaseAnalysisClient
   end
 
   def log_llm_debug(request_payload:, response:, started_at:)
-    return unless Rails.logger.debug?
     return if started_at.nil?
 
     elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round(2)
@@ -88,33 +87,52 @@ class Journal::BaseAnalysisClient
       elapsed_ms: elapsed_ms
     }
 
-    message = if Rails.env.development?
-      JSON.pretty_generate(payload)
-    else
-      payload.except(:request).merge(request: payload[:request].except(:messages)).to_json
-    end
-
-    Rails.logger.debug(message)
+    Rails.logger.info(JSON.pretty_generate(payload))
   end
 
   def debug_request_payload(request_payload)
-    return request_payload if Rails.env.development?
+    request_payload.merge(messages: debug_request_messages(request_payload[:messages]))
+  end
 
-    request_payload.merge(messages: "[redacted]")
+  def debug_request_messages(messages)
+    Array(messages).map do |message|
+      content_key = message.key?(:content) ? :content : "content"
+      message.merge(content_key => parsed_debug_content(message[content_key]))
+    end
+  end
+
+  def parsed_debug_content(content)
+    return content unless content.is_a?(String)
+
+    parsed_debug_payload(JSON.parse(content))
+  rescue JSON::ParserError
+    content
   end
 
   def debug_response_body(response)
-    return parsed_debug_response_body(response) if Rails.env.development?
-
-    "[redacted]"
+    parsed_debug_response_body(response)
   end
 
   def parsed_debug_response_body(response)
     parsed = response&.parsed_response
-    return parsed if parsed.present?
+    return parsed_debug_payload(parsed) if parsed.present?
 
-    JSON.parse(response&.body.to_s)
+    parsed_debug_payload(JSON.parse(response&.body.to_s))
   rescue JSON::ParserError
     response&.body
+  end
+
+  def parsed_debug_payload(payload)
+    case payload
+    when Array
+      payload.map { |item| parsed_debug_payload(item) }
+    when Hash
+      payload.to_h do |key, value|
+        parsed_value = key.to_s == "content" ? parsed_debug_content(value) : parsed_debug_payload(value)
+        [ key, parsed_value ]
+      end
+    else
+      payload
+    end
   end
 end

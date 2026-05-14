@@ -20,7 +20,6 @@ RSpec.describe Journal::AnalyzeExerciseInteraction, type: :interaction do
         {
           d: 35,
           cal: 320,
-          n: 10,
           sd: "Corrida moderada por 35 minutos"
         }
       )
@@ -37,8 +36,39 @@ RSpec.describe Journal::AnalyzeExerciseInteraction, type: :interaction do
       expect(exercise.reload.status.to_s).to eq("pending_patient")
       expect(exercise.duration).to eq(35)
       expect(exercise.calories).to eq(320)
-      expect(exercise.neat).to eq(10)
       expect(exercise.structured_description).to eq("Corrida moderada por 35 minutos")
+    end
+
+    it "sends patient age, weight, and height to the exercise analysis client" do
+      travel_to(Date.new(2026, 2, 5)) do
+        patient.update!(birth_date: Date.new(1990, 1, 1), weight_kg: 72.5, height_cm: 171)
+        client = instance_double(Journal::ExerciseAnalysisClient)
+        allow(client).to receive(:analyze).and_return(
+          {
+            d: 35,
+            cal: 320,
+            sd: "Corrida moderada por 35 minutos"
+          }
+        )
+        allow_any_instance_of(described_class).to receive(:llm_client).and_return(client)
+
+        described_class.run(
+          exercise: exercise,
+          user_id: user.id,
+          description: exercise.description,
+          user_language: user.language
+        )
+
+        expect(client).to have_received(:analyze).with(
+          description: exercise.description,
+          user_language: user.language,
+          patient_context: {
+            weight_kg: BigDecimal("72.5"),
+            height_cm: BigDecimal("171"),
+            age_years: 36
+          }
+        )
+      end
     end
 
     it "fails when response is malformed" do
@@ -68,7 +98,6 @@ RSpec.describe Journal::AnalyzeExerciseInteraction, type: :interaction do
         {
           d: 25,
           cal: 220,
-          n: 0,
           sd: "Caminhada rápida por 25 minutos"
         }
       end

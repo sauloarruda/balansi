@@ -28,7 +28,7 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
     retries = 0
 
     begin
-      llm_client.analyze(description: description, user_language: user_language)
+      llm_client.analyze(description: description, user_language: user_language, patient_context: patient_context)
     rescue Journal::ExerciseAnalysisClient::TransientError => e
       retries += 1
       if retries < MAX_RETRIES
@@ -50,6 +50,15 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
     @llm_client ||= Journal::ExerciseAnalysisClient.new
   end
 
+  def patient_context
+    patient = exercise.journal.patient
+    {
+      weight_kg: patient.weight_kg,
+      height_cm: patient.height_cm,
+      age_years: patient.age_in_years_and_months&.fetch(:years)
+    }.compact
+  end
+
   def update_exercise_with_analysis(raw_response)
     parsed_response = normalize_response(raw_response)
     return nil unless parsed_response
@@ -57,7 +66,6 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
     exercise.update!(
       duration: parsed_response[:d],
       calories: parsed_response[:cal],
-      neat: parsed_response[:n],
       structured_description: parsed_response[:sd],
       status: :pending_patient
     )
@@ -71,7 +79,7 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
   def normalize_response(raw_response)
     response = raw_response.respond_to?(:deep_symbolize_keys) ? raw_response.deep_symbolize_keys : {}
 
-    required_keys = %i[d cal n sd]
+    required_keys = %i[d cal sd]
     missing_keys = required_keys.reject { |key| response.key?(key) }
 
     if missing_keys.any?
@@ -83,7 +91,6 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
     normalized = {
       d: response[:d].to_i,
       cal: response[:cal].to_i,
-      n: response[:n].to_i,
       sd: response[:sd].to_s.strip
     }
 
@@ -96,7 +103,6 @@ class Journal::AnalyzeExerciseInteraction < ActiveInteraction::Base
   def valid_ranges?(normalized)
     normalized[:d].between?(1, 1439) &&
       normalized[:cal].between?(0, 9_999) &&
-      normalized[:n].between?(0, 4_999) &&
       normalized[:sd].present? &&
       normalized[:sd].length <= 255
   end

@@ -350,6 +350,8 @@ Estimated size: 150-300 changed lines.
 
 ## Phase 7: Meal Recipe Mention Picker UI
 
+Status: Complete.
+
 Purpose: support `@` recipe mentions in the new meal form.
 
 Scope:
@@ -391,9 +393,19 @@ Acceptance criteria:
 - Selecting a recipe inserts a parseable reference.
 - Existing meal creation still works without a recipe mention.
 
+Implementation status:
+
+- `Recipe::MENTION_*` constants define the shared structured reference format.
+- `recipe_mentions_controller.js` powers the contenteditable meal description editor, search debounce, mouse selection, keyboard selection, chip rendering, and hidden-field serialization.
+- Meal description forms render the mention editor with translated loading, empty, and error states.
+- Saved structured references are rehydrated as visual chips when editing or re-rendering meal forms.
+- Controller/request specs cover the meal form wiring, and JavaScript controller specs cover serialization, rehydration, structured reference generation, and recent-recipe search behavior.
+
 Estimated size: 250-450 changed lines.
 
 ## Phase 8: Persist Meal Recipe References
+
+Status: Complete.
 
 Purpose: turn recipe mentions into durable meal data and preserve historical nutrition context.
 
@@ -413,7 +425,6 @@ Scope:
   - `proteins_per_portion`
   - `carbs_per_portion`
   - `fats_per_portion`
-  - `portion_quantity`
 - Add parser or interaction to extract `@[Name](recipe:id)` references.
 - Resolve references only through the current patient's recipes.
 - Attach references during meal create and reprocess flows.
@@ -439,9 +450,20 @@ Acceptance criteria:
 - Recipes owned by other patients are ignored or rejected.
 - Historical meal references remain readable if the recipe is later edited or deleted.
 
+Implementation status:
+
+- `meal_recipe_references` table stores durable meal-owned recipe snapshots with nullable `recipe_id`.
+- `MealRecipeReference` validates snapshot nutrition and portion size.
+- `Meal has_many :meal_recipe_references`; `Recipe has_many :meal_recipe_references, dependent: :nullify`.
+- `Journal::ResolveRecipeReferencesInteraction` parses structured mentions, resolves recipes through `patient.recipes`, snapshots nutrition fields, keeps repeated mentions, and replaces references on description changes.
+- Meal create and reprocess flows sync recipe references transactionally before analysis.
+- Specs cover snapshot creation, ownership isolation, replacement behavior, repeated mentions, create/reprocess integration, and historical readability after recipe edits or deletion.
+
 Estimated size: 300-500 changed lines.
 
 ## Phase 9: Inject Recipe Context Into Meal Analysis
+
+Status: Complete.
 
 Purpose: fulfill the PRD requirement that the LLM receives exact recipe nutrition context.
 
@@ -453,7 +475,6 @@ Scope:
   - recipe name
   - portion size in grams
   - per-portion macros
-  - referenced portion quantity when available
 - Preserve existing behavior when no recipe references exist.
 - Add specs for interaction and client payload.
 
@@ -476,6 +497,14 @@ Acceptance criteria:
 - Meals with recipe references send recipe context to the LLM.
 - Meals without recipe references use the existing prompt shape.
 - Existing meal analysis specs continue passing.
+
+Implementation status:
+
+- `Journal::AnalyzeMealInteraction` gathers persisted `meal_recipe_references` snapshots ordered by id.
+- Meal analysis sends `recipe_context` only when references exist, preserving the existing client call shape for meals without recipe mentions.
+- `Journal::MealAnalysisClient#analyze` accepts optional recipe context and sends structured JSON prompts with role, source-of-truth priority, operational contract, response schema, validation rules, meal data, and recipe snapshots.
+- Client prompt specs verify recipe context inclusion and absence when no references are present.
+- Interaction specs verify recipe context is passed from persisted meal references into the LLM client.
 
 Estimated size: 200-400 changed lines.
 

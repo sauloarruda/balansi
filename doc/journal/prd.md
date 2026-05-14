@@ -23,7 +23,7 @@ The User Journal must be:
   - exercises (with free text descriptions)
 - Use LLM (OpenAI) to:
   - estimate macros, calories and daily evaluation
-  - estimate calories, NEAT and structured exercise descriptions
+  - estimate calories and structured exercise descriptions
   - calculate daily qualitative feedback and score (1–5)
   - generate daily summary and guidance
 - Enforce nutritionist-driven logic:
@@ -115,12 +115,11 @@ The User Journal must be:
 - Numeric ranges:
   - `duration`: `1..1439` minutes (max 24 hours, when present)
   - `calories`: `0..9999` (when present)
-  - `neat`: `0..4999` (when present)
   - `structured_description`: max 255 chars (when present)
 
 #### Lifecycle
 - Mirrors meal lifecycle (`pending_llm` -> `pending_patient` -> `confirmed`).
-- AI success sets duration, calories, NEAT, structured description.
+- AI success sets duration, calories, and structured description.
 - Confirmed exercises are included in daily energy expenditure.
 
 ---
@@ -195,7 +194,7 @@ Defines the business rules for caloric balance status messaging and color coding
 ### 7.2 Flow: Log an Exercise
 1. User taps "Add Exercise", types description, submits.
 2. System calls LLM. Exercise is `pending_llm`.
-3. If LLM succeeds: shows review screen (duration, calories, NEAT, structured_description). Exercise is `pending_patient`.
+3. If LLM succeeds: shows review screen (duration, calories, structured_description). Exercise is `pending_patient`.
 4. User confirms or reprocesses. Confirmed exercise updates energy expenditure.
 
 ### 7.3 Flow: Close Day
@@ -234,7 +233,7 @@ Defines the business rules for caloric balance status messaging and color coding
 Expected fields: `p` (proteins), `c` (carbs), `f` (fats), `cal` (calories), `gw` (gram weight), `cmt` (comment in user language), `feel` (1 positive, 0 negative). Values cast to integer ranges before persistence.
 
 #### Exercise Response Shape
-Expected fields: `d` (duration), `cal` (calories), `n` (NEAT), `sd` (structured description).
+Expected fields: `d` (duration), `cal` (calories), `sd` (structured description).
 
 #### Daily Scoring Prompt (For future completion)
 Context provided:

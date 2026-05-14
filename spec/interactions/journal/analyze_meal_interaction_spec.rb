@@ -44,6 +44,59 @@ RSpec.describe Journal::AnalyzeMealInteraction, type: :interaction do
       expect(meal.feeling).to eq(1)
     end
 
+    it "sends persisted recipe context when meal has recipe references" do
+      recipe = create(:recipe, patient: patient, name: "Chicken bowl")
+      create(
+        :meal_recipe_reference,
+        meal: meal,
+        recipe: recipe,
+        recipe_name: "Chicken bowl",
+        portion_size_grams: 250,
+        calories_per_portion: 450,
+        proteins_per_portion: 34.5,
+        carbs_per_portion: 48.25,
+        fats_per_portion: 11.75
+      )
+      client = instance_double(Journal::MealAnalysisClient)
+      allow(client).to receive(:analyze).and_return(
+        {
+          p: 35,
+          c: 48,
+          f: 12,
+          cal: 450,
+          gw: 250,
+          cmt: "Usou a receita cadastrada.",
+          feel: 1
+        }
+      )
+      allow_any_instance_of(described_class).to receive(:llm_client).and_return(client)
+
+      result = described_class.run(
+        meal: meal,
+        user_id: user.id,
+        description: meal.description,
+        meal_type: meal.meal_type,
+        user_language: user.language
+      )
+
+      expect(result).to be_valid
+      expect(client).to have_received(:analyze).with(
+        description: meal.description,
+        meal_type: meal.meal_type,
+        user_language: user.language,
+        recipe_context: [
+          {
+            recipe_name: "Chicken bowl",
+            portion_size_grams: BigDecimal("250"),
+            calories_per_portion: 450,
+            proteins_per_portion: BigDecimal("34.5"),
+            carbs_per_portion: BigDecimal("48.25"),
+            fats_per_portion: BigDecimal("11.75")
+          }
+        ]
+      )
+    end
+
     it "fails when response is malformed" do
       client = instance_double(Journal::MealAnalysisClient)
       allow(client).to receive(:analyze).and_return({ p: 10 })

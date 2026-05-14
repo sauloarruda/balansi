@@ -28,9 +28,6 @@ h1.text-3xl.font-bold.mb-6 = t("exercises.show.heading")
       .mb-4
         = f.label :calories, t("exercises.show.calories_burned")
         = f.number_field :calories, min: 0, max: 10000, step: 1
-      .mb-4
-        = f.label :neat, t("exercises.show.neat")
-        = f.number_field :neat, min: 0, max: 5000, step: 1
       .mb-4.md:col-span-2
         = f.label :structured_description, t("exercises.show.structured_description")
         = f.text_field :structured_description, maxlength: 255

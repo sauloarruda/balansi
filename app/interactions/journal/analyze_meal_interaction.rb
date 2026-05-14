@@ -2,6 +2,14 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
   DAILY_LIMIT = 50
   HOURLY_LIMIT = 10
   MAX_RETRIES = 3
+  RECIPE_CONTEXT_FIELDS = %i[
+    recipe_name
+    portion_size_grams
+    calories_per_portion
+    proteins_per_portion
+    carbs_per_portion
+    fats_per_portion
+  ].freeze
 
   include Journal::LlmRateLimitable
 
@@ -30,7 +38,7 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
     retries = 0
 
     begin
-      llm_client.analyze(description: description, meal_type: meal_type, user_language: user_language)
+      llm_client.analyze(**meal_analysis_attributes)
     rescue Journal::MealAnalysisClient::TransientError => e
       retries += 1
       if retries < MAX_RETRIES
@@ -52,6 +60,23 @@ class Journal::AnalyzeMealInteraction < ActiveInteraction::Base
 
   def llm_client
     @llm_client ||= Journal::MealAnalysisClient.new
+  end
+
+  def meal_analysis_attributes
+    attributes = {
+      description: description,
+      meal_type: meal_type,
+      user_language: user_language
+    }
+    context = recipe_context
+    attributes[:recipe_context] = context if context.any?
+    attributes
+  end
+
+  def recipe_context
+    meal.meal_recipe_references.order(:id).pluck(*RECIPE_CONTEXT_FIELDS).map do |values|
+      RECIPE_CONTEXT_FIELDS.zip(values).to_h
+    end
   end
 
   def update_meal_with_analysis(raw_response)
