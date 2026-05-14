@@ -48,6 +48,12 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
   }
 }
 
+function setReferenceFormat(controller) {
+  controller.referencePrefixValue = "@["
+  controller.referenceMiddleValue = "](recipe:"
+  controller.referenceSuffixValue = ")"
+}
+
 global.Node = { TEXT_NODE: 3, ELEMENT_NODE: 1 }
 global.document = {
   createElement(tagName) {
@@ -66,6 +72,7 @@ global.AbortController = class AbortController {
 test("structuredReference removes parser delimiters from recipe names", () => {
   const RecipeMentionsController = loadControllerClass()
   const controller = new RecipeMentionsController()
+  setReferenceFormat(controller)
 
   assert.equal(
     controller.structuredReference({ id: 7, name: "Bolo [teste] (caseiro)" }),
@@ -76,6 +83,7 @@ test("structuredReference removes parser delimiters from recipe names", () => {
 test("serializeNode turns visual recipe chips into structured references", () => {
   const RecipeMentionsController = loadControllerClass()
   const controller = new RecipeMentionsController()
+  setReferenceFormat(controller)
   controller.gramsTextValue = "g"
   const chip = controller.chipElement({
     id: "123",
@@ -128,6 +136,7 @@ test("syncField stores serialized editor content in the hidden form field", () =
 test("renderEditorFromField turns saved structured references into visual chips", () => {
   const RecipeMentionsController = loadControllerClass()
   const controller = new RecipeMentionsController()
+  setReferenceFormat(controller)
 
   controller.hasEditorTarget = true
   controller.editorTarget = elementNode({ tagName: "DIV" })

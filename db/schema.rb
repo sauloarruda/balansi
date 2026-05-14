@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_11_180500) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
@@ -88,6 +88,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_180500) do
     t.index [ "date" ], name: "index_journals_on_date"
     t.index [ "patient_id", "date" ], name: "journals_patient_date_unique_idx", unique: true
     t.index [ "patient_id" ], name: "index_journals_on_patient_id"
+  end
+
+  create_table "meal_recipe_references", force: :cascade do |t|
+    t.integer "calories_per_portion"
+    t.decimal "carbs_per_portion", precision: 8, scale: 2
+    t.datetime "created_at", null: false
+    t.decimal "fats_per_portion", precision: 8, scale: 2
+    t.integer "meal_id", null: false
+    t.decimal "portion_quantity", precision: 8, scale: 2, default: "1.0", null: false
+    t.decimal "portion_size_grams", precision: 8, scale: 2, null: false
+    t.decimal "proteins_per_portion", precision: 8, scale: 2
+    t.integer "recipe_id"
+    t.string "recipe_name", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "meal_id", "recipe_id" ], name: "meal_recipe_refs_meal_recipe_idx"
+    t.index [ "meal_id" ], name: "index_meal_recipe_references_on_meal_id"
+    t.index [ "recipe_id" ], name: "index_meal_recipe_references_on_recipe_id"
   end
 
   create_table "meals", force: :cascade do |t|
@@ -193,6 +210,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_180500) do
   add_foreign_key "exercises", "journals", on_delete: :cascade
   add_foreign_key "images", "recipes", on_delete: :cascade
   add_foreign_key "journals", "patients", on_delete: :cascade
+  add_foreign_key "meal_recipe_references", "meals", on_delete: :cascade
+  add_foreign_key "meal_recipe_references", "recipes", on_delete: :nullify
   add_foreign_key "meals", "journals", on_delete: :cascade
   add_foreign_key "patient_professional_accesses", "patients", on_delete: :cascade
   add_foreign_key "patient_professional_accesses", "professionals", on_delete: :cascade

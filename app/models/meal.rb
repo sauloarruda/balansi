@@ -6,6 +6,7 @@ class Meal < ApplicationRecord
   FEELING_NEGATIVE = 0
 
   belongs_to :journal
+  has_many :meal_recipe_references, dependent: :destroy
 
   enumerize :status, in: {
     pending_llm: "pending_llm",

@@ -37,6 +37,22 @@ module JournalHelper
       end
   end
 
+  def recipe_mentions_controller_data(initial_recipes)
+    {
+      controller: "character-counter recipe-mentions",
+      "recipe-mentions-search-url-value": search_patient_recipes_path,
+      "recipe-mentions-loading-text-value": t("meals.recipe_mentions.loading"),
+      "recipe-mentions-no-results-text-value": t("meals.recipe_mentions.no_results"),
+      "recipe-mentions-error-text-value": t("meals.recipe_mentions.error"),
+      "recipe-mentions-kcal-text-value": t("defaults.kcal"),
+      "recipe-mentions-grams-text-value": t("defaults.grams"),
+      "recipe-mentions-initial-recipes-value": initial_recipes.to_json,
+      "recipe-mentions-reference-prefix-value": Recipe::MENTION_PREFIX,
+      "recipe-mentions-reference-middle-value": Recipe::MENTION_MIDDLE,
+      "recipe-mentions-reference-suffix-value": Recipe::MENTION_SUFFIX
+    }
+  end
+
   def progress_percentage(consumed, goal)
     return 0 if goal.nil? || goal.zero?
     [ (consumed.to_f / goal * 100).round, 100 ].min
@@ -209,7 +225,7 @@ module JournalHelper
   end
 
   def meal_recipe_mention_pattern
-    /@\[ (?<name>[^\]]+) \]\(recipe:(?<id>\d+)\)/x
+    Recipe::MENTION_PATTERN
   end
 
   def meal_recipe_mention_ids(description)

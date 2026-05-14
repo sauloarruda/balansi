@@ -11,6 +11,9 @@ export default class extends Controller {
     errorText: String,
     kcalText: String,
     gramsText: String,
+    referencePrefix: String,
+    referenceMiddle: String,
+    referenceSuffix: String,
     initialRecipes: Array
   }
 
@@ -234,11 +237,30 @@ export default class extends Controller {
 
   structuredReference(recipe) {
     const name = recipe.name.replace(/[\[\]()]/g, "").trim()
-    return `@[${name || recipe.name}](recipe:${recipe.id})`
+    return `${this.referencePrefix()}${name || recipe.name}${this.referenceMiddle()}${recipe.id}${this.referenceSuffix()}`
   }
 
   structuredReferencePattern() {
-    return /@\[([^\]]+)\]\(recipe:(\d+)\)/g
+    return new RegExp(
+      `${this.escapeRegExp(this.referencePrefix())}([^\\]]+)${this.escapeRegExp(this.referenceMiddle())}(\\d+)${this.escapeRegExp(this.referenceSuffix())}`,
+      "g"
+    )
+  }
+
+  referencePrefix() {
+    return this.referencePrefixValue
+  }
+
+  referenceMiddle() {
+    return this.referenceMiddleValue
+  }
+
+  referenceSuffix() {
+    return this.referenceSuffixValue
+  }
+
+  escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   }
 
   scheduleSearch(query) {
