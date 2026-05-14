@@ -40,16 +40,16 @@ module JournalHelper
   def recipe_mentions_controller_data(initial_recipes)
     {
       controller: "character-counter recipe-mentions",
-      recipe_mentions_search_url_value: search_patient_recipes_path,
-      recipe_mentions_loading_text_value: t("meals.recipe_mentions.loading"),
-      recipe_mentions_no_results_text_value: t("meals.recipe_mentions.no_results"),
-      recipe_mentions_error_text_value: t("meals.recipe_mentions.error"),
-      recipe_mentions_kcal_text_value: t("defaults.kcal"),
-      recipe_mentions_grams_text_value: t("defaults.grams"),
-      recipe_mentions_initial_recipes_value: initial_recipes.to_json,
-      recipe_mentions_reference_prefix_value: Recipe::MENTION_PREFIX,
-      recipe_mentions_reference_middle_value: Recipe::MENTION_MIDDLE,
-      recipe_mentions_reference_suffix_value: Recipe::MENTION_SUFFIX
+      "recipe-mentions-search-url-value": search_patient_recipes_path,
+      "recipe-mentions-loading-text-value": t("meals.recipe_mentions.loading"),
+      "recipe-mentions-no-results-text-value": t("meals.recipe_mentions.no_results"),
+      "recipe-mentions-error-text-value": t("meals.recipe_mentions.error"),
+      "recipe-mentions-kcal-text-value": t("defaults.kcal"),
+      "recipe-mentions-grams-text-value": t("defaults.grams"),
+      "recipe-mentions-initial-recipes-value": initial_recipes.to_json,
+      "recipe-mentions-reference-prefix-value": Recipe::MENTION_PREFIX,
+      "recipe-mentions-reference-middle-value": Recipe::MENTION_MIDDLE,
+      "recipe-mentions-reference-suffix-value": Recipe::MENTION_SUFFIX
     }
   end
 

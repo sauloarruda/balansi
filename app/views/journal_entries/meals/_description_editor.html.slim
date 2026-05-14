@@ -1,7 +1,7 @@
 - results_id = "meal_recipe_mentions_results"
 - initial_recipes = meal_recipe_mention_data(form.object.description)
 
-.mb-6 data=recipe_mentions_controller_data(initial_recipes)
+.mb-6 *{ data: recipe_mentions_controller_data(initial_recipes) }
   = form.label :description, label_text
   .relative
     = form.hidden_field :description, data: { recipe_mentions_target: "field" }

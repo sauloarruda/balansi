@@ -18,6 +18,7 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("meal[meal_type]")
       expect(response.body).to include("lunch")
+      expect(response.body).to include('data-recipe-mentions-search-url-value="/patient/recipes/search"')
     end
   end
 
