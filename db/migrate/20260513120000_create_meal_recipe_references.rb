@@ -9,7 +9,6 @@ class CreateMealRecipeReferences < ActiveRecord::Migration[8.1]
       t.decimal :proteins_per_portion, precision: 8, scale: 2
       t.decimal :carbs_per_portion, precision: 8, scale: 2
       t.decimal :fats_per_portion, precision: 8, scale: 2
-      t.decimal :portion_quantity, precision: 8, scale: 2, null: false, default: 1
 
       t.timestamps
     end

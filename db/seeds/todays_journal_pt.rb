@@ -78,7 +78,6 @@ Time.use_zone(patient.user.timezone) do
       description: "Caminhada moderada de 40 minutos",
       duration: 40,
       calories: 220,
-      neat: 0,
       structured_description: "Caminhada moderada 40 min",
       status: "confirmed"
     },
@@ -86,7 +85,6 @@ Time.use_zone(patient.user.timezone) do
       description: "Alongamento e mobilidade por 20 minutos",
       duration: 20,
       calories: 60,
-      neat: 0,
       structured_description: "Alongamento 20 min",
       status: "pending_patient"
     }

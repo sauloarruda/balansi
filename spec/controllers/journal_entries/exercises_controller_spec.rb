@@ -70,7 +70,6 @@ RSpec.describe JournalEntries::ExercisesController, type: :controller do
         exercise: {
           duration: 30,
           calories: 250,
-          neat: 10,
           structured_description: "Corrida moderada por 30 minutos"
         }
       }

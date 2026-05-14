@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_14_120000) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
@@ -51,7 +51,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_120000) do
     t.string "description", null: false
     t.integer "duration"
     t.integer "journal_id", null: false
-    t.integer "neat"
     t.string "status", default: "pending_llm", null: false
     t.string "structured_description"
     t.datetime "updated_at", null: false

@@ -140,7 +140,6 @@ module JournalEntries
         :description,
         :duration,
         :calories,
-        :neat,
         :structured_description
       )
     end

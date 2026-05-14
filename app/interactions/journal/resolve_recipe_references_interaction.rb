@@ -1,6 +1,4 @@
 class Journal::ResolveRecipeReferencesInteraction < ActiveInteraction::Base
-  DEFAULT_PORTION_QUANTITY = BigDecimal("1")
-
   object :meal, class: Meal
   object :patient, class: Patient
   string :description, default: ""
@@ -43,8 +41,7 @@ class Journal::ResolveRecipeReferencesInteraction < ActiveInteraction::Base
       calories_per_portion: recipe.calories_per_portion,
       proteins_per_portion: recipe.proteins_per_portion,
       carbs_per_portion: recipe.carbs_per_portion,
-      fats_per_portion: recipe.fats_per_portion,
-      portion_quantity: DEFAULT_PORTION_QUANTITY
+      fats_per_portion: recipe.fats_per_portion
     }
   end
 end

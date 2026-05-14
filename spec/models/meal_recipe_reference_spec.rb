@@ -15,8 +15,7 @@ RSpec.describe MealRecipeReference, type: :model do
       calories_per_portion: recipe.calories_per_portion,
       proteins_per_portion: recipe.proteins_per_portion,
       carbs_per_portion: recipe.carbs_per_portion,
-      fats_per_portion: recipe.fats_per_portion,
-      portion_quantity: 1
+      fats_per_portion: recipe.fats_per_portion
     )
 
     expect(reference).to be_valid

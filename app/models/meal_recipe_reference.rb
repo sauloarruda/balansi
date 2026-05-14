@@ -12,5 +12,4 @@ class MealRecipeReference < ApplicationRecord
     :fats_per_portion,
     numericality: { greater_than_or_equal_to: 0, less_than: Recipe::MACROS_MAX },
     allow_nil: true
-  validates :portion_quantity, numericality: { greater_than: 0, less_than: 10_000 }
 end

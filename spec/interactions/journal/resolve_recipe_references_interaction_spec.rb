@@ -20,7 +20,6 @@ RSpec.describe Journal::ResolveRecipeReferencesInteraction, type: :interaction d
     expect(reference.proteins_per_portion).to eq(34.5)
     expect(reference.carbs_per_portion).to eq(48.25)
     expect(reference.fats_per_portion).to eq(11.75)
-    expect(reference.portion_quantity).to eq(1)
   end
 
   it "ignores recipes that do not belong to the patient" do

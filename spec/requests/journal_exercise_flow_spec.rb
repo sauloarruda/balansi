@@ -11,7 +11,6 @@ RSpec.describe "Journal exercise flow", type: :request do
       {
         d: 30,
         cal: 250,
-        n: 0,
         sd: "Corrida moderada por 30 minutos"
       }
     )
@@ -37,7 +36,6 @@ RSpec.describe "Journal exercise flow", type: :request do
       exercise: {
         duration: 35,
         calories: 280,
-        neat: 0,
         structured_description: "Corrida moderada por 35 minutos"
       }
     }

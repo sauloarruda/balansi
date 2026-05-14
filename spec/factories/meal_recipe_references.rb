@@ -8,6 +8,5 @@ FactoryBot.define do
     proteins_per_portion { recipe.proteins_per_portion }
     carbs_per_portion { recipe.carbs_per_portion }
     fats_per_portion { recipe.fats_per_portion }
-    portion_quantity { 1 }
   end
 end
