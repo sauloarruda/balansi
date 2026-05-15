@@ -19,6 +19,17 @@ RSpec.describe Professionals::PatientsController, type: :controller do
       expect(response.body).to include(I18n.t("professional.patients.index.title"))
     end
 
+    it "renders the professional invite link using the request base URL" do
+      get :index, params: {}
+
+      invite_url = "http://test.host/auth/sign_up?invite_code=#{professional.invite_code}"
+      expect(response.body).to include(I18n.t("professional.patients.index.invite_link"))
+      expect(response.body).to include("data-controller=\"clipboard\"")
+      expect(response.body).to include("data-action=\"clipboard#copy\"")
+      expect(response.body).to include("data-clipboard-text-value=\"#{invite_url}\"")
+      expect(response.body).to include(I18n.t("professional.patients.index.invite_link_copied"))
+    end
+
     it "shows empty message when no linked patients" do
       get :index, params: {}
 

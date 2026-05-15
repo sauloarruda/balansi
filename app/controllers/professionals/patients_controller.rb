@@ -4,6 +4,8 @@ module Professionals
     before_action :authorize_access!, only: [ :show ]
 
     def index
+      query = { invite_code: current_professional.invite_code }.to_query
+      @professional_invite_url = "#{request.base_url}#{auth_sign_up_path}?#{query}"
       @patients = if current_professional.user.admin?
         Patient.includes(:user).order("users.name ASC")
       else

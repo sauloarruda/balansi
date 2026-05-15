@@ -5,7 +5,11 @@ nav.rounded-lg.mb-4 aria-label="Breadcrumb"
     li.flex.items-center
       span.font-medium.text-gray-900 = t("professional.patients.index.title")
 
-h1.text-3xl.font-bold.mb-6 = t("professional.patients.index.title")
+.mb-6.flex.flex-col.gap-3.sm:flex-row.sm:items-center.sm:justify-between
+  h1.text-3xl.font-bold = t("professional.patients.index.title")
+  = button_tag type: "button", class: "inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 rounded-lg px-4 py-2", data: { controller: "clipboard", action: "clipboard#copy", clipboard_text_value: @professional_invite_url, clipboard_success_message_value: t("professional.patients.index.invite_link_copied"), clipboard_error_message_value: t("professional.patients.index.invite_link_copy_failed") } do
+    = heroicon "clipboard-document", variant: :outline, options: { class: "h-4 w-4" }
+    = t("professional.patients.index.invite_link")
 
 - if @patients.empty?
   p.text-gray-600 = t("professional.patients.index.empty")

@@ -250,6 +250,9 @@ en:
       index:
         title: "Patients"
         empty: "No patients linked yet."
+        invite_link: "Copy invite link"
+        invite_link_copied: "Invite link copied."
+        invite_link_copy_failed: "Could not copy the invite link."
         owner_badge: "Owner"
         shared_badge: "Shared access"
       show:
