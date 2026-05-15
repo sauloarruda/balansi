@@ -3,18 +3,25 @@ module JournalHelper
     I18n.l(date, format: :long)
   end
 
-  def format_meal_description(description)
+  def format_meal_description(description, recipe_references: [], link_recipes: true, patient_id: nil)
     return "" if description.blank?
 
     nodes = []
     text = description.to_s
     last_index = 0
-    portions_by_recipe_id = meal_recipe_portions_by_id(text)
+    reference_by_recipe_id = meal_recipe_reference_by_recipe_id(recipe_references)
+    portions_by_recipe_id = reference_by_recipe_id.empty? ? meal_recipe_portions_by_id(text) : {}
 
     text.to_enum(:scan, meal_recipe_mention_pattern).each do
       match = Regexp.last_match
       nodes.concat(meal_description_text_nodes(text[last_index...match.begin(0)]))
-      nodes << meal_recipe_chip(match[:name], portions_by_recipe_id[match[:id]])
+      nodes << meal_recipe_chip(
+        match[:name],
+        reference: reference_by_recipe_id[match[:id]],
+        portion_size_grams: portions_by_recipe_id[match[:id]],
+        link_recipe: link_recipes,
+        patient_id:
+      )
       last_index = match.end(0)
     end
 
@@ -28,11 +35,15 @@ module JournalHelper
 
     current_patient_recipes
       .where(id: recipe_ids)
-      .pluck(:id, :portion_size_grams)
-      .map do |id, portion_size_grams|
+      .pluck(:id, :portion_size_grams, :calories, :proteins, :carbs, :fats)
+      .map do |id, portion_size_grams, calories, proteins, carbs, fats|
         {
           id: id,
-          portion_size_grams: portion_size_grams.to_f
+          portion_size_grams: portion_size_grams.to_f,
+          calories_per_portion: calories&.to_f,
+          proteins_per_portion: proteins&.to_f,
+          carbs_per_portion: carbs&.to_f,
+          fats_per_portion: fats&.to_f
         }
       end
   end
@@ -46,11 +57,20 @@ module JournalHelper
       "recipe-mentions-error-text-value": t("meals.recipe_mentions.error"),
       "recipe-mentions-kcal-text-value": t("defaults.kcal"),
       "recipe-mentions-grams-text-value": t("defaults.grams"),
+      "recipe-mentions-carbs-text-value": t("defaults.carbs"),
+      "recipe-mentions-protein-text-value": t("defaults.protein"),
+      "recipe-mentions-fats-text-value": t("defaults.fats"),
       "recipe-mentions-initial-recipes-value": initial_recipes.to_json,
       "recipe-mentions-reference-prefix-value": Recipe::MENTION_PREFIX,
       "recipe-mentions-reference-middle-value": Recipe::MENTION_MIDDLE,
       "recipe-mentions-reference-suffix-value": Recipe::MENTION_SUFFIX
     }
+  end
+
+  def format_recipe_reference_value(value)
+    return "-" if value.blank?
+
+    number_with_precision(value, precision: 2, strip_insignificant_zeros: true)
   end
 
   def progress_percentage(consumed, goal)
@@ -249,10 +269,92 @@ module JournalHelper
     end
   end
 
-  def meal_recipe_chip(name, portion_size_grams = nil)
-    tag.span(
-      meal_recipe_chip_label(name, portion_size_grams),
-      class: "recipe-mention-chip"
+  def meal_recipe_reference_by_recipe_id(recipe_references)
+    Array(recipe_references).each_with_object({}) do |reference, references_by_id|
+      next if reference.recipe_id.blank?
+
+      references_by_id[reference.recipe_id.to_s] ||= reference
+    end
+  end
+
+  def meal_recipe_chip(name, reference: nil, portion_size_grams: nil, link_recipe: true, patient_id: nil)
+    label = meal_recipe_chip_label(name, reference&.portion_size_grams || portion_size_grams)
+    return tag.span(label, class: "recipe-mention-chip") if reference.blank?
+
+    tag.span(class: "inline-flex", data: { controller: "popover-tooltip", popover_tooltip_placement: "top" }) do
+      safe_join([
+        tag.button(
+          label,
+          type: "button",
+          class: "recipe-mention-chip",
+          aria: { label: t("meals.recipe_references.open_details", recipe: name) }
+        ),
+        meal_recipe_tooltip(name, reference:, link_recipe:, patient_id:)
+      ])
+    end
+  end
+
+  def meal_recipe_tooltip(name, reference:, link_recipe: true, patient_id: nil)
+    tag.div(
+      class: "tooltip hidden opacity-0 transition-opacity duration-150 fixed z-50 rounded-lg bg-gray-900 p-3 text-left text-sm text-white shadow-lg w-max max-w-[calc(100vw-2rem)]",
+      data: { popover_tooltip_target: "tip" },
+      role: "tooltip"
+    ) do
+      safe_join([
+        tag.div(class: "space-y-3") do
+          safe_join([
+            meal_recipe_tooltip_header(name, reference),
+            meal_recipe_tooltip_nutrition(reference),
+            meal_recipe_tooltip_link(reference, link_recipe:, patient_id:)
+          ].compact)
+        end,
+        tag.div(class: "tooltip-arrow")
+      ])
+    end
+  end
+
+  def meal_recipe_tooltip_header(name, reference)
+    tag.div(class: "flex items-start justify-between gap-3") do
+      safe_join([
+        tag.div(class: "min-w-0") do
+          safe_join([
+            tag.div(name, class: "font-semibold leading-5"),
+            tag.div(
+              t("meals.recipe_references.portion_size", grams: format_recipe_reference_value(reference.portion_size_grams)),
+              class: "mt-0.5 text-xs text-gray-300"
+            )
+          ])
+        end,
+        (tag.span(t("meals.recipe_references.deleted_recipe"), class: "shrink-0 rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-200") if reference.recipe.blank?)
+      ].compact)
+    end
+  end
+
+  def meal_recipe_tooltip_nutrition(reference)
+    tag.div(class: "flex items-center gap-3 rounded-base border border-pink-100 bg-pink-50 px-3 py-2 text-gray-900") do
+      safe_join([
+        tag.div(class: "shrink-0") do
+          safe_join([
+            tag.span(format_recipe_reference_value(reference.calories_per_portion), class: "text-body font-bold text-pink-900"),
+            tag.span(t("defaults.kcal"), class: "text-xs text-pink-600 ml-0.5")
+          ])
+        end,
+        tag.div(class: "shrink-0") do
+          tag.span("#{format_recipe_reference_value(reference.portion_size_grams)}#{t("defaults.grams")}", class: "text-xs font-bold text-gray-500")
+        end,
+        render("shared/macro_circles", carbs: reference.carbs_per_portion.to_f, proteins: reference.proteins_per_portion.to_f, fats: reference.fats_per_portion.to_f, size: :sm, hide_labels_mobile: true)
+      ])
+    end
+  end
+
+  def meal_recipe_tooltip_link(reference, link_recipe: true, patient_id: nil)
+    recipe = reference.recipe
+    return unless link_recipe && recipe.present? && recipe.patient_id == patient_id
+
+    link_to(
+      t("meals.recipe_references.view_recipe"),
+      patient_recipe_path(recipe),
+      class: "inline-flex text-xs font-medium text-white underline underline-offset-2 hover:text-gray-200"
     )
   end
 

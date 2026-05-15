@@ -7,7 +7,7 @@ module Professionals
         date = parse_date_param(params[:date]) || Date.current
 
         @journal = @patient.journals.find_by(date: date) || @patient.journals.build(date: date)
-        @meals = @journal.persisted? ? @journal.meals.order(:created_at) : Meal.none
+        @meals = @journal.persisted? ? @journal.meals.includes(meal_recipe_references: :recipe).order(:created_at) : Meal.none
         @exercises = @journal.persisted? ? @journal.exercises.order(:created_at) : Exercise.none
 
         render "journals/show"

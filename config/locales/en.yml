@@ -80,6 +80,7 @@ en:
     minutes: "minutes"
     kcal_burned: "kcal burned"
     excess: "excess"
+    goal_percentage: "%{percentage}% of goal"
     item:
       one: "item"
       other: "items"
@@ -378,6 +379,14 @@ en:
       loading: "Searching..."
       no_results: "No matching recipes"
       error: "Could not load recipes"
+    recipe_references:
+      title: "Referenced recipes"
+      label: "Recipes:"
+      portion_size: "%{grams} g portion"
+      deleted_recipe: "Recipe deleted"
+      calories: "Calories"
+      open_details: "Open recipe details for %{recipe}"
+      view_recipe: "View recipe"
   meal:
     status:
       pending_llm: "Waiting for AI"

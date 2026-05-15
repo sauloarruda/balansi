@@ -46,6 +46,24 @@ RSpec.describe JournalHelper, type: :helper do
       expect(html).not_to include("@[Bolo de banana](recipe:#{recipe.id})")
     end
 
+    it "renders recipe reference tooltip details when snapshots are provided" do
+      patient = create(:patient)
+      recipe = create(:recipe, patient: patient, name: "Bolo de banana", calories: 320, proteins: 8, carbs: 52, fats: 9)
+      meal = create(:meal, journal: create(:journal, patient: patient), description: "Comi @[Bolo de banana](recipe:#{recipe.id})")
+      reference = create(:meal_recipe_reference, meal: meal, recipe: recipe)
+
+      html = helper.format_meal_description(
+        meal.description,
+        recipe_references: [ reference ],
+        patient_id: patient.id
+      )
+
+      expect(html).to include("data-controller=\"popover-tooltip\"")
+      expect(html).to include("320")
+      expect(html).to include("macro-ring")
+      expect(html).to include(helper.patient_recipe_path(recipe))
+    end
+
     it "escapes plain text and recipe names" do
       html = helper.format_meal_description("<script>x</script> @[Bolo <caseiro>](recipe:123)")
 
@@ -68,7 +86,16 @@ RSpec.describe JournalHelper, type: :helper do
 
       data = helper.meal_recipe_mention_data("Comi @[Iogurte](recipe:#{recipe.id})")
 
-      expect(data).to eq([ { id: recipe.id, portion_size_grams: 200.0 } ])
+      expect(data).to eq([
+        {
+          id: recipe.id,
+          portion_size_grams: 200.0,
+          calories_per_portion: 400.0,
+          proteins_per_portion: 30.25,
+          carbs_per_portion: 45.12,
+          fats_per_portion: 12.38
+        }
+      ])
     end
 
     it "does not return portion metadata for recipes owned by another patient" do

@@ -80,6 +80,7 @@ pt:
     minutes: "minutos"
     kcal_burned: "kcal queimadas"
     excess: "excesso"
+    goal_percentage: "%{percentage}% da meta"
     item:
       one: "item"
       other: "itens"
@@ -426,6 +427,14 @@ pt:
       loading: "Buscando..."
       no_results: "Nenhuma receita encontrada"
       error: "Não foi possível carregar receitas"
+    recipe_references:
+      title: "Receitas referenciadas"
+      label: "Receitas:"
+      portion_size: "Porção de %{grams} g"
+      deleted_recipe: "Receita excluída"
+      calories: "Calorias"
+      open_details: "Abrir detalhes da receita %{recipe}"
+      view_recipe: "Ver receita"
   meal:
     status:
       pending_llm: "Aguardando IA"

@@ -26,6 +26,8 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
     tagName,
     dataset,
     childNodes,
+    attributes: {},
+    className: "",
     _textContent: undefined,
     get textContent() {
       if (this._textContent !== undefined) return this._textContent
@@ -44,6 +46,15 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
     },
     matches(selector) {
       return selector === "[data-recipe-id]" && Boolean(this.dataset.recipeId)
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value
+    },
+    getAttribute(name) {
+      return this.attributes[name]
+    },
+    querySelector() {
+      return null
     }
   }
 }
@@ -57,6 +68,9 @@ function setReferenceFormat(controller) {
 global.Node = { TEXT_NODE: 3, ELEMENT_NODE: 1 }
 global.document = {
   createElement(tagName) {
+    return elementNode({ tagName: tagName.toUpperCase() })
+  },
+  createElementNS(_namespace, tagName) {
     return elementNode({ tagName: tagName.toUpperCase() })
   },
   createTextNode: textNode
@@ -100,7 +114,31 @@ test("serializeNode turns visual recipe chips into structured references", () =>
   })
 
   assert.equal(chip.textContent, "Bolo de banana (180g)")
+  assert.equal(chip.className, "inline-flex")
+  assert.equal(chip.childNodes[0].className, "recipe-mention-chip")
   assert.equal(controller.serializeNode(editor), "Comi @[Bolo de banana](recipe:123) hoje")
+})
+
+test("chipElement includes a tooltip when recipe nutrition is available", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  controller.gramsTextValue = "g"
+  controller.kcalTextValue = "kcal"
+
+  const chip = controller.chipElement({
+    id: "123",
+    name: "Bolo de banana",
+    portion_size_grams: 180,
+    calories_per_portion: 320,
+    proteins_per_portion: 8,
+    carbs_per_portion: 52,
+    fats_per_portion: 9
+  })
+
+  assert.equal(chip.dataset.controller, "popover-tooltip")
+  assert.equal(chip.childNodes[1].dataset.popoverTooltipTarget, "tip")
+  assert.match(chip.textContent, /320/)
+  assert.match(chip.textContent, /52g/)
 })
 
 test("serializedValue trims editor value and normalizes non-breaking spaces", () => {
@@ -152,7 +190,8 @@ test("renderEditorFromField turns saved structured references into visual chips"
   assert.equal(controller.editorTarget.childNodes[1].dataset.recipeId, "123")
   assert.equal(controller.editorTarget.childNodes[1].dataset.recipeName, "Bolo de banana")
   assert.equal(controller.editorTarget.childNodes[1].dataset.recipePortionSizeGrams, 180)
-  assert.equal(controller.editorTarget.childNodes[1].className, "recipe-mention-chip")
+  assert.equal(controller.editorTarget.childNodes[1].className, "inline-flex")
+  assert.equal(controller.editorTarget.childNodes[1].childNodes[0].className, "recipe-mention-chip")
   assert.equal(controller.editorTarget.childNodes[1].textContent, "Bolo de banana (180g)")
   assert.equal(controller.editorTarget.childNodes[2].textContent, " hoje")
   assert.equal(controller.serializedValue(), "Comi @[Bolo de banana](recipe:123) hoje")

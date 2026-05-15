@@ -82,7 +82,7 @@ module JournalEntries
 
     def set_meal
       @meal = Meal.joins(:journal)
-        .includes(:journal)
+        .includes(:journal, meal_recipe_references: :recipe)
         .find_by(id: params[:id], journals: { patient_id: current_patient.id })
 
       return if @meal

@@ -11,6 +11,9 @@ export default class extends Controller {
     errorText: String,
     kcalText: String,
     gramsText: String,
+    carbsText: String,
+    proteinText: String,
+    fatsText: String,
     referencePrefix: String,
     referenceMiddle: String,
     referenceSuffix: String,
@@ -144,13 +147,150 @@ export default class extends Controller {
   chipElement(recipe) {
     const chip = document.createElement("span")
     chip.contentEditable = "false"
+    chip.dataset.controller = "popover-tooltip"
+    chip.dataset.popoverTooltipPlacement = "top"
     chip.dataset.recipeId = recipe.id
     chip.dataset.recipeName = recipe.name
+    chip.className = "inline-flex"
+
     if (recipe.portion_size_grams) chip.dataset.recipePortionSizeGrams = recipe.portion_size_grams
-    chip.className = "recipe-mention-chip"
-    chip.textContent = this.chipText(recipe)
+
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "recipe-mention-chip"
+    button.textContent = this.chipText(recipe)
+    chip.appendChild(button)
+
+    if (this.hasRecipeNutrition(recipe)) {
+      chip.appendChild(this.recipeTooltipElement(recipe))
+    }
 
     return chip
+  }
+
+  recipeTooltipElement(recipe) {
+    const tooltip = document.createElement("span")
+    tooltip.className = "tooltip hidden opacity-0 transition-opacity duration-150 fixed z-50 rounded-lg bg-gray-900 p-3 text-left text-sm text-white shadow-lg w-max max-w-[calc(100vw-2rem)]"
+    tooltip.dataset.popoverTooltipTarget = "tip"
+    tooltip.setAttribute("role", "tooltip")
+
+    const body = document.createElement("span")
+    body.className = "block space-y-3"
+
+    const header = document.createElement("span")
+    header.className = "block"
+
+    const name = document.createElement("span")
+    name.className = "block font-semibold leading-5"
+    name.textContent = recipe.name
+    header.appendChild(name)
+
+    const portion = document.createElement("span")
+    portion.className = "mt-0.5 block text-xs text-gray-300"
+    portion.textContent = `${this.formatNumber(recipe.portion_size_grams, 2)}${this.gramsTextValue || "g"}`
+    header.appendChild(portion)
+
+    body.appendChild(header)
+    body.appendChild(this.recipeNutritionStripElement(recipe))
+    tooltip.appendChild(body)
+
+    const arrow = document.createElement("span")
+    arrow.className = "tooltip-arrow"
+    tooltip.appendChild(arrow)
+
+    return tooltip
+  }
+
+  recipeNutritionStripElement(recipe) {
+    const strip = document.createElement("span")
+    strip.className = "flex items-center gap-3 rounded-base border border-pink-100 bg-pink-50 px-3 py-2 text-gray-900"
+
+    const calories = document.createElement("span")
+    calories.className = "shrink-0"
+
+    const calorieValue = document.createElement("span")
+    calorieValue.className = "text-body font-bold text-pink-900"
+    calorieValue.textContent = this.formatNumber(recipe.calories_per_portion, 2)
+    calories.appendChild(calorieValue)
+
+    const calorieUnit = document.createElement("span")
+    calorieUnit.className = "text-xs text-pink-600 ml-0.5"
+    calorieUnit.textContent = this.kcalTextValue || "kcal"
+    calories.appendChild(calorieUnit)
+    strip.appendChild(calories)
+
+    const portion = document.createElement("span")
+    portion.className = "shrink-0"
+
+    const portionValue = document.createElement("span")
+    portionValue.className = "text-xs font-bold text-gray-500"
+    portionValue.textContent = `${this.formatNumber(recipe.portion_size_grams, 2)}${this.gramsTextValue || "g"}`
+    portion.appendChild(portionValue)
+    strip.appendChild(portion)
+
+    strip.appendChild(this.macroCirclesElement(recipe))
+
+    return strip
+  }
+
+  macroCirclesElement(recipe) {
+    const wrapper = document.createElement("span")
+    wrapper.className = "flex items-center gap-3"
+
+    wrapper.appendChild(this.macroCircleElement(recipe, recipe.carbs_per_portion, this.carbsTextValue, "ring-carbs", "#92400e"))
+    wrapper.appendChild(this.macroCircleElement(recipe, recipe.proteins_per_portion, this.proteinTextValue, "ring-protein", "#1e3a8a"))
+    wrapper.appendChild(this.macroCircleElement(recipe, recipe.fats_per_portion, this.fatsTextValue, "ring-fat", "#9d174d"))
+
+    return wrapper
+  }
+
+  macroCircleElement(recipe, value, label, ringClass, textColor) {
+    const item = document.createElement("span")
+    item.className = "flex items-center gap-1.5"
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    svg.setAttribute("width", "44")
+    svg.setAttribute("height", "44")
+    svg.setAttribute("viewBox", "0 0 36 36")
+
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g")
+    group.setAttribute("transform", "rotate(-90 18 18)")
+
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+    bg.setAttribute("class", "macro-ring-bg")
+    bg.setAttribute("cx", "18")
+    bg.setAttribute("cy", "18")
+    bg.setAttribute("r", "15.9")
+    group.appendChild(bg)
+
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+    ring.setAttribute("class", `macro-ring ${ringClass}`)
+    ring.setAttribute("cx", "18")
+    ring.setAttribute("cy", "18")
+    ring.setAttribute("r", "15.9")
+    const percent = this.macroPercent(recipe, value)
+    ring.setAttribute("stroke-dasharray", `${percent} ${100 - percent}`)
+    group.appendChild(ring)
+    svg.appendChild(group)
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text")
+    text.setAttribute("x", "18")
+    text.setAttribute("y", "18")
+    text.setAttribute("text-anchor", "middle")
+    text.setAttribute("dominant-baseline", "middle")
+    text.setAttribute("font-size", "7.5")
+    text.setAttribute("font-weight", "700")
+    text.setAttribute("fill", textColor)
+    text.textContent = `${this.formatNumber(value, 0)}${this.gramsTextValue || "g"}`
+    svg.appendChild(text)
+    item.appendChild(svg)
+
+    const labelNode = document.createElement("span")
+    labelNode.className = "hidden text-xs font-semibold sm:block"
+    labelNode.textContent = label
+    item.appendChild(labelNode)
+
+    return item
   }
 
   renderEditorFromField() {
@@ -177,7 +317,11 @@ export default class extends Controller {
     return {
       id,
       name,
-      portion_size_grams: recipe?.portion_size_grams
+      portion_size_grams: recipe?.portion_size_grams,
+      calories_per_portion: recipe?.calories_per_portion,
+      proteins_per_portion: recipe?.proteins_per_portion,
+      carbs_per_portion: recipe?.carbs_per_portion,
+      fats_per_portion: recipe?.fats_per_portion
     }
   }
 
@@ -359,6 +503,27 @@ export default class extends Controller {
     const portion = this.formatNumber(recipe.portion_size_grams, 0)
 
     return `${calories} ${this.kcalTextValue} · ${portion} ${this.gramsTextValue}`
+  }
+
+  hasRecipeNutrition(recipe) {
+    return [
+      recipe.portion_size_grams,
+      recipe.calories_per_portion,
+      recipe.proteins_per_portion,
+      recipe.carbs_per_portion,
+      recipe.fats_per_portion
+    ].every((value) => value !== undefined && value !== null && value !== "")
+  }
+
+  macroPercent(recipe, value) {
+    const carbs = Number(recipe.carbs_per_portion || 0)
+    const proteins = Number(recipe.proteins_per_portion || 0)
+    const fats = Number(recipe.fats_per_portion || 0)
+    const total = carbs + proteins + fats
+
+    if (total <= 0) return 0
+
+    return Math.min(Math.round(Number(value || 0) / total * 100), 99)
   }
 
   formatNumber(value, maximumFractionDigits) {
