@@ -211,7 +211,12 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       post :create, params: { return_to: return_to, recipe: valid_params }
 
-      expect(response).to redirect_to(return_to)
+      redirect_uri = URI.parse(response.location)
+      redirect_params = Rack::Utils.parse_query(redirect_uri.query)
+      expect(redirect_uri.path).to eq(return_to)
+      expect(redirect_params["created_recipe_mention_id"]).to eq(patient.recipes.last.id.to_s)
+      expect(redirect_params["created_recipe_mention_name"]).to eq("Lentil stew")
+      expect(redirect_params["created_recipe_mention_calories_per_portion"]).to eq("450")
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
     end
 

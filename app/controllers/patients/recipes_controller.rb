@@ -18,7 +18,7 @@ module Patients
       @recipe = current_patient.recipes.build
 
       if save_recipe
-        redirect_to(@return_to.presence || patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created"))
+        redirect_to(created_recipe_return_to.presence || patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created"))
       else
         render :new, status: :unprocessable_entity
       end
@@ -75,6 +75,24 @@ module Patients
       return if params[:return_to].blank?
 
       url_from(params[:return_to].presence)
+    end
+
+    def created_recipe_return_to
+      return if @return_to.blank?
+
+      uri = URI.parse(@return_to)
+      query_params = Rack::Utils.parse_nested_query(uri.query)
+      query_params.merge!(
+        "created_recipe_mention_id" => @recipe.id,
+        "created_recipe_mention_name" => @recipe.name,
+        "created_recipe_mention_portion_size_grams" => @recipe.portion_size_grams,
+        "created_recipe_mention_calories_per_portion" => @recipe.calories,
+        "created_recipe_mention_proteins_per_portion" => @recipe.proteins,
+        "created_recipe_mention_carbs_per_portion" => @recipe.carbs,
+        "created_recipe_mention_fats_per_portion" => @recipe.fats
+      )
+      uri.query = Rack::Utils.build_query(query_params)
+      uri.to_s
     end
 
     def save_recipe

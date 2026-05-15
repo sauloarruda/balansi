@@ -28,7 +28,8 @@ export default class extends Controller {
     this.debounceTimeout = null
     this.abortController = null
     this.activeQuery = ""
-    this.restoreFormDraft()
+    const restoredDraft = this.restoreFormDraft()
+    this.applyCreatedRecipeMention(restoredDraft?.pendingRecipeMentionQuery)
     this.renderEditorFromField()
     this.syncField()
     this.editorTarget.dispatchEvent(new Event("input", { bubbles: true }))
@@ -646,16 +647,19 @@ export default class extends Controller {
         selectedValues: field.multiple ? Array.from(field.selectedOptions).map((option) => option.value) : []
       }))
 
-    window.sessionStorage.setItem(this.formDraftStorageKey(), JSON.stringify({ fields }))
+    window.sessionStorage.setItem(
+      this.formDraftStorageKey(),
+      JSON.stringify({ fields, pendingRecipeMentionQuery: this.activeQuery })
+    )
   }
 
   restoreFormDraft() {
     const form = this.element.closest("form")
-    if (!form || !window.sessionStorage) return
+    if (!form || !window.sessionStorage) return null
 
     const key = this.formDraftStorageKey()
     const rawDraft = window.sessionStorage.getItem(key)
-    if (!rawDraft) return
+    if (!rawDraft) return null
 
     window.sessionStorage.removeItem(key)
 
@@ -663,7 +667,7 @@ export default class extends Controller {
     try {
       draft = JSON.parse(rawDraft)
     } catch (_error) {
-      return
+      return null
     }
 
     const fields = Array.isArray(draft.fields) ? draft.fields : []
@@ -672,6 +676,8 @@ export default class extends Controller {
         .filter((field) => field.name === storedField.name)
         .forEach((field) => this.restoreFieldValue(field, storedField))
     })
+
+    return draft
   }
 
   restoreFieldValue(field, storedField) {
@@ -692,6 +698,69 @@ export default class extends Controller {
   }
 
   formDraftStorageKey() {
-    return `balansi:recipe-mentions:form-draft:${window.location.pathname}${window.location.search}`
+    const params = new URLSearchParams(window.location.search)
+    Array.from(params.keys())
+      .filter((key) => key.startsWith("created_recipe_mention_"))
+      .forEach((key) => params.delete(key))
+
+    const query = params.toString()
+    return `balansi:recipe-mentions:form-draft:${window.location.pathname}${query ? `?${query}` : ""}`
+  }
+
+  applyCreatedRecipeMention(pendingQuery) {
+    const recipe = this.createdRecipeMentionFromUrl()
+    if (!recipe || !this.hasFieldTarget) return
+
+    const nextValue = this.descriptionWithCreatedRecipeMention(this.fieldTarget.value, pendingQuery, recipe)
+    if (!nextValue) return
+    if (nextValue === this.fieldTarget.value) return
+
+    this.fieldTarget.value = nextValue
+    this.initialRecipesValue = [
+      ...(this.initialRecipesValue || []).filter((item) => item.id.toString() !== recipe.id.toString()),
+      recipe
+    ]
+    if (this.hasEditorTarget) this.editorTarget.replaceChildren()
+    this.clearCreatedRecipeMentionParams()
+  }
+
+  createdRecipeMentionFromUrl() {
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get("created_recipe_mention_id")
+    const name = params.get("created_recipe_mention_name")
+    if (!id || !name) return null
+
+    return {
+      id,
+      name,
+      portion_size_grams: params.get("created_recipe_mention_portion_size_grams"),
+      calories_per_portion: params.get("created_recipe_mention_calories_per_portion"),
+      proteins_per_portion: params.get("created_recipe_mention_proteins_per_portion"),
+      carbs_per_portion: params.get("created_recipe_mention_carbs_per_portion"),
+      fats_per_portion: params.get("created_recipe_mention_fats_per_portion")
+    }
+  }
+
+  descriptionWithCreatedRecipeMention(value, pendingQuery, recipe) {
+    const description = value.toString()
+    const structuredReference = this.structuredReference(recipe)
+    const exactMention = pendingQuery?.trim() ? `@${pendingQuery.trim()}` : null
+
+    if (exactMention && description.includes(exactMention)) {
+      const index = description.lastIndexOf(exactMention)
+      return `${description.slice(0, index)}${structuredReference}${description.slice(index + exactMention.length)}`
+    }
+
+    return description.replace(/(^|\s)@([^\n\r@()[\]]{0,80})$/, (_match, prefix) => `${prefix}${structuredReference}`)
+  }
+
+  clearCreatedRecipeMentionParams() {
+    if (!window.history?.replaceState) return
+
+    const url = new URL(window.location.href)
+    Array.from(url.searchParams.keys())
+      .filter((key) => key.startsWith("created_recipe_mention_"))
+      .forEach((key) => url.searchParams.delete(key))
+    window.history.replaceState(window.history.state, "", url.toString())
   }
 }

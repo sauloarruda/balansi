@@ -338,6 +338,7 @@ test("createRecipe stores the meal form draft and redirects to the recipe form",
 
   assert.equal(storedDraft.fields.find((field) => field.name === "meal[description]").value, "Comi @Bolo")
   assert.equal(storedDraft.fields.find((field) => field.name === "meal[meal_type]").value, "lunch")
+  assert.equal(storedDraft.pendingRecipeMentionQuery, "Bolo")
   assert.equal(url.pathname, "/patient/recipes/new")
   assert.equal(url.searchParams.get("recipe[name]"), "Bolo")
   assert.equal(url.searchParams.get("return_to"), "http://example.test/journals/2026-05-15/meals/new")
@@ -398,4 +399,56 @@ test("restoreFormDraft restores saved form fields", () => {
   assert.equal(descriptionField.value, "Comi @[Bolo](recipe:1)")
   assert.equal(mealTypeField.value, "snack")
   assert.equal(stored[key], undefined)
+})
+
+test("applyCreatedRecipeMention replaces the pending text mention with the created recipe chip", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  setReferenceFormat(controller)
+  const replacedUrls = []
+
+  global.window = {
+    location: {
+      href: "http://example.test/journals/2026-05-15/meals/new?created_recipe_mention_id=77&created_recipe_mention_name=Bolo%20caseiro&created_recipe_mention_portion_size_grams=120&created_recipe_mention_calories_per_portion=320&created_recipe_mention_proteins_per_portion=8&created_recipe_mention_carbs_per_portion=52&created_recipe_mention_fats_per_portion=9",
+      pathname: "/journals/2026-05-15/meals/new",
+      search: "?created_recipe_mention_id=77&created_recipe_mention_name=Bolo%20caseiro&created_recipe_mention_portion_size_grams=120&created_recipe_mention_calories_per_portion=320&created_recipe_mention_proteins_per_portion=8&created_recipe_mention_carbs_per_portion=52&created_recipe_mention_fats_per_portion=9"
+    },
+    history: {
+      state: {},
+      replaceState(_state, _title, url) {
+        replacedUrls.push(url)
+      }
+    }
+  }
+  controller.hasFieldTarget = true
+  controller.fieldTarget = { value: "Lanche com @Bolo" }
+  controller.hasEditorTarget = true
+  controller.editorTarget = elementNode({ tagName: "DIV", childNodes: [textNode("Lanche com @Bolo")] })
+  controller.initialRecipesValue = []
+
+  controller.applyCreatedRecipeMention("Bolo")
+  controller.renderEditorFromField()
+
+  assert.equal(controller.fieldTarget.value, "Lanche com @[Bolo caseiro](recipe:77)")
+  assert.equal(controller.initialRecipesValue[0].portion_size_grams, "120")
+  assert.equal(controller.editorTarget.childNodes[1].dataset.recipeId, "77")
+  assert.equal(controller.editorTarget.childNodes[1].textContent.includes("Bolo caseiro"), true)
+  assert.equal(new URL(replacedUrls[0]).searchParams.has("created_recipe_mention_id"), false)
+})
+
+test("formDraftStorageKey ignores created recipe mention return params", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+
+  global.window = {
+    location: {
+      pathname: "/journals/2026-05-15/meals/new",
+      search: "?test_user_id=13&created_recipe_mention_id=77&created_recipe_mention_name=Bolo"
+    }
+  }
+
+  assert.equal(
+    controller.formDraftStorageKey(),
+    "balansi:recipe-mentions:form-draft:/journals/2026-05-15/meals/new?test_user_id=13"
+  )
 })
