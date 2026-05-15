@@ -52,9 +52,11 @@ module JournalHelper
     {
       controller: "character-counter recipe-mentions",
       "recipe-mentions-search-url-value": search_patient_recipes_path,
+      "recipe-mentions-new-recipe-url-value": new_patient_recipe_path,
       "recipe-mentions-loading-text-value": t("meals.recipe_mentions.loading"),
       "recipe-mentions-no-results-text-value": t("meals.recipe_mentions.no_results"),
       "recipe-mentions-error-text-value": t("meals.recipe_mentions.error"),
+      "recipe-mentions-create-recipe-text-value": t("meals.recipe_mentions.create_recipe"),
       "recipe-mentions-kcal-text-value": t("defaults.kcal"),
       "recipe-mentions-grams-text-value": t("defaults.grams"),
       "recipe-mentions-carbs-text-value": t("defaults.carbs"),

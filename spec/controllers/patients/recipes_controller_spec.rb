@@ -151,6 +151,26 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response.body).to include(%(disabled="disabled"))
       expect(response.body).to include(I18n.t("patient.recipes.actions.create"))
     end
+
+    it "prefills the recipe name and keeps a local return path" do
+      return_to = journal_path(date: Date.current.iso8601)
+
+      get :new, params: { return_to: return_to, recipe: { name: "Bolo" } }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(value="Bolo"))
+      expect(response.body).to include(%(name="return_to"))
+      expect(response.body).to include(return_to)
+      expect(response.body).to include(I18n.t("patient.recipes.actions.back"))
+    end
+
+    it "ignores external return paths" do
+      get :new, params: { return_to: "https://example.com/outside" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("https://example.com/outside")
+      expect(response.body).to include(I18n.t("patient.recipes.actions.back_to_recipes"))
+    end
   end
 
   describe "POST #create" do
@@ -183,6 +203,24 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to redirect_to(patient_recipe_path(recipe))
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
       expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "redirects to a local return path after creating a recipe from another flow" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+      return_to = edit_journal_meal_path(journal_date: Date.current.iso8601, id: 123)
+
+      post :create, params: { return_to: return_to, recipe: valid_params }
+
+      expect(response).to redirect_to(return_to)
+      expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
+    end
+
+    it "ignores external return paths after creating a recipe" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+
+      post :create, params: { return_to: "https://example.com/outside", recipe: valid_params }
+
+      expect(response).to redirect_to(patient_recipe_path(patient.recipes.last))
     end
 
     it "creates a recipe with AI nutrition when macro values are missing" do

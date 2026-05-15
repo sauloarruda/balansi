@@ -379,6 +379,7 @@ en:
       loading: "Searching..."
       no_results: "No matching recipes"
       error: "Could not load recipes"
+      create_recipe: "Create new recipe"
     recipe_references:
       title: "Referenced recipes"
       label: "Recipes:"
@@ -463,6 +464,7 @@ en:
         edit: "Edit"
         delete: "Delete"
         delete_image: "Delete image"
+        back: "Back"
         back_to_recipes: "Back to recipes"
         view_image: "View full recipe image"
       messages:

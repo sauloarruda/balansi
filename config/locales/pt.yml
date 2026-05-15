@@ -427,6 +427,7 @@ pt:
       loading: "Buscando..."
       no_results: "Nenhuma receita encontrada"
       error: "Não foi possível carregar receitas"
+      create_recipe: "Criar nova receita"
     recipe_references:
       title: "Receitas referenciadas"
       label: "Receitas:"
@@ -511,6 +512,7 @@ pt:
         edit: "Editar"
         delete: "Excluir"
         delete_image: "Excluir imagem"
+        back: "Voltar"
         back_to_recipes: "Voltar para receitas"
         view_image: "Ver imagem completa da receita"
       messages:

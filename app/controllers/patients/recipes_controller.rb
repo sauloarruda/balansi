@@ -9,14 +9,16 @@ module Patients
     def show; end
 
     def new
-      @recipe = current_patient.recipes.build
+      @return_to = safe_return_to
+      @recipe = current_patient.recipes.build(recipe_params_from_query)
     end
 
     def create
+      @return_to = safe_return_to
       @recipe = current_patient.recipes.build
 
       if save_recipe
-        redirect_to patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created")
+        redirect_to(@return_to.presence || patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created"))
       else
         render :new, status: :unprocessable_entity
       end
@@ -61,6 +63,18 @@ module Patients
         :carbs,
         :fats
       )
+    end
+
+    def recipe_params_from_query
+      return {} if params[:recipe].blank?
+
+      params.require(:recipe).permit(:name)
+    end
+
+    def safe_return_to
+      return if params[:return_to].blank?
+
+      url_from(params[:return_to].presence)
     end
 
     def save_recipe

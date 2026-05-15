@@ -28,6 +28,11 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
     childNodes,
     attributes: {},
     className: "",
+    classList: {
+      add() {},
+      remove() {},
+      toggle() {}
+    },
     _textContent: undefined,
     get textContent() {
       if (this._textContent !== undefined) return this._textContent
@@ -53,7 +58,21 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
     getAttribute(name) {
       return this.attributes[name]
     },
-    querySelector() {
+    querySelector(selector) {
+      return this.querySelectorAll(selector)[0] || null
+    },
+    querySelectorAll(selector) {
+      const matches = []
+      const visit = (node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return
+        if (selector === "[data-recipe-result]" && node.dataset.recipeResult) matches.push(node)
+        node.childNodes.forEach(visit)
+      }
+
+      this.childNodes.forEach(visit)
+      return matches
+    },
+    closest() {
       return null
     }
   }
@@ -74,6 +93,11 @@ global.document = {
     return elementNode({ tagName: tagName.toUpperCase() })
   },
   createTextNode: textNode
+}
+global.Event = class Event {
+  constructor(type) {
+    this.type = type
+  }
 }
 global.AbortController = class AbortController {
   constructor() {
@@ -241,4 +265,137 @@ test("scheduleSearch waits 500ms before searching", () => {
   }
 
   assert.equal(delay, 500)
+})
+
+test("appendCreateRecipeButton adds a fixed create recipe action to the actions footer", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  const actions = elementNode({ tagName: "DIV" })
+
+  controller.hasActionsTarget = true
+  controller.actionsTarget = actions
+  controller.hasNewRecipeUrlValue = true
+  controller.createRecipeTextValue = "Create new recipe"
+
+  controller.appendCreateRecipeButton()
+
+  assert.equal(actions.childNodes.length, 1)
+  assert.equal(actions.childNodes[0].textContent, "Create new recipe")
+  assert.equal(actions.childNodes[0].dataset.action, "mousedown->recipe-mentions#createRecipe")
+})
+
+test("createRecipe stores the meal form draft and redirects to the recipe form", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  const stored = {}
+  const redirectedTo = []
+  const descriptionField = {
+    name: "meal[description]",
+    type: "hidden",
+    value: "",
+    checked: false,
+    multiple: false
+  }
+  const mealTypeField = {
+    name: "meal[meal_type]",
+    type: "select-one",
+    value: "lunch",
+    checked: false,
+    multiple: false
+  }
+  const form = {
+    querySelectorAll() {
+      return [descriptionField, mealTypeField]
+    }
+  }
+
+  global.window = {
+    location: {
+      origin: "http://example.test",
+      href: "http://example.test/journals/2026-05-15/meals/new",
+      pathname: "/journals/2026-05-15/meals/new",
+      search: ""
+    },
+    sessionStorage: {
+      setItem(key, value) {
+        stored[key] = value
+      }
+    }
+  }
+  global.window.location.assign = (url) => redirectedTo.push(url)
+  controller.element = { closest: () => form }
+  controller.hasEditorTarget = true
+  controller.editorTarget = elementNode({ tagName: "DIV", childNodes: [textNode("Comi @Bolo")] })
+  controller.hasFieldTarget = true
+  controller.fieldTarget = descriptionField
+  controller.newRecipeUrlValue = "/patient/recipes/new"
+  controller.activeQuery = "Bolo"
+
+  controller.createRecipe({ preventDefault() {} })
+
+  const storedDraft = JSON.parse(stored["balansi:recipe-mentions:form-draft:/journals/2026-05-15/meals/new"])
+  const url = new URL(redirectedTo[0])
+
+  assert.equal(storedDraft.fields.find((field) => field.name === "meal[description]").value, "Comi @Bolo")
+  assert.equal(storedDraft.fields.find((field) => field.name === "meal[meal_type]").value, "lunch")
+  assert.equal(url.pathname, "/patient/recipes/new")
+  assert.equal(url.searchParams.get("recipe[name]"), "Bolo")
+  assert.equal(url.searchParams.get("return_to"), "http://example.test/journals/2026-05-15/meals/new")
+})
+
+test("restoreFormDraft restores saved form fields", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  const descriptionField = {
+    name: "meal[description]",
+    type: "hidden",
+    value: "",
+    checked: false,
+    multiple: false,
+    dispatchEvent() {}
+  }
+  const mealTypeField = {
+    name: "meal[meal_type]",
+    type: "select-one",
+    value: "breakfast",
+    checked: false,
+    multiple: false,
+    dispatchEvent() {}
+  }
+  const form = {
+    querySelectorAll() {
+      return [descriptionField, mealTypeField]
+    }
+  }
+  const key = "balansi:recipe-mentions:form-draft:/journals/2026-05-15/meals/new"
+  const stored = {
+    [key]: JSON.stringify({
+      fields: [
+        { name: "meal[description]", type: "hidden", value: "Comi @[Bolo](recipe:1)", checked: false, multiple: false },
+        { name: "meal[meal_type]", type: "select-one", value: "snack", checked: false, multiple: false }
+      ]
+    })
+  }
+
+  global.window = {
+    location: {
+      pathname: "/journals/2026-05-15/meals/new",
+      search: ""
+    },
+    sessionStorage: {
+      getItem(keyName) {
+        return stored[keyName]
+      },
+      removeItem(keyName) {
+        delete stored[keyName]
+      }
+    }
+  }
+  controller.element = { closest: () => form }
+
+  controller.restoreFormDraft()
+
+  assert.equal(descriptionField.value, "Comi @[Bolo](recipe:1)")
+  assert.equal(mealTypeField.value, "snack")
+  assert.equal(stored[key], undefined)
 })

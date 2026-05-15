@@ -3,12 +3,14 @@ import { Controller } from "@hotwired/stimulus"
 const SEARCH_DEBOUNCE_MS = 500
 
 export default class extends Controller {
-  static targets = ["editor", "field", "panel", "list", "status"]
+  static targets = ["editor", "field", "panel", "list", "status", "actions"]
   static values = {
     searchUrl: String,
+    newRecipeUrl: String,
     loadingText: String,
     noResultsText: String,
     errorText: String,
+    createRecipeText: String,
     kcalText: String,
     gramsText: String,
     carbsText: String,
@@ -25,6 +27,8 @@ export default class extends Controller {
     this.selectedIndex = -1
     this.debounceTimeout = null
     this.abortController = null
+    this.activeQuery = ""
+    this.restoreFormDraft()
     this.renderEditorFromField()
     this.syncField()
     this.editorTarget.dispatchEvent(new Event("input", { bubbles: true }))
@@ -40,6 +44,7 @@ export default class extends Controller {
     const mention = this.currentMention()
 
     if (!mention) {
+      this.activeQuery = ""
       clearTimeout(this.debounceTimeout)
       this.abortSearch()
       this.hidePanel()
@@ -47,7 +52,8 @@ export default class extends Controller {
     }
 
     this.showPanel()
-    this.scheduleSearch(mention.query.trim())
+    this.activeQuery = mention.query.trim()
+    this.scheduleSearch(this.activeQuery)
   }
 
   keydown(event) {
@@ -89,6 +95,12 @@ export default class extends Controller {
   select(event) {
     const recipe = this.recipes[event.params.index]
     if (recipe) this.insertRecipe(recipe)
+  }
+
+  createRecipe(event) {
+    event.preventDefault()
+    this.storeFormDraft()
+    window.location.assign(this.newRecipeUrl())
   }
 
   currentMention() {
@@ -455,6 +467,7 @@ export default class extends Controller {
 
     if (recipes.length === 0) {
       this.showStatus(this.noResultsTextValue)
+      this.appendCreateRecipeButton()
       return
     }
 
@@ -462,6 +475,7 @@ export default class extends Controller {
     recipes.forEach((recipe, index) => {
       this.listTarget.appendChild(this.resultElement(recipe, index))
     })
+    this.appendCreateRecipeButton()
     this.updateSelection()
   }
 
@@ -471,6 +485,7 @@ export default class extends Controller {
     button.className = "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-pink-50 focus:bg-pink-50 focus:outline-none"
     button.dataset.action = "mousedown->recipe-mentions#select"
     button.dataset.recipeMentionsIndexParam = index
+    button.dataset.recipeResult = "true"
     button.setAttribute("role", "option")
 
     if (recipe.thumbnail_url) {
@@ -496,6 +511,19 @@ export default class extends Controller {
 
     button.appendChild(body)
     return button
+  }
+
+  appendCreateRecipeButton() {
+    if (!this.hasActionsTarget || !this.hasNewRecipeUrlValue) return
+
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "flex w-full items-center justify-center rounded-md border border-pink-200 bg-pink-50 px-3 py-2 text-sm font-medium text-pink-800 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-200"
+    button.dataset.action = "mousedown->recipe-mentions#createRecipe"
+    button.textContent = this.createRecipeTextValue
+
+    this.actionsTarget.replaceChildren(button)
+    this.actionsTarget.classList.remove("hidden")
   }
 
   recipeDetails(recipe) {
@@ -536,7 +564,7 @@ export default class extends Controller {
   }
 
   updateSelection() {
-    this.listTarget.querySelectorAll("button").forEach((button, index) => {
+    this.listTarget.querySelectorAll("[data-recipe-result]").forEach((button, index) => {
       const selected = index === this.selectedIndex
       button.classList.toggle("bg-pink-50", selected)
       button.setAttribute("aria-selected", selected.toString())
@@ -547,6 +575,7 @@ export default class extends Controller {
     if (!this.hasPanelTarget) return
 
     this.panelTarget.classList.remove("hidden")
+    this.panelTarget.classList.add("flex")
     this.editorTarget.setAttribute("aria-expanded", "true")
   }
 
@@ -554,10 +583,12 @@ export default class extends Controller {
     if (!this.hasPanelTarget) return
 
     this.panelTarget.classList.add("hidden")
+    this.panelTarget.classList.remove("flex")
     this.editorTarget.setAttribute("aria-expanded", "false")
     this.recipes = []
     this.selectedIndex = -1
     this.clearList()
+    this.clearActions()
     this.hideStatus()
   }
 
@@ -582,5 +613,85 @@ export default class extends Controller {
 
   clearList() {
     if (this.hasListTarget) this.listTarget.replaceChildren()
+  }
+
+  clearActions() {
+    if (!this.hasActionsTarget) return
+
+    this.actionsTarget.replaceChildren()
+    this.actionsTarget.classList.add("hidden")
+  }
+
+  newRecipeUrl() {
+    const url = new URL(this.newRecipeUrlValue, window.location.origin)
+    url.searchParams.set("return_to", window.location.href)
+    if (this.activeQuery.length > 0) url.searchParams.set("recipe[name]", this.activeQuery)
+
+    return url.toString()
+  }
+
+  storeFormDraft() {
+    const form = this.element.closest("form")
+    if (!form || !window.sessionStorage) return
+
+    this.syncField()
+    const fields = Array.from(form.querySelectorAll("input[name], textarea[name], select[name]"))
+      .filter((field) => field.type !== "file")
+      .map((field) => ({
+        name: field.name,
+        type: field.type,
+        value: field.value,
+        checked: field.checked,
+        multiple: field.multiple,
+        selectedValues: field.multiple ? Array.from(field.selectedOptions).map((option) => option.value) : []
+      }))
+
+    window.sessionStorage.setItem(this.formDraftStorageKey(), JSON.stringify({ fields }))
+  }
+
+  restoreFormDraft() {
+    const form = this.element.closest("form")
+    if (!form || !window.sessionStorage) return
+
+    const key = this.formDraftStorageKey()
+    const rawDraft = window.sessionStorage.getItem(key)
+    if (!rawDraft) return
+
+    window.sessionStorage.removeItem(key)
+
+    let draft = null
+    try {
+      draft = JSON.parse(rawDraft)
+    } catch (_error) {
+      return
+    }
+
+    const fields = Array.isArray(draft.fields) ? draft.fields : []
+    fields.forEach((storedField) => {
+      Array.from(form.querySelectorAll("input[name], textarea[name], select[name]"))
+        .filter((field) => field.name === storedField.name)
+        .forEach((field) => this.restoreFieldValue(field, storedField))
+    })
+  }
+
+  restoreFieldValue(field, storedField) {
+    if (field.type === "file") return
+
+    if (field.type === "checkbox" || field.type === "radio") {
+      field.checked = storedField.checked
+    } else if (field.multiple) {
+      Array.from(field.options).forEach((option) => {
+        option.selected = storedField.selectedValues.includes(option.value)
+      })
+    } else {
+      field.value = storedField.value
+    }
+
+    field.dispatchEvent(new Event("input", { bubbles: true }))
+    field.dispatchEvent(new Event("change", { bubbles: true }))
+  }
+
+  formDraftStorageKey() {
+    return `balansi:recipe-mentions:form-draft:${window.location.pathname}${window.location.search}`
   }
 }
