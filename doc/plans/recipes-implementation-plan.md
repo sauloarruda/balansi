@@ -510,6 +510,8 @@ Estimated size: 200-400 changed lines.
 
 ## Phase 10: Patient And Professional Recipe Visibility In Journals
 
+Status: Complete.
+
 Purpose: show recipe details where meals are reviewed, including professional read-only journal access.
 
 Scope:
@@ -539,9 +541,21 @@ Acceptance criteria:
 - Professionals with access can see recipe details in the patient's journal.
 - Professionals without access cannot see recipe details.
 
+Implementation status:
+
+- Patient and professional journal queries preload `meal_recipe_references` and associated recipes for meal cards and review pages.
+- Meal descriptions render recipe mentions as compact chips rather than a separate applied-recipes block.
+- Referenced recipe chips open Popper-backed tooltips on hover/focus/click, including mobile click behavior and scroll-aware positioning.
+- Recipe tooltips use the same nutrition presentation as meal cards: calories, portion weight, and macro circles.
+- Patient views link tooltip details to the patient recipe page when the recipe still belongs to the current patient.
+- Professional journal views show the recipe snapshot read-only and do not expose patient recipe management links.
+- Tooltip, helper, controller, and professional journal specs cover recipe visibility, ownership boundaries, snapshot display, and scroll-aware tooltip behavior.
+
 Estimated size: 250-450 changed lines.
 
 ## Phase 11: Polish, Performance, And Hardening
+
+Status: In progress.
 
 Purpose: close usability, performance, and full-flow test gaps after the feature is functionally complete.
 
@@ -572,6 +586,16 @@ Acceptance criteria:
 - Main recipe-to-meal flow is covered.
 - Picker remains usable on mobile.
 - No obvious security or lint regressions remain.
+
+Implementation status:
+
+- The mention picker includes a fixed footer action to create a new recipe while the results/status area scrolls independently.
+- Creating a recipe from the meal editor stores the current meal form draft in `sessionStorage`, sends a local `return_to`, and returns to the original form after creation.
+- The recipe form pre-fills the recipe name from the active mention query when opened from the picker.
+- After the new recipe is created, the returning meal editor replaces the pending typed `@...` mention with a structured recipe reference and renders the new recipe chip automatically.
+- Temporary `created_recipe_mention_*` return parameters are removed from the browser URL after the editor applies the created recipe.
+- JavaScript controller specs cover draft storage/restoration, fixed footer behavior, created-recipe application, and return URL cleanup.
+- Controller specs cover safe local return handling and external return URL rejection.
 
 Estimated size: split into multiple PRs if this exceeds 500 changed lines.
 
