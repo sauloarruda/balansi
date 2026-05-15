@@ -63,16 +63,16 @@
       .flex-none class="#{goal_balance_pct > 10 ? 'ring-2 ring-red-600 ring-inset' : ''}" style="background-color: #dc2626; width: 20%;"
 
   / Legend
-  .grid.grid-cols-4.gap-2.text-xs.font-medium.mt-3
+  .grid.grid-cols-2.sm:grid-cols-4.gap-2.text-xs.font-medium.mt-3
     .flex.items-center.gap-1
-      .w-3.h-3.rounded-full style="background-color: #ea580c;"
+      .w-3.h-3.flex-none.rounded-full style="background-color: #ea580c;"
       span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_very_below")
     .flex.items-center.gap-1
-      .w-3.h-3.rounded-full style="background-color: #16a34a;"
+      .w-3.h-3.flex-none.rounded-full style="background-color: #16a34a;"
       span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_below")
     .flex.items-center.gap-1
-      .w-3.h-3.rounded-full style="background-color: #2563eb;"
+      .w-3.h-3.flex-none.rounded-full style="background-color: #2563eb;"
       span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_balanced")
     .flex.items-center.gap-1
-      .w-3.h-3.rounded-full style="background-color: #dc2626;"
+      .w-3.h-3.flex-none.rounded-full style="background-color: #dc2626;"
       span.text-gray-600 = t("journals.daily_summary.daily_goal_progress_above")
