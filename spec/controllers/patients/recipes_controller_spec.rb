@@ -39,6 +39,18 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response.body).not_to include(other_recipe.name)
     end
 
+    it "does not list discarded recipes" do
+      kept_recipe = create(:recipe, patient: patient, name: "Visible soup")
+      discarded_recipe = create(:recipe, patient: patient, name: "Hidden soup")
+      discarded_recipe.discard!
+
+      get :index
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(kept_recipe.name)
+      expect(response.body).not_to include(discarded_recipe.name)
+    end
+
     it "renders recipe images with high-resolution modals" do
       recipe = create(:recipe, patient: patient, name: "Recipe with image")
       image = create(:image, recipe: recipe)
@@ -133,6 +145,16 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include(other_recipe.name)
+    end
+
+    it "does not show discarded recipes" do
+      recipe = create(:recipe, patient: patient, name: "Discarded cake")
+      recipe.discard!
+
+      get :show, params: { id: recipe.id }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).not_to include(recipe.name)
     end
   end
 
@@ -324,6 +346,16 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include(other_recipe.name)
     end
+
+    it "does not render the edit form for discarded recipes" do
+      recipe = create(:recipe, patient: patient, name: "Discarded recipe")
+      recipe.discard!
+
+      get :edit, params: { id: recipe.id }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).not_to include(recipe.name)
+    end
   end
 
   describe "PATCH #update" do
@@ -436,19 +468,37 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to have_http_status(:not_found)
       expect(other_recipe.reload.name).to eq("Other recipe")
     end
+
+    it "does not update discarded recipes" do
+      recipe.discard!
+
+      patch :update, params: {
+        id: recipe.id,
+        recipe: {
+          name: "Updated discarded",
+          ingredients: recipe.ingredients,
+          portion_size_grams: 150
+        }
+      }
+
+      expect(response).to have_http_status(:not_found)
+      expect(recipe.reload.name).to eq("Original name")
+    end
   end
 
   describe "DELETE #destroy" do
-    it "deletes a recipe owned by the current patient" do
+    it "soft deletes a recipe owned by the current patient" do
       recipe = create(:recipe, patient: patient)
 
       expect do
         delete :destroy, params: { id: recipe.id }
-      end.to change { patient.recipes.count }.by(-1)
+      end.to change { patient.recipes.kept.count }.by(-1)
 
       expect(response).to redirect_to(patient_recipes_path)
       expect(response).to have_http_status(:see_other)
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.deleted"))
+      expect(recipe.reload).to be_discarded
+      expect(Recipe.exists?(recipe.id)).to be true
     end
 
     it "does not delete recipes owned by another patient" do

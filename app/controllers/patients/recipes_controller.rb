@@ -3,7 +3,7 @@ module Patients
     before_action :set_recipe, only: [ :show, :edit, :update, :destroy ]
 
     def index
-      @recipes = current_patient.recipes.includes(images: image_includes).order(created_at: :desc)
+      @recipes = current_patient.recipes.kept.includes(images: image_includes).order(created_at: :desc)
     end
 
     def show; end
@@ -35,7 +35,7 @@ module Patients
     end
 
     def destroy
-      @recipe.destroy!
+      @recipe.discard!
 
       redirect_to patient_recipes_path,
         status: :see_other,
@@ -45,7 +45,7 @@ module Patients
     private
 
     def set_recipe
-      @recipe = current_patient.recipes.includes(images: image_includes).find(params[:id])
+      @recipe = current_patient.recipes.kept.includes(images: image_includes).find(params[:id])
     end
 
     def image_includes

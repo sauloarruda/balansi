@@ -13,7 +13,7 @@ class Recipes::SearchInteraction < ActiveInteraction::Base
 
     escaped_query = ActiveRecord::Base.sanitize_sql_like(normalized_query)
 
-    patient.recipes
+    patient.recipes.kept
       .includes(images: { file_attachment: :blob })
       .where(::Recipe.arel_table[:name].matches("%#{escaped_query}%"))
       .order(:name, :id)
@@ -23,7 +23,7 @@ class Recipes::SearchInteraction < ActiveInteraction::Base
   private
 
   def recent_recipes
-    patient.recipes
+    patient.recipes.kept
       .includes(images: { file_attachment: :blob })
       .order(updated_at: :desc, id: :desc)
       .limit(RECENT_RESULTS)

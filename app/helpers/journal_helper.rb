@@ -319,6 +319,8 @@ module JournalHelper
   end
 
   def meal_recipe_tooltip_header(name, reference)
+    recipe_deleted = reference.recipe.blank? || reference.recipe.discarded?
+
     tag.div(class: "flex items-start justify-between gap-3") do
       safe_join([
         tag.div(class: "min-w-0") do
@@ -330,7 +332,7 @@ module JournalHelper
             )
           ])
         end,
-        (tag.span(t("meals.recipe_references.deleted_recipe"), class: "shrink-0 rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-200") if reference.recipe.blank?)
+        (tag.span(t("meals.recipe_references.deleted_recipe"), class: "shrink-0 rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-200") if recipe_deleted)
       ].compact)
     end
   end
@@ -354,7 +356,7 @@ module JournalHelper
 
   def meal_recipe_tooltip_link(reference, link_recipe: true, patient_id: nil)
     recipe = reference.recipe
-    return unless link_recipe && recipe.present? && recipe.patient_id == patient_id
+    return unless link_recipe && recipe.present? && recipe.kept? && recipe.patient_id == patient_id
 
     link_to(
       t("meals.recipe_references.view_recipe"),
@@ -373,6 +375,6 @@ module JournalHelper
   def current_patient_recipes
     return Recipe.none unless respond_to?(:current_patient)
 
-    current_patient&.recipes || Recipe.none
+    current_patient&.recipes&.kept || Recipe.none
   end
 end

@@ -15,6 +15,18 @@ RSpec.describe Recipe, type: :model do
     end
   end
 
+  describe "discard" do
+    it "soft deletes recipes with discarded_at" do
+      recipe = create(:recipe)
+
+      recipe.discard!
+
+      expect(recipe).to be_discarded
+      expect(described_class.kept).not_to include(recipe)
+      expect(described_class.find(recipe.id)).to eq(recipe)
+    end
+  end
+
   describe "validations" do
     it "is valid with required fields" do
       recipe = build(:recipe)

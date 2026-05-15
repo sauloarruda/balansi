@@ -64,6 +64,24 @@ RSpec.describe JournalHelper, type: :helper do
       expect(html).to include(helper.patient_recipe_path(recipe))
     end
 
+    it "renders discarded recipe snapshots without linking to the recipe" do
+      patient = create(:patient)
+      recipe = create(:recipe, patient: patient, name: "Bolo de banana", calories: 320, proteins: 8, carbs: 52, fats: 9)
+      meal = create(:meal, journal: create(:journal, patient: patient), description: "Comi @[Bolo de banana](recipe:#{recipe.id})")
+      reference = create(:meal_recipe_reference, meal: meal, recipe: recipe)
+      recipe.discard!
+
+      html = helper.format_meal_description(
+        meal.description,
+        recipe_references: [ reference ],
+        patient_id: patient.id
+      )
+
+      expect(html).to include(I18n.t("meals.recipe_references.deleted_recipe"))
+      expect(html).to include("320")
+      expect(html).not_to include(helper.patient_recipe_path(recipe))
+    end
+
     it "escapes plain text and recipe names" do
       html = helper.format_meal_description("<script>x</script> @[Bolo <caseiro>](recipe:123)")
 
