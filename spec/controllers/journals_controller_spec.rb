@@ -187,9 +187,9 @@ RSpec.describe JournalsController, type: :controller do
       get :show, params: { date: "2026-02-06" }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("carboidratos: 60g / 250g (24%)")
-      expect(response.body).to include("proteína: 40g / 150g (27%)")
-      expect(response.body).to include("gorduras: 20g / 70g (29%)")
+      expect(response.body).to include("carboidratos: 60g / 250g (24%, 190g faltando)")
+      expect(response.body).to include("proteína: 40g / 150g (27%, 110g faltando)")
+      expect(response.body).to include("gorduras: 20g / 70g (29%, 50g faltando)")
     end
 
     it "renders referenced recipe details with patient recipe links" do

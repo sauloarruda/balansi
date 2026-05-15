@@ -80,6 +80,7 @@ pt:
     minutes: "minutos"
     kcal_burned: "kcal queimadas"
     excess: "excesso"
+    missing: "faltando"
     goal_percentage: "%{percentage}% da meta"
     item:
       one: "item"

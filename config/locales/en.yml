@@ -80,6 +80,7 @@ en:
     minutes: "minutes"
     kcal_burned: "kcal burned"
     excess: "excess"
+    missing: "missing"
     goal_percentage: "%{percentage}% of goal"
     item:
       one: "item"

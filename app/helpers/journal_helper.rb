@@ -238,6 +238,9 @@ module JournalHelper
       if pct > 100
         excess = current.to_i - goal
         "#{label}: #{current.to_i}g / #{goal}g (#{pct}%, +#{excess}g #{t('defaults.excess')})"
+      elsif pct < 100
+        missing = goal - current.to_i
+        "#{label}: #{current.to_i}g / #{goal}g (#{pct}%, #{missing}g #{t('defaults.missing')})"
       else
         "#{label}: #{current.to_i}g / #{goal}g (#{pct}%)"
       end
