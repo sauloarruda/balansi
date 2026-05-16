@@ -209,11 +209,11 @@ RSpec.describe Patients::RecipesController, type: :controller do
       }
     end
 
-    it "creates a recipe for the current patient" do
+    it "creates a recipe with manual nutrition when AI calculation is disabled" do
       allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
 
       expect do
-        post :create, params: { recipe: valid_params }
+        post :create, params: { recipe: valid_params.merge(calculate_macros_with_ai: "0") }
       end.to change { patient.recipes.count }.by(1)
 
       recipe = patient.recipes.last
@@ -225,6 +225,31 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to redirect_to(patient_recipe_path(recipe))
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
       expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "recalculates nutrition when AI calculation is enabled during create" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+        recipe.assign_attributes(calories: 430, proteins: 25.5, carbs: 56.25, fats: 10.75)
+        instance_double(ActiveInteraction::Base, valid?: true)
+      end
+
+      expect do
+        post :create, params: { recipe: valid_params.merge(calculate_macros_with_ai: "1") }
+      end.to change { patient.recipes.count }.by(1)
+
+      recipe = patient.recipes.last
+      expect(recipe.calories).to eq(430)
+      expect(recipe.proteins).to eq(25.5)
+      expect(recipe.carbs).to eq(56.25)
+      expect(recipe.fats).to eq(10.75)
+      expect(response).to redirect_to(patient_recipe_path(recipe))
+      expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+        recipe: an_instance_of(Recipe),
+        user_id: patient_user.id,
+        user_language: patient_user.language,
+        persist: false,
+        force: true
+      )
     end
 
     it "redirects to a local return path after creating a recipe from another flow" do
@@ -278,7 +303,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
         recipe: an_instance_of(Recipe),
         user_id: patient_user.id,
         user_language: patient_user.language,
-        persist: false
+        persist: false,
+        force: true
       )
     end
 
@@ -408,6 +434,38 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(recipe.carbs).to eq(62.25)
       expect(recipe.fats).to eq(14.75)
       expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "reanalyzes nutrition when AI calculation is enabled during edit" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+        recipe.assign_attributes(calories: 390, proteins: 21.5, carbs: 48.75, fats: 8.25)
+        instance_double(ActiveInteraction::Base, valid?: true)
+      end
+
+      patch :update, params: {
+        id: recipe.id,
+        recipe: {
+          name: "Updated name",
+          ingredients: "Updated ingredients",
+          instructions: "Updated instructions",
+          portion_size_grams: 180,
+          calculate_macros_with_ai: "1"
+        }
+      }
+
+      expect(response).to redirect_to(patient_recipe_path(recipe))
+      expect(recipe.reload.name).to eq("Updated name")
+      expect(recipe.calories).to eq(390)
+      expect(recipe.proteins).to eq(21.5)
+      expect(recipe.carbs).to eq(48.75)
+      expect(recipe.fats).to eq(8.25)
+      expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+        recipe: recipe,
+        user_id: patient_user.id,
+        user_language: patient_user.language,
+        persist: false,
+        force: true
+      )
     end
 
     it "adds recipe images" do

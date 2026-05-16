@@ -10,11 +10,12 @@ class Recipes::AnalyzeNutritionInteraction < ActiveInteraction::Base
   integer :user_id
   string :user_language, default: "pt"
   boolean :persist, default: true
+  boolean :force, default: false
 
   validates :user_language, presence: true
 
   def execute
-    return recipe if nutrition_complete?
+    return recipe if nutrition_complete? && !force
     return nil unless recipe_valid_for_analysis?
     return nil unless rate_limit_ok?
 

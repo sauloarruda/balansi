@@ -46,6 +46,29 @@ RSpec.describe Recipes::AnalyzeNutritionInteraction, type: :interaction do
       expect(client).not_to have_received(:analyze)
     end
 
+    it "reanalyzes complete nutrition values when forced" do
+      recipe = create(:recipe, patient: patient, calories: 450, proteins: 24.12, carbs: 60.25, fats: 9.38)
+      client = instance_double(Recipes::NutritionAnalysisClient)
+      allow(client).to receive(:analyze).and_return(
+        {
+          calories: 390,
+          proteins: 21.5,
+          carbs: 48.75,
+          fats: 8.25
+        }
+      )
+      allow_any_instance_of(described_class).to receive(:llm_client).and_return(client)
+
+      result = described_class.run(recipe: recipe, user_id: user.id, user_language: user.language, force: true)
+
+      expect(result).to be_valid
+      expect(client).to have_received(:analyze)
+      expect(recipe.reload.calories).to eq(390)
+      expect(recipe.proteins).to eq(21.5)
+      expect(recipe.carbs).to eq(48.75)
+      expect(recipe.fats).to eq(8.25)
+    end
+
     it "assigns values without saving when persist is false" do
       recipe = create(:recipe, patient: patient, calories: nil, proteins: nil, carbs: nil, fats: nil)
       client = instance_double(Recipes::NutritionAnalysisClient)

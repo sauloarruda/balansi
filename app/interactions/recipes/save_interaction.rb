@@ -34,25 +34,19 @@ class Recipes::SaveInteraction < ActiveInteraction::Base
 
   def analyze_recipe_nutrition
     return true unless calculate_macros_with_ai
-    return true if nutrition_manually_provided?
 
     result = Recipes::AnalyzeNutritionInteraction.run(
       recipe: recipe,
       user_id: user.id,
       user_language: user.language.presence || "pt",
-      persist: false
+      persist: false,
+      force: true
     )
 
     return true if result.valid?
 
     copy_analysis_errors(result)
     false
-  end
-
-  def nutrition_manually_provided?
-    Recipes::AnalyzeNutritionInteraction::NUTRITION_ATTRIBUTES.all? do |attribute|
-      recipe.public_send(attribute).present?
-    end
   end
 
   def attach_images

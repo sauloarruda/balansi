@@ -104,7 +104,7 @@ module Patients
     end
 
     def calculate_macros_with_ai?
-      ActiveModel::Type::Boolean.new.cast(params.dig(:recipe, :calculate_macros_with_ai))
+      ActiveModel::Type::Boolean.new.cast(params.dig(:recipe, :calculate_macros_with_ai)) || false
     end
   end
 end
