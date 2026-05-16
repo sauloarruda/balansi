@@ -22,14 +22,14 @@ export default class extends Controller {
     initialRecipes: Array
   }
 
-  connect() {
+  async connect() {
     this.recipes = []
     this.selectedIndex = -1
     this.debounceTimeout = null
     this.abortController = null
     this.activeQuery = ""
     const restoredDraft = this.restoreFormDraft()
-    this.applyCreatedRecipeMention(restoredDraft?.pendingRecipeMentionQuery)
+    await this.applyCreatedRecipeMention(restoredDraft?.pendingRecipeMentionQuery)
     this.renderEditorFromField()
     this.syncField()
     this.editorTarget.dispatchEvent(new Event("input", { bubbles: true }))
@@ -707,8 +707,8 @@ export default class extends Controller {
     return `balansi:recipe-mentions:form-draft:${window.location.pathname}${query ? `?${query}` : ""}`
   }
 
-  applyCreatedRecipeMention(pendingQuery) {
-    const recipe = this.createdRecipeMentionFromUrl()
+  async applyCreatedRecipeMention(pendingQuery) {
+    const recipe = await this.createdRecipeMentionFromUrl()
     if (!recipe || !this.hasFieldTarget) return
 
     const nextValue = this.descriptionWithCreatedRecipeMention(this.fieldTarget.value, pendingQuery, recipe)
@@ -724,20 +724,22 @@ export default class extends Controller {
     this.clearCreatedRecipeMentionParams()
   }
 
-  createdRecipeMentionFromUrl() {
+  async createdRecipeMentionFromUrl() {
     const params = new URLSearchParams(window.location.search)
     const id = params.get("created_recipe_mention_id")
-    const name = params.get("created_recipe_mention_name")
-    if (!id || !name) return null
+    if (!id || !this.hasSearchUrlValue) return null
 
-    return {
-      id,
-      name,
-      portion_size_grams: params.get("created_recipe_mention_portion_size_grams"),
-      calories_per_portion: params.get("created_recipe_mention_calories_per_portion"),
-      proteins_per_portion: params.get("created_recipe_mention_proteins_per_portion"),
-      carbs_per_portion: params.get("created_recipe_mention_carbs_per_portion"),
-      fats_per_portion: params.get("created_recipe_mention_fats_per_portion")
+    const url = new URL(this.searchUrlValue, window.location.origin)
+    url.searchParams.set("recipe_id", id)
+
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      if (!response.ok) return null
+
+      const recipes = await response.json()
+      return recipes.find((recipe) => recipe.id.toString() === id.toString()) || null
+    } catch (_error) {
+      return null
     }
   }
 

@@ -23,6 +23,32 @@ RSpec.describe Recipes::SearchInteraction, type: :interaction do
     expect(result).to contain_exactly(matching_recipe)
   end
 
+  it "returns a current patient recipe by id" do
+    recipe = create(:recipe, patient: patient, name: "Created recipe")
+    create(:recipe, patient: patient, name: "Other recipe")
+
+    result = described_class.run!(patient: patient, recipe_id: recipe.id.to_s)
+
+    expect(result).to contain_exactly(recipe)
+  end
+
+  it "does not return other patient recipes by id" do
+    other_recipe = create(:recipe, name: "Private recipe")
+
+    result = described_class.run!(patient: patient, recipe_id: other_recipe.id.to_s)
+
+    expect(result).to be_empty
+  end
+
+  it "does not return discarded recipes by id" do
+    recipe = create(:recipe, patient: patient)
+    recipe.discard!
+
+    result = described_class.run!(patient: patient, recipe_id: recipe.id.to_s)
+
+    expect(result).to be_empty
+  end
+
   it "returns current patient recipes matching any part of the name" do
     matching_recipe = create(:recipe, patient: patient, name: "Carne com legumes")
     create(:recipe, patient: patient, name: "Carne assada")

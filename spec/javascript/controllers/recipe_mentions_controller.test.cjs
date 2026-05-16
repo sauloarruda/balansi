@@ -401,39 +401,70 @@ test("restoreFormDraft restores saved form fields", () => {
   assert.equal(stored[key], undefined)
 })
 
-test("applyCreatedRecipeMention replaces the pending text mention with the created recipe chip", () => {
+test("applyCreatedRecipeMention fetches the created recipe and replaces the pending text mention", async () => {
   const RecipeMentionsController = loadControllerClass()
   const controller = new RecipeMentionsController()
   setReferenceFormat(controller)
   const replacedUrls = []
+  const requestedUrls = []
+  const originalFetch = global.fetch
 
-  global.window = {
-    location: {
-      href: "http://example.test/journals/2026-05-15/meals/new?created_recipe_mention_id=77&created_recipe_mention_name=Bolo%20caseiro&created_recipe_mention_portion_size_grams=120&created_recipe_mention_calories_per_portion=320&created_recipe_mention_proteins_per_portion=8&created_recipe_mention_carbs_per_portion=52&created_recipe_mention_fats_per_portion=9",
-      pathname: "/journals/2026-05-15/meals/new",
-      search: "?created_recipe_mention_id=77&created_recipe_mention_name=Bolo%20caseiro&created_recipe_mention_portion_size_grams=120&created_recipe_mention_calories_per_portion=320&created_recipe_mention_proteins_per_portion=8&created_recipe_mention_carbs_per_portion=52&created_recipe_mention_fats_per_portion=9"
-    },
-    history: {
-      state: {},
-      replaceState(_state, _title, url) {
-        replacedUrls.push(url)
+  try {
+    global.fetch = async (url) => {
+      requestedUrls.push(url.toString())
+
+      return {
+        ok: true,
+        async json() {
+          return [{
+            id: 77,
+            name: "Bolo caseiro",
+            portion_size_grams: 120,
+            calories_per_portion: 320,
+            proteins_per_portion: 8,
+            carbs_per_portion: 52,
+            fats_per_portion: 9
+          }]
+        }
       }
     }
+
+    global.window = {
+      location: {
+        origin: "http://example.test",
+        href: "http://example.test/journals/2026-05-15/meals/new?created_recipe_mention_id=77",
+        pathname: "/journals/2026-05-15/meals/new",
+        search: "?created_recipe_mention_id=77"
+      },
+      history: {
+        state: {},
+        replaceState(_state, _title, url) {
+          replacedUrls.push(url)
+        }
+      }
+    }
+    controller.searchUrlValue = "/patient/recipes/search"
+    controller.hasSearchUrlValue = true
+    controller.hasFieldTarget = true
+    controller.fieldTarget = { value: "Lanche com @Bolo" }
+    controller.hasEditorTarget = true
+    controller.editorTarget = elementNode({ tagName: "DIV", childNodes: [textNode("Lanche com @Bolo")] })
+    controller.initialRecipesValue = []
+
+    await controller.applyCreatedRecipeMention("Bolo")
+    controller.renderEditorFromField()
+
+    const requestedUrl = new URL(requestedUrls[0])
+    assert.equal(requestedUrl.pathname, "/patient/recipes/search")
+    assert.equal(requestedUrl.searchParams.get("recipe_id"), "77")
+    assert.equal(controller.fieldTarget.value, "Lanche com @[Bolo caseiro](recipe:77)")
+    assert.equal(controller.initialRecipesValue[0].portion_size_grams, 120)
+    assert.equal(controller.editorTarget.childNodes[1].dataset.recipeId, "77")
+    assert.equal(controller.editorTarget.childNodes[1].textContent.includes("Bolo caseiro"), true)
+    assert.equal(new URL(replacedUrls[0]).searchParams.has("created_recipe_mention_id"), false)
+  } finally {
+    global.fetch = originalFetch
   }
-  controller.hasFieldTarget = true
-  controller.fieldTarget = { value: "Lanche com @Bolo" }
-  controller.hasEditorTarget = true
-  controller.editorTarget = elementNode({ tagName: "DIV", childNodes: [textNode("Lanche com @Bolo")] })
-  controller.initialRecipesValue = []
-
-  controller.applyCreatedRecipeMention("Bolo")
-  controller.renderEditorFromField()
-
-  assert.equal(controller.fieldTarget.value, "Lanche com @[Bolo caseiro](recipe:77)")
-  assert.equal(controller.initialRecipesValue[0].portion_size_grams, "120")
-  assert.equal(controller.editorTarget.childNodes[1].dataset.recipeId, "77")
-  assert.equal(controller.editorTarget.childNodes[1].textContent.includes("Bolo caseiro"), true)
-  assert.equal(new URL(replacedUrls[0]).searchParams.has("created_recipe_mention_id"), false)
 })
 
 test("formDraftStorageKey ignores created recipe mention return params", () => {
@@ -443,7 +474,7 @@ test("formDraftStorageKey ignores created recipe mention return params", () => {
   global.window = {
     location: {
       pathname: "/journals/2026-05-15/meals/new",
-      search: "?test_user_id=13&created_recipe_mention_id=77&created_recipe_mention_name=Bolo"
+      search: "?test_user_id=13&created_recipe_mention_id=77"
     }
   }
 

@@ -466,6 +466,7 @@ en:
         update: "Update recipe"
         view: "View"
         edit: "Edit"
+        archive: "Archive"
         delete: "Delete"
         delete_image: "Delete image"
         back: "Back"
@@ -474,6 +475,7 @@ en:
       messages:
         created: "Recipe created successfully."
         updated: "Recipe updated successfully."
+        archived: "Recipe archived successfully."
         deleted: "Recipe deleted successfully."
         image_deleted: "Recipe image deleted successfully."
       errors:

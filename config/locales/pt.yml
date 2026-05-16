@@ -514,6 +514,7 @@ pt:
         update: "Atualizar receita"
         view: "Ver"
         edit: "Editar"
+        archive: "Arquivar"
         delete: "Excluir"
         delete_image: "Excluir imagem"
         back: "Voltar"
@@ -522,6 +523,7 @@ pt:
       messages:
         created: "Receita criada com sucesso."
         updated: "Receita atualizada com sucesso."
+        archived: "Receita arquivada com sucesso."
         deleted: "Receita excluída com sucesso."
         image_deleted: "Imagem da receita excluída com sucesso."
       errors:

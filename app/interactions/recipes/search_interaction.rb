@@ -4,9 +4,12 @@ class Recipes::SearchInteraction < ActiveInteraction::Base
 
   object :patient, class: Patient
   string :query, default: ""
+  string :recipe_id, default: ""
   boolean :recent, default: false
 
   def execute
+    return recipe_by_id if recipe_id.present?
+
     normalized_query = query.strip
     return recent_recipes if normalized_query.blank? && recent
     return ::Recipe.none if normalized_query.blank?
@@ -21,6 +24,13 @@ class Recipes::SearchInteraction < ActiveInteraction::Base
   end
 
   private
+
+  def recipe_by_id
+    patient.recipes.kept
+      .includes(images: { file_attachment: :blob })
+      .where(id: recipe_id)
+      .limit(1)
+  end
 
   def recent_recipes
     patient.recipes.kept

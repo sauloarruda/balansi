@@ -237,8 +237,14 @@ RSpec.describe Patients::RecipesController, type: :controller do
       redirect_params = Rack::Utils.parse_query(redirect_uri.query)
       expect(redirect_uri.path).to eq(return_to)
       expect(redirect_params["created_recipe_mention_id"]).to eq(patient.recipes.last.id.to_s)
-      expect(redirect_params["created_recipe_mention_name"]).to eq("Lentil stew")
-      expect(redirect_params["created_recipe_mention_calories_per_portion"]).to eq("450")
+      expect(redirect_params).not_to include(
+        "created_recipe_mention_name",
+        "created_recipe_mention_portion_size_grams",
+        "created_recipe_mention_calories_per_portion",
+        "created_recipe_mention_proteins_per_portion",
+        "created_recipe_mention_carbs_per_portion",
+        "created_recipe_mention_fats_per_portion"
+      )
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
     end
 
@@ -496,7 +502,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       expect(response).to redirect_to(patient_recipes_path)
       expect(response).to have_http_status(:see_other)
-      expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.deleted"))
+      expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.archived"))
       expect(recipe.reload).to be_discarded
       expect(Recipe.exists?(recipe.id)).to be true
     end

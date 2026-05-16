@@ -39,7 +39,7 @@ module Patients
 
       redirect_to patient_recipes_path,
         status: :see_other,
-        notice: t("patient.recipes.messages.deleted")
+        notice: t("patient.recipes.messages.archived")
     end
 
     private
@@ -82,15 +82,7 @@ module Patients
 
       uri = URI.parse(@return_to)
       query_params = Rack::Utils.parse_nested_query(uri.query)
-      query_params.merge!(
-        "created_recipe_mention_id" => @recipe.id,
-        "created_recipe_mention_name" => @recipe.name,
-        "created_recipe_mention_portion_size_grams" => @recipe.portion_size_grams,
-        "created_recipe_mention_calories_per_portion" => @recipe.calories,
-        "created_recipe_mention_proteins_per_portion" => @recipe.proteins,
-        "created_recipe_mention_carbs_per_portion" => @recipe.carbs,
-        "created_recipe_mention_fats_per_portion" => @recipe.fats
-      )
+      query_params["created_recipe_mention_id"] = @recipe.id
       uri.query = Rack::Utils.build_query(query_params)
       uri.to_s
     end
