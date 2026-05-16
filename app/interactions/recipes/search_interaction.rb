@@ -10,17 +10,15 @@ class Recipes::SearchInteraction < ActiveInteraction::Base
   def execute
     return recipe_by_id if recipe_id.present?
 
-    normalized_query = query.strip
+    normalized_query = normalized_search_text(query)
     return recent_recipes if normalized_query.blank? && recent
     return ::Recipe.none if normalized_query.blank?
 
-    escaped_query = ActiveRecord::Base.sanitize_sql_like(normalized_query)
-
     patient.recipes.kept
       .includes(images: { file_attachment: :blob })
-      .where(::Recipe.arel_table[:name].matches("%#{escaped_query}%"))
       .order(:name, :id)
-      .limit(MAX_RESULTS)
+      .select { |recipe| normalized_search_text(recipe.name).include?(normalized_query) }
+      .first(MAX_RESULTS)
   end
 
   private
@@ -37,5 +35,9 @@ class Recipes::SearchInteraction < ActiveInteraction::Base
       .includes(images: { file_attachment: :blob })
       .order(updated_at: :desc, id: :desc)
       .limit(RECENT_RESULTS)
+  end
+
+  def normalized_search_text(value)
+    ActiveSupport::Inflector.transliterate(value.to_s).downcase.strip
   end
 end
