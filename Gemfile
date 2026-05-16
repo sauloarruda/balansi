@@ -112,4 +112,5 @@ gem "sentry-ruby"
 gem "sentry-rails"
 gem "aws-sdk-s3", require: false
 
+gem "resend", "~> 1.3"
 gem "discard", "~> 1.4"

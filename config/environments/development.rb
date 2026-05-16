@@ -40,7 +40,6 @@ Rails.application.configure do
 
   # Capture all emails and display them at /letter_opener
   config.action_mailer.delivery_method = :letter_opener_web
-  config.action_mailer.perform_deliveries = true
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
