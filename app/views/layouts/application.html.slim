@@ -60,9 +60,9 @@ html
               = heroicon "user-group", variant: :outline, options: { class: "w-5 h-5" }
           - if current_user&.professional.present?
             - professional_button_class = professional_patients_active ? "inline-flex items-center justify-center text-sm font-medium text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2" : "inline-flex items-center justify-center text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg px-3 py-2"
+            - professional_button_icon_class = "w-5 h-5"
             = link_to professional_patients_path, class: professional_button_class, title: t("professional.patients.index.title"), aria: { label: t("professional.patients.index.title"), current: (professional_patients_active ? "page" : nil) } do
-              svg.h-5.w-5 aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-                path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 0a4 4 0 014 4v2.5a3.5 3.5 0 003.5 3.5h.5M12 6a4 4 0 00-4 4v2.5a3.5 3.5 0 01-3.5 3.5H4m8 0v3m0 0a4 4 0 01-4 4m4-4a4 4 0 004 4m-4-4a4 4 0 004-4m0 0h3m-7 0H5"
+              = heroicon "heart", variant: :outline, options: { class: professional_button_icon_class }
               span.sr-only = t("professional.patients.index.title")
           - if current_user.present?
             - profile_top_button_class = profile_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
