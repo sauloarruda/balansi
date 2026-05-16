@@ -31,5 +31,18 @@ RSpec.describe Patients::RecipeImagesController, type: :controller do
       expect(response).to have_http_status(:not_found)
       expect(Image.exists?(image.id)).to be true
     end
+
+    it "does not delete images from discarded recipes" do
+      recipe = create(:recipe, patient: patient)
+      image = create(:image, recipe: recipe)
+      recipe.discard!
+
+      expect do
+        delete :destroy, params: { recipe_id: recipe.id, id: image.id }
+      end.not_to change(Image, :count)
+
+      expect(response).to have_http_status(:not_found)
+      expect(Image.exists?(image.id)).to be true
+    end
   end
 end

@@ -7,7 +7,7 @@
     p.mt-2.text-sm.text-gray-600 = t("patient.recipes.index.portion_size", grams: localized_decimal(@recipe.portion_size_grams, precision: 2))
   .flex.items-center.gap-3
     = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(@recipe), class: "inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-100"
-    = button_to t("patient.recipes.actions.delete"), patient_recipe_path(@recipe), method: :delete, class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
+    = button_to t("patient.recipes.actions.archive"), patient_recipe_path(@recipe), method: :delete, class: "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
 
 .grid.gap-6 class="lg:grid-cols-[minmax(0,1fr)_20rem]"
   .space-y-6

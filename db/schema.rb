@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_14_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_15_120000) do
   create_table "account_verification_keys", force: :cascade do |t|
     t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.string "key", null: false
@@ -174,6 +174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_14_120000) do
     t.integer "calories"
     t.decimal "carbs", precision: 8, scale: 2
     t.datetime "created_at", null: false
+    t.datetime "discarded_at"
     t.decimal "fats", precision: 8, scale: 2
     t.text "ingredients", null: false
     t.text "instructions"
@@ -182,6 +183,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_14_120000) do
     t.decimal "portion_size_grams", precision: 8, scale: 2, null: false
     t.decimal "proteins", precision: 8, scale: 2
     t.datetime "updated_at", null: false
+    t.index [ "discarded_at" ], name: "index_recipes_on_discarded_at"
     t.index [ "patient_id", "name" ], name: "recipes_patient_name_idx"
     t.index [ "patient_id" ], name: "index_recipes_on_patient_id"
   end

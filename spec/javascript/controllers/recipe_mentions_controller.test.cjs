@@ -26,6 +26,13 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
     tagName,
     dataset,
     childNodes,
+    attributes: {},
+    className: "",
+    classList: {
+      add() {},
+      remove() {},
+      toggle() {}
+    },
     _textContent: undefined,
     get textContent() {
       if (this._textContent !== undefined) return this._textContent
@@ -44,6 +51,29 @@ function elementNode({ tagName = "SPAN", dataset = {}, childNodes = [] } = {}) {
     },
     matches(selector) {
       return selector === "[data-recipe-id]" && Boolean(this.dataset.recipeId)
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value
+    },
+    getAttribute(name) {
+      return this.attributes[name]
+    },
+    querySelector(selector) {
+      return this.querySelectorAll(selector)[0] || null
+    },
+    querySelectorAll(selector) {
+      const matches = []
+      const visit = (node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return
+        if (selector === "[data-recipe-result]" && node.dataset.recipeResult) matches.push(node)
+        node.childNodes.forEach(visit)
+      }
+
+      this.childNodes.forEach(visit)
+      return matches
+    },
+    closest() {
+      return null
     }
   }
 }
@@ -59,7 +89,15 @@ global.document = {
   createElement(tagName) {
     return elementNode({ tagName: tagName.toUpperCase() })
   },
+  createElementNS(_namespace, tagName) {
+    return elementNode({ tagName: tagName.toUpperCase() })
+  },
   createTextNode: textNode
+}
+global.Event = class Event {
+  constructor(type) {
+    this.type = type
+  }
 }
 global.AbortController = class AbortController {
   constructor() {
@@ -100,7 +138,31 @@ test("serializeNode turns visual recipe chips into structured references", () =>
   })
 
   assert.equal(chip.textContent, "Bolo de banana (180g)")
+  assert.equal(chip.className, "inline-flex")
+  assert.equal(chip.childNodes[0].className, "recipe-mention-chip")
   assert.equal(controller.serializeNode(editor), "Comi @[Bolo de banana](recipe:123) hoje")
+})
+
+test("chipElement includes a tooltip when recipe nutrition is available", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  controller.gramsTextValue = "g"
+  controller.kcalTextValue = "kcal"
+
+  const chip = controller.chipElement({
+    id: "123",
+    name: "Bolo de banana",
+    portion_size_grams: 180,
+    calories_per_portion: 320,
+    proteins_per_portion: 8,
+    carbs_per_portion: 52,
+    fats_per_portion: 9
+  })
+
+  assert.equal(chip.dataset.controller, "popover-tooltip")
+  assert.equal(chip.childNodes[1].dataset.popoverTooltipTarget, "tip")
+  assert.match(chip.textContent, /320/)
+  assert.match(chip.textContent, /52g/)
 })
 
 test("serializedValue trims editor value and normalizes non-breaking spaces", () => {
@@ -152,7 +214,8 @@ test("renderEditorFromField turns saved structured references into visual chips"
   assert.equal(controller.editorTarget.childNodes[1].dataset.recipeId, "123")
   assert.equal(controller.editorTarget.childNodes[1].dataset.recipeName, "Bolo de banana")
   assert.equal(controller.editorTarget.childNodes[1].dataset.recipePortionSizeGrams, 180)
-  assert.equal(controller.editorTarget.childNodes[1].className, "recipe-mention-chip")
+  assert.equal(controller.editorTarget.childNodes[1].className, "inline-flex")
+  assert.equal(controller.editorTarget.childNodes[1].childNodes[0].className, "recipe-mention-chip")
   assert.equal(controller.editorTarget.childNodes[1].textContent, "Bolo de banana (180g)")
   assert.equal(controller.editorTarget.childNodes[2].textContent, " hoje")
   assert.equal(controller.serializedValue(), "Comi @[Bolo de banana](recipe:123) hoje")
@@ -202,4 +265,221 @@ test("scheduleSearch waits 500ms before searching", () => {
   }
 
   assert.equal(delay, 500)
+})
+
+test("appendCreateRecipeButton adds a fixed create recipe action to the actions footer", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  const actions = elementNode({ tagName: "DIV" })
+
+  controller.hasActionsTarget = true
+  controller.actionsTarget = actions
+  controller.hasNewRecipeUrlValue = true
+  controller.createRecipeTextValue = "Create new recipe"
+
+  controller.appendCreateRecipeButton()
+
+  assert.equal(actions.childNodes.length, 1)
+  assert.equal(actions.childNodes[0].textContent, "Create new recipe")
+  assert.equal(actions.childNodes[0].dataset.action, "mousedown->recipe-mentions#createRecipe")
+})
+
+test("createRecipe stores the meal form draft and redirects to the recipe form", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  const stored = {}
+  const redirectedTo = []
+  const descriptionField = {
+    name: "meal[description]",
+    type: "hidden",
+    value: "",
+    checked: false,
+    multiple: false
+  }
+  const mealTypeField = {
+    name: "meal[meal_type]",
+    type: "select-one",
+    value: "lunch",
+    checked: false,
+    multiple: false
+  }
+  const form = {
+    querySelectorAll() {
+      return [descriptionField, mealTypeField]
+    }
+  }
+
+  global.window = {
+    location: {
+      origin: "http://example.test",
+      href: "http://example.test/journals/2026-05-15/meals/new",
+      pathname: "/journals/2026-05-15/meals/new",
+      search: ""
+    },
+    sessionStorage: {
+      setItem(key, value) {
+        stored[key] = value
+      }
+    }
+  }
+  global.window.location.assign = (url) => redirectedTo.push(url)
+  controller.element = { closest: () => form }
+  controller.hasEditorTarget = true
+  controller.editorTarget = elementNode({ tagName: "DIV", childNodes: [textNode("Comi @Bolo")] })
+  controller.hasFieldTarget = true
+  controller.fieldTarget = descriptionField
+  controller.newRecipeUrlValue = "/patient/recipes/new"
+  controller.activeQuery = "Bolo"
+
+  controller.createRecipe({ preventDefault() {} })
+
+  const storedDraft = JSON.parse(stored["balansi:recipe-mentions:form-draft:/journals/2026-05-15/meals/new"])
+  const url = new URL(redirectedTo[0])
+
+  assert.equal(storedDraft.fields.find((field) => field.name === "meal[description]").value, "Comi @Bolo")
+  assert.equal(storedDraft.fields.find((field) => field.name === "meal[meal_type]").value, "lunch")
+  assert.equal(storedDraft.pendingRecipeMentionQuery, "Bolo")
+  assert.equal(url.pathname, "/patient/recipes/new")
+  assert.equal(url.searchParams.get("recipe[name]"), "Bolo")
+  assert.equal(url.searchParams.get("return_to"), "http://example.test/journals/2026-05-15/meals/new")
+})
+
+test("restoreFormDraft restores saved form fields", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  const descriptionField = {
+    name: "meal[description]",
+    type: "hidden",
+    value: "",
+    checked: false,
+    multiple: false,
+    dispatchEvent() {}
+  }
+  const mealTypeField = {
+    name: "meal[meal_type]",
+    type: "select-one",
+    value: "breakfast",
+    checked: false,
+    multiple: false,
+    dispatchEvent() {}
+  }
+  const form = {
+    querySelectorAll() {
+      return [descriptionField, mealTypeField]
+    }
+  }
+  const key = "balansi:recipe-mentions:form-draft:/journals/2026-05-15/meals/new"
+  const stored = {
+    [key]: JSON.stringify({
+      fields: [
+        { name: "meal[description]", type: "hidden", value: "Comi @[Bolo](recipe:1)", checked: false, multiple: false },
+        { name: "meal[meal_type]", type: "select-one", value: "snack", checked: false, multiple: false }
+      ]
+    })
+  }
+
+  global.window = {
+    location: {
+      pathname: "/journals/2026-05-15/meals/new",
+      search: ""
+    },
+    sessionStorage: {
+      getItem(keyName) {
+        return stored[keyName]
+      },
+      removeItem(keyName) {
+        delete stored[keyName]
+      }
+    }
+  }
+  controller.element = { closest: () => form }
+
+  controller.restoreFormDraft()
+
+  assert.equal(descriptionField.value, "Comi @[Bolo](recipe:1)")
+  assert.equal(mealTypeField.value, "snack")
+  assert.equal(stored[key], undefined)
+})
+
+test("applyCreatedRecipeMention fetches the created recipe and replaces the pending text mention", async () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+  setReferenceFormat(controller)
+  const replacedUrls = []
+  const requestedUrls = []
+  const originalFetch = global.fetch
+
+  try {
+    global.fetch = async (url) => {
+      requestedUrls.push(url.toString())
+
+      return {
+        ok: true,
+        async json() {
+          return [{
+            id: 77,
+            name: "Bolo caseiro",
+            portion_size_grams: 120,
+            calories_per_portion: 320,
+            proteins_per_portion: 8,
+            carbs_per_portion: 52,
+            fats_per_portion: 9
+          }]
+        }
+      }
+    }
+
+    global.window = {
+      location: {
+        origin: "http://example.test",
+        href: "http://example.test/journals/2026-05-15/meals/new?created_recipe_mention_id=77",
+        pathname: "/journals/2026-05-15/meals/new",
+        search: "?created_recipe_mention_id=77"
+      },
+      history: {
+        state: {},
+        replaceState(_state, _title, url) {
+          replacedUrls.push(url)
+        }
+      }
+    }
+    controller.searchUrlValue = "/patient/recipes/search"
+    controller.hasSearchUrlValue = true
+    controller.hasFieldTarget = true
+    controller.fieldTarget = { value: "Lanche com @Bolo" }
+    controller.hasEditorTarget = true
+    controller.editorTarget = elementNode({ tagName: "DIV", childNodes: [textNode("Lanche com @Bolo")] })
+    controller.initialRecipesValue = []
+
+    await controller.applyCreatedRecipeMention("Bolo")
+    controller.renderEditorFromField()
+
+    const requestedUrl = new URL(requestedUrls[0])
+    assert.equal(requestedUrl.pathname, "/patient/recipes/search")
+    assert.equal(requestedUrl.searchParams.get("recipe_id"), "77")
+    assert.equal(controller.fieldTarget.value, "Lanche com @[Bolo caseiro](recipe:77)")
+    assert.equal(controller.initialRecipesValue[0].portion_size_grams, 120)
+    assert.equal(controller.editorTarget.childNodes[1].dataset.recipeId, "77")
+    assert.equal(controller.editorTarget.childNodes[1].textContent.includes("Bolo caseiro"), true)
+    assert.equal(new URL(replacedUrls[0]).searchParams.has("created_recipe_mention_id"), false)
+  } finally {
+    global.fetch = originalFetch
+  }
+})
+
+test("formDraftStorageKey ignores created recipe mention return params", () => {
+  const RecipeMentionsController = loadControllerClass()
+  const controller = new RecipeMentionsController()
+
+  global.window = {
+    location: {
+      pathname: "/journals/2026-05-15/meals/new",
+      search: "?test_user_id=13&created_recipe_mention_id=77"
+    }
+  }
+
+  assert.equal(
+    controller.formDraftStorageKey(),
+    "balansi:recipe-mentions:form-draft:/journals/2026-05-15/meals/new?test_user_id=13"
+  )
 })

@@ -1,4 +1,6 @@
 class Recipe < ApplicationRecord
+  include Discard::Model
+
   CALORIES_MAX = 50_000
   MACROS_MAX = 10_000
   PORTION_SIZE_GRAMS_MAX = 50_000

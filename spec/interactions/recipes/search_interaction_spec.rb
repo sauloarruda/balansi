@@ -13,6 +13,42 @@ RSpec.describe Recipes::SearchInteraction, type: :interaction do
     expect(result).to contain_exactly(matching_recipe)
   end
 
+  it "does not return discarded recipes" do
+    matching_recipe = create(:recipe, patient: patient, name: "Bolo de banana")
+    discarded_recipe = create(:recipe, patient: patient, name: "Bolo antigo")
+    discarded_recipe.discard!
+
+    result = described_class.run!(patient: patient, query: "Bolo")
+
+    expect(result).to contain_exactly(matching_recipe)
+  end
+
+  it "returns a current patient recipe by id" do
+    recipe = create(:recipe, patient: patient, name: "Created recipe")
+    create(:recipe, patient: patient, name: "Other recipe")
+
+    result = described_class.run!(patient: patient, recipe_id: recipe.id.to_s)
+
+    expect(result).to contain_exactly(recipe)
+  end
+
+  it "does not return other patient recipes by id" do
+    other_recipe = create(:recipe, name: "Private recipe")
+
+    result = described_class.run!(patient: patient, recipe_id: other_recipe.id.to_s)
+
+    expect(result).to be_empty
+  end
+
+  it "does not return discarded recipes by id" do
+    recipe = create(:recipe, patient: patient)
+    recipe.discard!
+
+    result = described_class.run!(patient: patient, recipe_id: recipe.id.to_s)
+
+    expect(result).to be_empty
+  end
+
   it "returns current patient recipes matching any part of the name" do
     matching_recipe = create(:recipe, patient: patient, name: "Carne com legumes")
     create(:recipe, patient: patient, name: "Carne assada")
@@ -61,5 +97,15 @@ RSpec.describe Recipes::SearchInteraction, type: :interaction do
 
     expect(result).to eq(recipes.last(5).reverse)
     expect(result).not_to include(older_recipe)
+  end
+
+  it "does not return discarded recipes in recent searches" do
+    kept_recipe = create(:recipe, patient: patient, name: "Kept", updated_at: 1.minute.from_now)
+    discarded_recipe = create(:recipe, patient: patient, name: "Discarded", updated_at: 2.minutes.from_now)
+    discarded_recipe.discard!
+
+    result = described_class.run!(patient: patient, query: "", recent: true)
+
+    expect(result).to contain_exactly(kept_recipe)
   end
 end

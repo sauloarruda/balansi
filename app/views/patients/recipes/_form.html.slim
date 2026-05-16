@@ -8,9 +8,14 @@
 - calculate_macros_with_ai = params.dig(:recipe, :calculate_macros_with_ai)
 - calculate_macros_with_ai = recipe.new_record? if calculate_macros_with_ai.nil?
 - calculate_macros_with_ai = ActiveModel::Type::Boolean.new.cast(calculate_macros_with_ai)
+- return_to = local_assigns[:return_to].presence
+- back_path = return_to || patient_recipes_path
+- back_label = return_to.present? ? t("patient.recipes.actions.back") : t("patient.recipes.actions.back_to_recipes")
 
 .rounded-lg.border.border-gray-200.bg-white.p-5.shadow-sm
   = form_with model: recipe, url: recipe.persisted? ? patient_recipe_path(recipe) : patient_recipes_path, local: true, class: "space-y-6" do |f|
+    - if return_to.present?
+      = hidden_field_tag :return_to, return_to
     .grid.gap-6 class="lg:grid-cols-[minmax(0,1fr)_18rem]"
       .space-y-6
         div
@@ -67,4 +72,4 @@
 
     .flex.items-center.gap-3.border-t.border-gray-100.pt-5
       = f.submit submit_label, class: "inline-flex items-center justify-center rounded-lg bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-200"
-      = link_to t("patient.recipes.actions.back_to_recipes"), patient_recipes_path, class: "text-sm font-medium text-gray-700 hover:text-gray-900"
+      = link_to back_label, back_path, class: "text-sm font-medium text-gray-700 hover:text-gray-900"

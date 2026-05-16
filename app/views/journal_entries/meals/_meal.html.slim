@@ -1,11 +1,12 @@
 / Meal card partial
 - status = meal.status.to_s
 - card_color_class = status == "confirmed" ? (meal.feeling_positive? ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50") : "border-yellow-500 bg-yellow-50"
+- link_recipe_references = local_assigns.fetch(:link_recipe_references, !(defined?(current_professional) && current_professional.present?))
 .bg-white.border.border-default.rounded-base.shadow-xs.p-6 class="border-l-4 #{card_color_class}"
   .flex.justify-between.items-start.mb-4
     div.flex-1
       h5.text-xl.font-semibold.tracking-tight.text-heading.leading-8.mb-2 = t("defaults.meal_type.#{meal.meal_type}")
-      p.text-body = format_meal_description(meal.description)
+      .text-body = format_meal_description(meal.description, recipe_references: meal.meal_recipe_references, link_recipes: link_recipe_references, patient_id: journal.patient_id)
     span.inline-flex.items-center.px-3.py-1.text-xs.font-bold.rounded-full class="#{status == 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}"
       = meal.status_text
   
@@ -18,7 +19,7 @@
         .shrink-0
           span.text-xs.font-bold.text-gray-500 = "#{meal.gram_weight.round}g"
       = render "shared/macro_circles", carbs: meal.carbs.to_f, proteins: meal.proteins.to_f, fats: meal.fats.to_f, size: :sm, hide_labels_mobile: true
-  
+
   .flex.gap-2.mt-4 data-controller="submit-lock"
     - if meal.pending? && (journal.closed_at.nil? || journal.editable?)
       - if status == "pending_patient"

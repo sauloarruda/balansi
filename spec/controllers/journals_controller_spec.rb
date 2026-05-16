@@ -187,9 +187,38 @@ RSpec.describe JournalsController, type: :controller do
       get :show, params: { date: "2026-02-06" }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("carboidratos: 60g / 250g (24%)")
-      expect(response.body).to include("proteína: 40g / 150g (27%)")
-      expect(response.body).to include("gorduras: 20g / 70g (29%)")
+      expect(response.body).to include("carboidratos: 60g / 250g (24%, 190g faltando)")
+      expect(response.body).to include("proteína: 40g / 150g (27%, 110g faltando)")
+      expect(response.body).to include("gorduras: 20g / 70g (29%, 50g faltando)")
+    end
+
+    it "renders referenced recipe details with patient recipe links" do
+      patient = Patient.find(2001)
+      journal = Journal.create!(patient: patient, date: Date.new(2026, 2, 6))
+      recipe = create(:recipe, patient: patient, name: "Bolo de banana", calories: 320, proteins: 8, carbs: 52, fats: 9)
+      meal = create(
+        :meal,
+        journal: journal,
+        meal_type: "snack",
+        description: "Lanche com @[Bolo de banana](recipe:#{recipe.id})",
+        status: "confirmed",
+        calories: 320,
+        proteins: 8,
+        carbs: 52,
+        fats: 9,
+        gram_weight: 200
+      )
+      create(:meal_recipe_reference, meal: meal, recipe: recipe)
+
+      get :show, params: { date: "2026-02-06" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Bolo de banana")
+      expect(response.body).to include("320")
+      expect(response.body).to include(I18n.t("defaults.kcal"))
+      expect(response.body).to include("macro-ring")
+      expect(response.body).to include("data-controller=\"popover-tooltip\"")
+      expect(response.body).to include(patient_recipe_path(recipe))
     end
 
     it "renders red excess ring and tooltip when macros exceed goals" do

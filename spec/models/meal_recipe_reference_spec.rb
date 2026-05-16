@@ -40,4 +40,15 @@ RSpec.describe MealRecipeReference, type: :model do
     expect(reference.recipe).to be_nil
     expect(reference.recipe_name).to eq("Chicken bowl")
   end
+
+  it "keeps the recipe association when the recipe is discarded" do
+    reference = create(:meal_recipe_reference, meal:, recipe:)
+
+    recipe.discard!
+
+    expect(reference.reload).to be_valid
+    expect(reference.recipe).to eq(recipe)
+    expect(reference.recipe).to be_discarded
+    expect(reference.recipe_name).to eq("Chicken bowl")
+  end
 end

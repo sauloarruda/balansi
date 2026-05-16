@@ -80,6 +80,8 @@ en:
     minutes: "minutes"
     kcal_burned: "kcal burned"
     excess: "excess"
+    missing: "missing"
+    goal_percentage: "%{percentage}% of goal"
     item:
       one: "item"
       other: "items"
@@ -249,6 +251,9 @@ en:
       index:
         title: "Patients"
         empty: "No patients linked yet."
+        invite_link: "Copy invite link"
+        invite_link_copied: "Invite link copied."
+        invite_link_copy_failed: "Could not copy the invite link."
         owner_badge: "Owner"
         shared_badge: "Shared access"
       show:
@@ -378,6 +383,15 @@ en:
       loading: "Searching..."
       no_results: "No matching recipes"
       error: "Could not load recipes"
+      create_recipe: "Create new recipe"
+    recipe_references:
+      title: "Referenced recipes"
+      label: "Recipes:"
+      portion_size: "%{grams} g portion"
+      deleted_recipe: "Recipe deleted"
+      calories: "Calories"
+      open_details: "Open recipe details for %{recipe}"
+      view_recipe: "View recipe"
   meal:
     status:
       pending_llm: "Waiting for AI"
@@ -452,13 +466,16 @@ en:
         update: "Update recipe"
         view: "View"
         edit: "Edit"
+        archive: "Archive"
         delete: "Delete"
         delete_image: "Delete image"
+        back: "Back"
         back_to_recipes: "Back to recipes"
         view_image: "View full recipe image"
       messages:
         created: "Recipe created successfully."
         updated: "Recipe updated successfully."
+        archived: "Recipe archived successfully."
         deleted: "Recipe deleted successfully."
         image_deleted: "Recipe image deleted successfully."
       errors:

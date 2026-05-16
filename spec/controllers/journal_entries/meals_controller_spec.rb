@@ -19,6 +19,8 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(response.body).to include("meal[meal_type]")
       expect(response.body).to include("lunch")
       expect(response.body).to include('data-recipe-mentions-search-url-value="/patient/recipes/search"')
+      expect(response.body).to include('data-recipe-mentions-new-recipe-url-value="/patient/recipes/new"')
+      expect(response.body).to include(I18n.t("meals.recipe_mentions.create_recipe"))
     end
   end
 
@@ -36,6 +38,35 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('data-recipe-mentions-target="editor"')
       expect(response.body).to include('value="Comi @[Carne com legumes](recipe:6)"')
+    end
+  end
+
+  describe "GET #show" do
+    it "renders recipe reference snapshots on the meal review page" do
+      recipe = create(:recipe, patient: patient, name: "Carne com legumes", calories: 510, proteins: 42, carbs: 24, fats: 18)
+      meal = create(
+        :meal,
+        journal: journal,
+        meal_type: "lunch",
+        description: "Almoço com @[Carne com legumes](recipe:#{recipe.id})",
+        status: "pending_patient",
+        calories: 510,
+        proteins: 42,
+        carbs: 24,
+        fats: 18,
+        gram_weight: 200
+      )
+      create(:meal_recipe_reference, meal: meal, recipe: recipe)
+
+      get :show, params: { journal_date: "2026-02-05", id: meal.id }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Carne com legumes")
+      expect(response.body).to include("510")
+      expect(response.body).to include(I18n.t("defaults.kcal"))
+      expect(response.body).to include("macro-ring")
+      expect(response.body).to include("data-controller=\"popover-tooltip\"")
+      expect(response.body).to include(patient_recipe_path(recipe))
     end
   end
 

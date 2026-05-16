@@ -3,25 +3,33 @@ import { Controller } from "@hotwired/stimulus"
 const SEARCH_DEBOUNCE_MS = 500
 
 export default class extends Controller {
-  static targets = ["editor", "field", "panel", "list", "status"]
+  static targets = ["editor", "field", "panel", "list", "status", "actions"]
   static values = {
     searchUrl: String,
+    newRecipeUrl: String,
     loadingText: String,
     noResultsText: String,
     errorText: String,
+    createRecipeText: String,
     kcalText: String,
     gramsText: String,
+    carbsText: String,
+    proteinText: String,
+    fatsText: String,
     referencePrefix: String,
     referenceMiddle: String,
     referenceSuffix: String,
     initialRecipes: Array
   }
 
-  connect() {
+  async connect() {
     this.recipes = []
     this.selectedIndex = -1
     this.debounceTimeout = null
     this.abortController = null
+    this.activeQuery = ""
+    const restoredDraft = this.restoreFormDraft()
+    await this.applyCreatedRecipeMention(restoredDraft?.pendingRecipeMentionQuery)
     this.renderEditorFromField()
     this.syncField()
     this.editorTarget.dispatchEvent(new Event("input", { bubbles: true }))
@@ -37,6 +45,7 @@ export default class extends Controller {
     const mention = this.currentMention()
 
     if (!mention) {
+      this.activeQuery = ""
       clearTimeout(this.debounceTimeout)
       this.abortSearch()
       this.hidePanel()
@@ -44,7 +53,8 @@ export default class extends Controller {
     }
 
     this.showPanel()
-    this.scheduleSearch(mention.query.trim())
+    this.activeQuery = mention.query.trim()
+    this.scheduleSearch(this.activeQuery)
   }
 
   keydown(event) {
@@ -86,6 +96,12 @@ export default class extends Controller {
   select(event) {
     const recipe = this.recipes[event.params.index]
     if (recipe) this.insertRecipe(recipe)
+  }
+
+  createRecipe(event) {
+    event.preventDefault()
+    this.storeFormDraft()
+    window.location.assign(this.newRecipeUrl())
   }
 
   currentMention() {
@@ -144,13 +160,150 @@ export default class extends Controller {
   chipElement(recipe) {
     const chip = document.createElement("span")
     chip.contentEditable = "false"
+    chip.dataset.controller = "popover-tooltip"
+    chip.dataset.popoverTooltipPlacement = "top"
     chip.dataset.recipeId = recipe.id
     chip.dataset.recipeName = recipe.name
+    chip.className = "inline-flex"
+
     if (recipe.portion_size_grams) chip.dataset.recipePortionSizeGrams = recipe.portion_size_grams
-    chip.className = "recipe-mention-chip"
-    chip.textContent = this.chipText(recipe)
+
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "recipe-mention-chip"
+    button.textContent = this.chipText(recipe)
+    chip.appendChild(button)
+
+    if (this.hasRecipeNutrition(recipe)) {
+      chip.appendChild(this.recipeTooltipElement(recipe))
+    }
 
     return chip
+  }
+
+  recipeTooltipElement(recipe) {
+    const tooltip = document.createElement("span")
+    tooltip.className = "tooltip hidden opacity-0 transition-opacity duration-150 fixed z-50 rounded-lg bg-gray-900 p-3 text-left text-sm text-white shadow-lg w-max max-w-[calc(100vw-2rem)]"
+    tooltip.dataset.popoverTooltipTarget = "tip"
+    tooltip.setAttribute("role", "tooltip")
+
+    const body = document.createElement("span")
+    body.className = "block space-y-3"
+
+    const header = document.createElement("span")
+    header.className = "block"
+
+    const name = document.createElement("span")
+    name.className = "block font-semibold leading-5"
+    name.textContent = recipe.name
+    header.appendChild(name)
+
+    const portion = document.createElement("span")
+    portion.className = "mt-0.5 block text-xs text-gray-300"
+    portion.textContent = `${this.formatNumber(recipe.portion_size_grams, 2)}${this.gramsTextValue || "g"}`
+    header.appendChild(portion)
+
+    body.appendChild(header)
+    body.appendChild(this.recipeNutritionStripElement(recipe))
+    tooltip.appendChild(body)
+
+    const arrow = document.createElement("span")
+    arrow.className = "tooltip-arrow"
+    tooltip.appendChild(arrow)
+
+    return tooltip
+  }
+
+  recipeNutritionStripElement(recipe) {
+    const strip = document.createElement("span")
+    strip.className = "flex items-center gap-3 rounded-base border border-pink-100 bg-pink-50 px-3 py-2 text-gray-900"
+
+    const calories = document.createElement("span")
+    calories.className = "shrink-0"
+
+    const calorieValue = document.createElement("span")
+    calorieValue.className = "text-body font-bold text-pink-900"
+    calorieValue.textContent = this.formatNumber(recipe.calories_per_portion, 2)
+    calories.appendChild(calorieValue)
+
+    const calorieUnit = document.createElement("span")
+    calorieUnit.className = "text-xs text-pink-600 ml-0.5"
+    calorieUnit.textContent = this.kcalTextValue || "kcal"
+    calories.appendChild(calorieUnit)
+    strip.appendChild(calories)
+
+    const portion = document.createElement("span")
+    portion.className = "shrink-0"
+
+    const portionValue = document.createElement("span")
+    portionValue.className = "text-xs font-bold text-gray-500"
+    portionValue.textContent = `${this.formatNumber(recipe.portion_size_grams, 2)}${this.gramsTextValue || "g"}`
+    portion.appendChild(portionValue)
+    strip.appendChild(portion)
+
+    strip.appendChild(this.macroCirclesElement(recipe))
+
+    return strip
+  }
+
+  macroCirclesElement(recipe) {
+    const wrapper = document.createElement("span")
+    wrapper.className = "flex items-center gap-3"
+
+    wrapper.appendChild(this.macroCircleElement(recipe, recipe.carbs_per_portion, this.carbsTextValue, "ring-carbs", "#92400e"))
+    wrapper.appendChild(this.macroCircleElement(recipe, recipe.proteins_per_portion, this.proteinTextValue, "ring-protein", "#1e3a8a"))
+    wrapper.appendChild(this.macroCircleElement(recipe, recipe.fats_per_portion, this.fatsTextValue, "ring-fat", "#9d174d"))
+
+    return wrapper
+  }
+
+  macroCircleElement(recipe, value, label, ringClass, textColor) {
+    const item = document.createElement("span")
+    item.className = "flex items-center gap-1.5"
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    svg.setAttribute("width", "44")
+    svg.setAttribute("height", "44")
+    svg.setAttribute("viewBox", "0 0 36 36")
+
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g")
+    group.setAttribute("transform", "rotate(-90 18 18)")
+
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+    bg.setAttribute("class", "macro-ring-bg")
+    bg.setAttribute("cx", "18")
+    bg.setAttribute("cy", "18")
+    bg.setAttribute("r", "15.9")
+    group.appendChild(bg)
+
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+    ring.setAttribute("class", `macro-ring ${ringClass}`)
+    ring.setAttribute("cx", "18")
+    ring.setAttribute("cy", "18")
+    ring.setAttribute("r", "15.9")
+    const percent = this.macroPercent(recipe, value)
+    ring.setAttribute("stroke-dasharray", `${percent} ${100 - percent}`)
+    group.appendChild(ring)
+    svg.appendChild(group)
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text")
+    text.setAttribute("x", "18")
+    text.setAttribute("y", "18")
+    text.setAttribute("text-anchor", "middle")
+    text.setAttribute("dominant-baseline", "middle")
+    text.setAttribute("font-size", "7.5")
+    text.setAttribute("font-weight", "700")
+    text.setAttribute("fill", textColor)
+    text.textContent = `${this.formatNumber(value, 0)}${this.gramsTextValue || "g"}`
+    svg.appendChild(text)
+    item.appendChild(svg)
+
+    const labelNode = document.createElement("span")
+    labelNode.className = "hidden text-xs font-semibold sm:block"
+    labelNode.textContent = label
+    item.appendChild(labelNode)
+
+    return item
   }
 
   renderEditorFromField() {
@@ -177,7 +330,11 @@ export default class extends Controller {
     return {
       id,
       name,
-      portion_size_grams: recipe?.portion_size_grams
+      portion_size_grams: recipe?.portion_size_grams,
+      calories_per_portion: recipe?.calories_per_portion,
+      proteins_per_portion: recipe?.proteins_per_portion,
+      carbs_per_portion: recipe?.carbs_per_portion,
+      fats_per_portion: recipe?.fats_per_portion
     }
   }
 
@@ -311,6 +468,7 @@ export default class extends Controller {
 
     if (recipes.length === 0) {
       this.showStatus(this.noResultsTextValue)
+      this.appendCreateRecipeButton()
       return
     }
 
@@ -318,6 +476,7 @@ export default class extends Controller {
     recipes.forEach((recipe, index) => {
       this.listTarget.appendChild(this.resultElement(recipe, index))
     })
+    this.appendCreateRecipeButton()
     this.updateSelection()
   }
 
@@ -327,6 +486,7 @@ export default class extends Controller {
     button.className = "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-pink-50 focus:bg-pink-50 focus:outline-none"
     button.dataset.action = "mousedown->recipe-mentions#select"
     button.dataset.recipeMentionsIndexParam = index
+    button.dataset.recipeResult = "true"
     button.setAttribute("role", "option")
 
     if (recipe.thumbnail_url) {
@@ -354,11 +514,45 @@ export default class extends Controller {
     return button
   }
 
+  appendCreateRecipeButton() {
+    if (!this.hasActionsTarget || !this.hasNewRecipeUrlValue) return
+
+    const button = document.createElement("button")
+    button.type = "button"
+    button.className = "flex w-full items-center justify-center rounded-md border border-pink-200 bg-pink-50 px-3 py-2 text-sm font-medium text-pink-800 hover:bg-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-200"
+    button.dataset.action = "mousedown->recipe-mentions#createRecipe"
+    button.textContent = this.createRecipeTextValue
+
+    this.actionsTarget.replaceChildren(button)
+    this.actionsTarget.classList.remove("hidden")
+  }
+
   recipeDetails(recipe) {
     const calories = this.formatNumber(recipe.calories_per_portion, 0)
     const portion = this.formatNumber(recipe.portion_size_grams, 0)
 
     return `${calories} ${this.kcalTextValue} · ${portion} ${this.gramsTextValue}`
+  }
+
+  hasRecipeNutrition(recipe) {
+    return [
+      recipe.portion_size_grams,
+      recipe.calories_per_portion,
+      recipe.proteins_per_portion,
+      recipe.carbs_per_portion,
+      recipe.fats_per_portion
+    ].every((value) => value !== undefined && value !== null && value !== "")
+  }
+
+  macroPercent(recipe, value) {
+    const carbs = Number(recipe.carbs_per_portion || 0)
+    const proteins = Number(recipe.proteins_per_portion || 0)
+    const fats = Number(recipe.fats_per_portion || 0)
+    const total = carbs + proteins + fats
+
+    if (total <= 0) return 0
+
+    return Math.min(Math.round(Number(value || 0) / total * 100), 99)
   }
 
   formatNumber(value, maximumFractionDigits) {
@@ -371,7 +565,7 @@ export default class extends Controller {
   }
 
   updateSelection() {
-    this.listTarget.querySelectorAll("button").forEach((button, index) => {
+    this.listTarget.querySelectorAll("[data-recipe-result]").forEach((button, index) => {
       const selected = index === this.selectedIndex
       button.classList.toggle("bg-pink-50", selected)
       button.setAttribute("aria-selected", selected.toString())
@@ -382,6 +576,7 @@ export default class extends Controller {
     if (!this.hasPanelTarget) return
 
     this.panelTarget.classList.remove("hidden")
+    this.panelTarget.classList.add("flex")
     this.editorTarget.setAttribute("aria-expanded", "true")
   }
 
@@ -389,10 +584,12 @@ export default class extends Controller {
     if (!this.hasPanelTarget) return
 
     this.panelTarget.classList.add("hidden")
+    this.panelTarget.classList.remove("flex")
     this.editorTarget.setAttribute("aria-expanded", "false")
     this.recipes = []
     this.selectedIndex = -1
     this.clearList()
+    this.clearActions()
     this.hideStatus()
   }
 
@@ -417,5 +614,155 @@ export default class extends Controller {
 
   clearList() {
     if (this.hasListTarget) this.listTarget.replaceChildren()
+  }
+
+  clearActions() {
+    if (!this.hasActionsTarget) return
+
+    this.actionsTarget.replaceChildren()
+    this.actionsTarget.classList.add("hidden")
+  }
+
+  newRecipeUrl() {
+    const url = new URL(this.newRecipeUrlValue, window.location.origin)
+    url.searchParams.set("return_to", window.location.href)
+    if (this.activeQuery.length > 0) url.searchParams.set("recipe[name]", this.activeQuery)
+
+    return url.toString()
+  }
+
+  storeFormDraft() {
+    const form = this.element.closest("form")
+    if (!form || !window.sessionStorage) return
+
+    this.syncField()
+    const fields = Array.from(form.querySelectorAll("input[name], textarea[name], select[name]"))
+      .filter((field) => field.type !== "file")
+      .map((field) => ({
+        name: field.name,
+        type: field.type,
+        value: field.value,
+        checked: field.checked,
+        multiple: field.multiple,
+        selectedValues: field.multiple ? Array.from(field.selectedOptions).map((option) => option.value) : []
+      }))
+
+    window.sessionStorage.setItem(
+      this.formDraftStorageKey(),
+      JSON.stringify({ fields, pendingRecipeMentionQuery: this.activeQuery })
+    )
+  }
+
+  restoreFormDraft() {
+    const form = this.element.closest("form")
+    if (!form || !window.sessionStorage) return null
+
+    const key = this.formDraftStorageKey()
+    const rawDraft = window.sessionStorage.getItem(key)
+    if (!rawDraft) return null
+
+    window.sessionStorage.removeItem(key)
+
+    let draft = null
+    try {
+      draft = JSON.parse(rawDraft)
+    } catch (_error) {
+      return null
+    }
+
+    const fields = Array.isArray(draft.fields) ? draft.fields : []
+    fields.forEach((storedField) => {
+      Array.from(form.querySelectorAll("input[name], textarea[name], select[name]"))
+        .filter((field) => field.name === storedField.name)
+        .forEach((field) => this.restoreFieldValue(field, storedField))
+    })
+
+    return draft
+  }
+
+  restoreFieldValue(field, storedField) {
+    if (field.type === "file") return
+
+    if (field.type === "checkbox" || field.type === "radio") {
+      field.checked = storedField.checked
+    } else if (field.multiple) {
+      Array.from(field.options).forEach((option) => {
+        option.selected = storedField.selectedValues.includes(option.value)
+      })
+    } else {
+      field.value = storedField.value
+    }
+
+    field.dispatchEvent(new Event("input", { bubbles: true }))
+    field.dispatchEvent(new Event("change", { bubbles: true }))
+  }
+
+  formDraftStorageKey() {
+    const params = new URLSearchParams(window.location.search)
+    Array.from(params.keys())
+      .filter((key) => key.startsWith("created_recipe_mention_"))
+      .forEach((key) => params.delete(key))
+
+    const query = params.toString()
+    return `balansi:recipe-mentions:form-draft:${window.location.pathname}${query ? `?${query}` : ""}`
+  }
+
+  async applyCreatedRecipeMention(pendingQuery) {
+    const recipe = await this.createdRecipeMentionFromUrl()
+    if (!recipe || !this.hasFieldTarget) return
+
+    const nextValue = this.descriptionWithCreatedRecipeMention(this.fieldTarget.value, pendingQuery, recipe)
+    if (!nextValue) return
+    if (nextValue === this.fieldTarget.value) return
+
+    this.fieldTarget.value = nextValue
+    this.initialRecipesValue = [
+      ...(this.initialRecipesValue || []).filter((item) => item.id.toString() !== recipe.id.toString()),
+      recipe
+    ]
+    if (this.hasEditorTarget) this.editorTarget.replaceChildren()
+    this.clearCreatedRecipeMentionParams()
+  }
+
+  async createdRecipeMentionFromUrl() {
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get("created_recipe_mention_id")
+    if (!id || !this.hasSearchUrlValue) return null
+
+    const url = new URL(this.searchUrlValue, window.location.origin)
+    url.searchParams.set("recipe_id", id)
+
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      if (!response.ok) return null
+
+      const recipes = await response.json()
+      return recipes.find((recipe) => recipe.id.toString() === id.toString()) || null
+    } catch (_error) {
+      return null
+    }
+  }
+
+  descriptionWithCreatedRecipeMention(value, pendingQuery, recipe) {
+    const description = value.toString()
+    const structuredReference = this.structuredReference(recipe)
+    const exactMention = pendingQuery?.trim() ? `@${pendingQuery.trim()}` : null
+
+    if (exactMention && description.includes(exactMention)) {
+      const index = description.lastIndexOf(exactMention)
+      return `${description.slice(0, index)}${structuredReference}${description.slice(index + exactMention.length)}`
+    }
+
+    return description.replace(/(^|\s)@([^\n\r@()[\]]{0,80})$/, (_match, prefix) => `${prefix}${structuredReference}`)
+  }
+
+  clearCreatedRecipeMentionParams() {
+    if (!window.history?.replaceState) return
+
+    const url = new URL(window.location.href)
+    Array.from(url.searchParams.keys())
+      .filter((key) => key.startsWith("created_recipe_mention_"))
+      .forEach((key) => url.searchParams.delete(key))
+    window.history.replaceState(window.history.state, "", url.toString())
   }
 }

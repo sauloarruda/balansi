@@ -39,6 +39,18 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response.body).not_to include(other_recipe.name)
     end
 
+    it "does not list discarded recipes" do
+      kept_recipe = create(:recipe, patient: patient, name: "Visible soup")
+      discarded_recipe = create(:recipe, patient: patient, name: "Hidden soup")
+      discarded_recipe.discard!
+
+      get :index
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(kept_recipe.name)
+      expect(response.body).not_to include(discarded_recipe.name)
+    end
+
     it "renders recipe images with high-resolution modals" do
       recipe = create(:recipe, patient: patient, name: "Recipe with image")
       image = create(:image, recipe: recipe)
@@ -134,6 +146,16 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include(other_recipe.name)
     end
+
+    it "does not show discarded recipes" do
+      recipe = create(:recipe, patient: patient, name: "Discarded cake")
+      recipe.discard!
+
+      get :show, params: { id: recipe.id }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).not_to include(recipe.name)
+    end
   end
 
   describe "GET #new" do
@@ -151,6 +173,26 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response.body).to include(%(disabled="disabled"))
       expect(response.body).to include(I18n.t("patient.recipes.actions.create"))
     end
+
+    it "prefills the recipe name and keeps a local return path" do
+      return_to = journal_path(date: Date.current.iso8601)
+
+      get :new, params: { return_to: return_to, recipe: { name: "Bolo" } }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(value="Bolo"))
+      expect(response.body).to include(%(name="return_to"))
+      expect(response.body).to include(return_to)
+      expect(response.body).to include(I18n.t("patient.recipes.actions.back"))
+    end
+
+    it "ignores external return paths" do
+      get :new, params: { return_to: "https://example.com/outside" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("https://example.com/outside")
+      expect(response.body).to include(I18n.t("patient.recipes.actions.back_to_recipes"))
+    end
   end
 
   describe "POST #create" do
@@ -167,11 +209,11 @@ RSpec.describe Patients::RecipesController, type: :controller do
       }
     end
 
-    it "creates a recipe for the current patient" do
+    it "creates a recipe with manual nutrition when AI calculation is disabled" do
       allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
 
       expect do
-        post :create, params: { recipe: valid_params }
+        post :create, params: { recipe: valid_params.merge(calculate_macros_with_ai: "0") }
       end.to change { patient.recipes.count }.by(1)
 
       recipe = patient.recipes.last
@@ -183,6 +225,60 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to redirect_to(patient_recipe_path(recipe))
       expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
       expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "recalculates nutrition when AI calculation is enabled during create" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+        recipe.assign_attributes(calories: 430, proteins: 25.5, carbs: 56.25, fats: 10.75)
+        instance_double(ActiveInteraction::Base, valid?: true)
+      end
+
+      expect do
+        post :create, params: { recipe: valid_params.merge(calculate_macros_with_ai: "1") }
+      end.to change { patient.recipes.count }.by(1)
+
+      recipe = patient.recipes.last
+      expect(recipe.calories).to eq(430)
+      expect(recipe.proteins).to eq(25.5)
+      expect(recipe.carbs).to eq(56.25)
+      expect(recipe.fats).to eq(10.75)
+      expect(response).to redirect_to(patient_recipe_path(recipe))
+      expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+        recipe: an_instance_of(Recipe),
+        user_id: patient_user.id,
+        user_language: patient_user.language,
+        persist: false,
+        force: true
+      )
+    end
+
+    it "redirects to a local return path after creating a recipe from another flow" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+      return_to = edit_journal_meal_path(journal_date: Date.current.iso8601, id: 123)
+
+      post :create, params: { return_to: return_to, recipe: valid_params }
+
+      redirect_uri = URI.parse(response.location)
+      redirect_params = Rack::Utils.parse_query(redirect_uri.query)
+      expect(redirect_uri.path).to eq(return_to)
+      expect(redirect_params["created_recipe_mention_id"]).to eq(patient.recipes.last.id.to_s)
+      expect(redirect_params).not_to include(
+        "created_recipe_mention_name",
+        "created_recipe_mention_portion_size_grams",
+        "created_recipe_mention_calories_per_portion",
+        "created_recipe_mention_proteins_per_portion",
+        "created_recipe_mention_carbs_per_portion",
+        "created_recipe_mention_fats_per_portion"
+      )
+      expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.created"))
+    end
+
+    it "ignores external return paths after creating a recipe" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+
+      post :create, params: { return_to: "https://example.com/outside", recipe: valid_params }
+
+      expect(response).to redirect_to(patient_recipe_path(patient.recipes.last))
     end
 
     it "creates a recipe with AI nutrition when macro values are missing" do
@@ -207,7 +303,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
         recipe: an_instance_of(Recipe),
         user_id: patient_user.id,
         user_language: patient_user.language,
-        persist: false
+        persist: false,
+        force: true
       )
     end
 
@@ -281,6 +378,16 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to have_http_status(:not_found)
       expect(response.body).not_to include(other_recipe.name)
     end
+
+    it "does not render the edit form for discarded recipes" do
+      recipe = create(:recipe, patient: patient, name: "Discarded recipe")
+      recipe.discard!
+
+      get :edit, params: { id: recipe.id }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).not_to include(recipe.name)
+    end
   end
 
   describe "PATCH #update" do
@@ -327,6 +434,38 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(recipe.carbs).to eq(62.25)
       expect(recipe.fats).to eq(14.75)
       expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    end
+
+    it "reanalyzes nutrition when AI calculation is enabled during edit" do
+      allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+        recipe.assign_attributes(calories: 390, proteins: 21.5, carbs: 48.75, fats: 8.25)
+        instance_double(ActiveInteraction::Base, valid?: true)
+      end
+
+      patch :update, params: {
+        id: recipe.id,
+        recipe: {
+          name: "Updated name",
+          ingredients: "Updated ingredients",
+          instructions: "Updated instructions",
+          portion_size_grams: 180,
+          calculate_macros_with_ai: "1"
+        }
+      }
+
+      expect(response).to redirect_to(patient_recipe_path(recipe))
+      expect(recipe.reload.name).to eq("Updated name")
+      expect(recipe.calories).to eq(390)
+      expect(recipe.proteins).to eq(21.5)
+      expect(recipe.carbs).to eq(48.75)
+      expect(recipe.fats).to eq(8.25)
+      expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+        recipe: recipe,
+        user_id: patient_user.id,
+        user_language: patient_user.language,
+        persist: false,
+        force: true
+      )
     end
 
     it "adds recipe images" do
@@ -393,19 +532,37 @@ RSpec.describe Patients::RecipesController, type: :controller do
       expect(response).to have_http_status(:not_found)
       expect(other_recipe.reload.name).to eq("Other recipe")
     end
+
+    it "does not update discarded recipes" do
+      recipe.discard!
+
+      patch :update, params: {
+        id: recipe.id,
+        recipe: {
+          name: "Updated discarded",
+          ingredients: recipe.ingredients,
+          portion_size_grams: 150
+        }
+      }
+
+      expect(response).to have_http_status(:not_found)
+      expect(recipe.reload.name).to eq("Original name")
+    end
   end
 
   describe "DELETE #destroy" do
-    it "deletes a recipe owned by the current patient" do
+    it "soft deletes a recipe owned by the current patient" do
       recipe = create(:recipe, patient: patient)
 
       expect do
         delete :destroy, params: { id: recipe.id }
-      end.to change { patient.recipes.count }.by(-1)
+      end.to change { patient.recipes.kept.count }.by(-1)
 
       expect(response).to redirect_to(patient_recipes_path)
       expect(response).to have_http_status(:see_other)
-      expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.deleted"))
+      expect(flash[:notice]).to eq(I18n.t("patient.recipes.messages.archived"))
+      expect(recipe.reload).to be_discarded
+      expect(Recipe.exists?(recipe.id)).to be true
     end
 
     it "does not delete recipes owned by another patient" do
