@@ -432,6 +432,7 @@ pt:
       no_results: "Nenhuma receita encontrada"
       error: "Não foi possível carregar receitas"
       create_recipe: "Criar nova receita"
+      hint: "Digite @ para buscar receitas e selecione uma opção para vinculá-la à refeição."
     recipe_references:
       title: "Receitas referenciadas"
       label: "Receitas:"
@@ -491,6 +492,8 @@ pt:
         calculate_macros_with_ai: "Calcular macros usando AI"
         nutrition_hint: "Use os valores nutricionais de uma porção do tamanho informado acima."
         portion_size_hint: "Defina quantos gramas contam como uma porção, por exemplo 200 g."
+        ingredients_placeholder: "Liste os ingredientes e use @ para buscar receitas"
+        ingredients_hint: "Use @ para pesquisar receitas e incluí-las diretamente nos ingredientes."
         images_label: "Imagens da receita"
         images_hint: "PNG, JPG ou WebP. As imagens aparecem na biblioteca e nos detalhes da receita."
       images:

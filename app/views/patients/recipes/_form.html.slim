@@ -22,9 +22,7 @@
           = f.label :name, class: "block mb-1 text-sm font-medium text-gray-700"
           = f.text_field :name, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", required: true
 
-        div
-          = f.label :ingredients, class: "block mb-1 text-sm font-medium text-gray-700"
-          = f.text_area :ingredients, rows: 8, class: "block w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-pink-500 focus:ring-pink-500", required: true
+        = render "ingredients_editor", form: f, recipe: recipe
 
         div
           = f.label :instructions, class: "block mb-1 text-sm font-medium text-gray-700"

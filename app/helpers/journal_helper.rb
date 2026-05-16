@@ -30,7 +30,11 @@ module JournalHelper
   end
 
   def meal_recipe_mention_data(description)
-    recipe_ids = meal_recipe_mention_ids(description)
+    recipe_mention_data(description)
+  end
+
+  def recipe_mention_data(description)
+    recipe_ids = recipe_mention_ids(description)
     return [] if recipe_ids.empty?
 
     current_patient_recipes
@@ -46,6 +50,10 @@ module JournalHelper
           fats_per_portion: fats&.to_f
         }
       end
+  end
+
+  def recipe_mention_ids(description)
+    description.to_s.scan(meal_recipe_mention_pattern).map { |_name, id| id.to_i }.uniq
   end
 
   def recipe_mentions_controller_data(initial_recipes)

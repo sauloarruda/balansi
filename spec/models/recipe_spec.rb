@@ -145,4 +145,22 @@ RSpec.describe Recipe, type: :model do
       expect(recipe.calories_for_grams(150)).to be_nil
     end
   end
+
+  describe "#mentioned_recipe_ids" do
+    it "returns unique recipe ids from ingredients and instructions" do
+      recipe = build(
+        :recipe,
+        ingredients: "Misture @[Rice bowl](recipe:12) com @[Rice bowl](recipe:12)",
+        instructions: "Finalize com @[Sauce](recipe:34)"
+      )
+
+      expect(recipe.mentioned_recipe_ids).to eq([ 12, 34 ])
+    end
+
+    it "returns an empty array when there are no mentions" do
+      recipe = build(:recipe, ingredients: "Arroz", instructions: "Servir")
+
+      expect(recipe.mentioned_recipe_ids).to eq([])
+    end
+  end
 end

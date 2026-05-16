@@ -384,6 +384,7 @@ en:
       no_results: "No matching recipes"
       error: "Could not load recipes"
       create_recipe: "Create new recipe"
+      hint: "Type @ to search recipes and pick one to link it to the meal."
     recipe_references:
       title: "Referenced recipes"
       label: "Recipes:"
@@ -443,6 +444,8 @@ en:
         calculate_macros_with_ai: "Calculate macros using AI"
         nutrition_hint: "Use the nutrition values for one portion of the size above."
         portion_size_hint: "Define how many grams count as one portion, for example 200 g."
+        ingredients_placeholder: "List the ingredients and use @ to search recipes"
+        ingredients_hint: "Use @ to search recipes and include them directly in the ingredients."
         images_label: "Recipe images"
         images_hint: "PNG, JPG, or WebP. Images appear in your recipe library and recipe details."
       images:

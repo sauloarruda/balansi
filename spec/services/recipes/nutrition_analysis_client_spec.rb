@@ -48,6 +48,7 @@ RSpec.describe Recipes::NutritionAnalysisClient, type: :service do
   end
 
   it "sends the recipe context in the prompt" do
+    captured_prompt = nil
     response_body = {
       choices: [
         {
@@ -63,19 +64,38 @@ RSpec.describe Recipes::NutritionAnalysisClient, type: :service do
       ]
     }.to_json
 
-    request = stub_openai(status: 200, body: response_body)
+    stub_request(:post, "https://api.openai.com/v1/chat/completions")
+      .with(headers: { "Authorization" => "Bearer #{api_key}" }) do |request|
+        captured_prompt = JSON.parse(request.body).dig("messages", 1, "content")
+        true
+      end
+      .to_return(status: 200, body: response_body, headers: { "Content-Type" => "application/json" })
 
     client.analyze(
       name: "Chicken bowl",
       ingredients: "Chicken breast, rice, beans",
       instructions: "",
       portion_size_grams: 250,
-      user_language: "pt"
+      user_language: "pt",
+      recipe_context: [
+        {
+          recipe_name: "Rice bowl",
+          portion_size_grams: 220,
+          calories_per_portion: 410,
+          proteins_per_portion: 24.5,
+          carbs_per_portion: 52.25,
+          fats_per_portion: 9.75
+        }
+      ]
     )
 
-    expect(request).to have_been_requested
-    expect(WebMock).to have_requested(:post, "https://api.openai.com/v1/chat/completions")
-      .with { |req| req.body.include?("Chicken bowl") && req.body.include?("250 g") }
+    payload = JSON.parse(captured_prompt)
+    recipe = payload["recipes"].sole
+
+    expect(payload.dig("rules", "recipes_exact")).to be(true)
+    expect(payload.dig("recipe", "name")).to eq("Chicken bowl")
+    expect(recipe).to include("n" => "Rice bowl", "g" => "220")
+    expect(recipe["per_portion"]).to include("cal" => "410", "p" => "24.5", "c" => "52.25", "f" => "9.75")
   end
 
   it "raises TransientError on rate limited response" do

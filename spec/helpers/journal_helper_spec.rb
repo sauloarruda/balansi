@@ -136,4 +136,25 @@ RSpec.describe JournalHelper, type: :helper do
       expect(data).to eq([])
     end
   end
+
+  describe "#recipe_mention_data" do
+    it "returns portion metadata for mentioned recipes in scope" do
+      patient = create(:patient)
+      recipe = create(:recipe, patient: patient, name: "Iogurte", portion_size_grams: 200)
+      allow(helper).to receive(:current_patient_recipes).and_return(patient.recipes)
+
+      data = helper.recipe_mention_data("Comi @[Iogurte](recipe:#{recipe.id})")
+
+      expect(data).to eq([
+        {
+          id: recipe.id,
+          portion_size_grams: 200.0,
+          calories_per_portion: 400.0,
+          proteins_per_portion: 30.25,
+          carbs_per_portion: 45.12,
+          fats_per_portion: 12.38
+        }
+      ])
+    end
+  end
 end
