@@ -103,7 +103,7 @@ gem "rack-attack"
 # Enum helper with i18n support for model attributes
 gem "enumerize"
 
-gem "phonelib", "~> 0.10.18"
+gem "phonelib", "~> 0.10.20"
 
 gem "rodauth-rails", "~> 2.1"
 gem "bcrypt", "~> 3.1", require: false

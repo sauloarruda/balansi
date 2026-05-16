@@ -297,7 +297,7 @@ GEM
     parser (3.3.10.2)
       ast (~> 2.4.1)
       racc
-    phonelib (0.10.18)
+    phonelib (0.10.20)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -594,7 +594,7 @@ DEPENDENCIES
   jbuilder
   kamal
   letter_opener_web
-  phonelib (~> 0.10.18)
+  phonelib (~> 0.10.20)
   propshaft
   puma (>= 5.0)
   rack-attack
