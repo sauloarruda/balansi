@@ -21,6 +21,7 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(response.body).to include('data-recipe-mentions-search-url-value="/patient/recipes/search"')
       expect(response.body).to include('data-recipe-mentions-new-recipe-url-value="/patient/recipes/new"')
       expect(response.body).to include(I18n.t("meals.recipe_mentions.create_recipe"))
+      expect(response.body).to include(I18n.t("meals.recipe_mentions.hint"))
     end
   end
 
@@ -38,6 +39,7 @@ RSpec.describe JournalEntries::MealsController, type: :controller do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('data-recipe-mentions-target="editor"')
       expect(response.body).to include('value="Comi @[Carne com legumes](recipe:6)"')
+      expect(response.body).to include(I18n.t("meals.recipe_mentions.hint"))
     end
   end
 

@@ -1,0 +1,14 @@
+- results_id = "recipe_ingredients_recipe_mentions_results"
+- initial_recipes = recipe_mention_data(recipe.ingredients)
+
+.mb-6 *{ data: recipe_mentions_controller_data(initial_recipes) }
+  = form.label :ingredients, class: "block mb-1 text-sm font-medium text-gray-700"
+  .relative
+    = form.hidden_field :ingredients, data: { recipe_mentions_target: "field" }
+    div class="min-h-44 w-full whitespace-pre-wrap rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm leading-6 text-gray-900 focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500 empty:before:text-gray-400 empty:before:content-[attr(data-placeholder)]" contenteditable="true" role="textbox" aria-autocomplete="list" aria-controls=results_id aria-expanded="false" aria-multiline="true" data-placeholder=t("patient.recipes.form.ingredients_placeholder") data-max-length="2000" data-character-counter-target="input" data-recipe-mentions-target="editor" data-action="input->recipe-mentions#input keydown->recipe-mentions#keydown paste->recipe-mentions#paste blur->recipe-mentions#blur"
+    div id=results_id class="absolute left-0 right-0 z-20 mt-2 hidden max-h-72 flex-col rounded-lg border border-gray-200 bg-white shadow-lg" data-recipe-mentions-target="panel" data-action="mousedown->recipe-mentions#keepFocus"
+      .min-h-0.overflow-y-auto.p-2
+        .space-y-1 data-recipe-mentions-target="list" role="listbox"
+        .hidden.px-3.py-2.text-sm.text-gray-600 data-recipe-mentions-target="status"
+      .hidden.border-t.border-gray-100.p-2 data-recipe-mentions-target="actions"
+  .mt-2.text-sm.text-gray-500 = t("patient.recipes.form.ingredients_hint")

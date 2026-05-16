@@ -59,9 +59,10 @@ html
             = link_to patient_professional_accesses_path, class: accesses_top_button_class, title: t("patient.professional_accesses.navigation.title"), aria: { label: t("patient.professional_accesses.navigation.title"), current: (accesses_active ? "page" : nil) } do
               = heroicon "user-group", variant: :outline, options: { class: "w-5 h-5" }
           - if current_user&.professional.present?
-            - professional_button_class = professional_patients_active ? "inline-flex items-center justify-center text-sm font-medium text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2" : "inline-flex items-center justify-center text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg px-3 py-2"
-            = link_to professional_patients_path, class: professional_button_class, aria: { current: (professional_patients_active ? "page" : nil) } do
-              = t("professional.patients.index.title")
+            - professional_button_class = professional_patients_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-blue-50 text-blue-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            = link_to professional_patients_path, class: professional_button_class, title: t("professional.patients.index.title"), aria: { label: t("professional.patients.index.title"), current: (professional_patients_active ? "page" : nil) } do
+              = heroicon "heart", variant: :outline, options: { class: "w-5 h-5" }
+              span.sr-only = t("professional.patients.index.title")
           - if current_user.present?
             - profile_top_button_class = profile_active ? "inline-flex items-center justify-center p-2 rounded-lg bg-pink-50 text-pink-700" : "inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100"
             = link_to profile_path, class: profile_top_button_class, title: t("users.profile.navigation.title"), aria: { label: t("users.profile.navigation.title"), current: (profile_active ? "page" : nil) } do

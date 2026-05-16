@@ -164,6 +164,8 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("recipe[name]")
+      expect(response.body).to include('data-recipe-mentions-target="editor"')
+      expect(response.body).to include(I18n.t("patient.recipes.form.ingredients_hint"))
       expect(response.body).to include(I18n.t("patient.recipes.form.calculate_macros_with_ai"))
       expect(response.body).to include(%(name="recipe[calculate_macros_with_ai]"))
       expect(response.body).to include(%(checked="checked"))
@@ -247,6 +249,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
         recipe: an_instance_of(Recipe),
         user_id: patient_user.id,
         user_language: patient_user.language,
+        recipe_context: [],
         persist: false,
         force: true
       )
@@ -303,6 +306,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
         recipe: an_instance_of(Recipe),
         user_id: patient_user.id,
         user_language: patient_user.language,
+        recipe_context: [],
         persist: false,
         force: true
       )
@@ -365,6 +369,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("recipe[name]")
+      expect(response.body).to include('data-recipe-mentions-target="editor"')
       expect(response.body).to include(I18n.t("patient.recipes.actions.update"))
       expect(response.body).to include(patient_recipe_image_path(recipe, image))
       expect(response.body).to include(I18n.t("patient.recipes.actions.delete_image"))
@@ -463,6 +468,7 @@ RSpec.describe Patients::RecipesController, type: :controller do
         recipe: recipe,
         user_id: patient_user.id,
         user_language: patient_user.language,
+        recipe_context: [],
         persist: false,
         force: true
       )

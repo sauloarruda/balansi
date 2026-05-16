@@ -9,6 +9,7 @@ class Recipes::AnalyzeNutritionInteraction < ActiveInteraction::Base
   object :recipe, class: Recipe
   integer :user_id
   string :user_language, default: "pt"
+  array :recipe_context, default: []
   boolean :persist, default: true
   boolean :force, default: false
 
@@ -47,6 +48,7 @@ class Recipes::AnalyzeNutritionInteraction < ActiveInteraction::Base
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
         portion_size_grams: recipe.portion_size_grams,
+        recipe_context: recipe_context,
         user_language: user_language
       )
     rescue Recipes::NutritionAnalysisClient::TransientError => e

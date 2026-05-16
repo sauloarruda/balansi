@@ -28,6 +28,12 @@ class Recipe < ApplicationRecord
     allow_nil: true
   validate :macro_decimal_places
 
+  def mentioned_recipe_ids
+    [ ingredients, instructions ].compact.flat_map do |text|
+      text.to_s.scan(MENTION_PATTERN).map { |(_name, recipe_id)| recipe_id.to_i }
+    end.uniq
+  end
+
   def calories_per_portion
     normalized_macro(calories)
   end

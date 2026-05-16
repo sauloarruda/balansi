@@ -27,5 +27,14 @@ RSpec.describe "Patient recipes", type: :request do
       expect(response.body).to include(%(href="/patient/recipes"))
       expect(response.body).to include(I18n.t("patient.recipes.navigation.title"))
     end
+
+    it "renders the professional patients top button as an icon" do
+      get patient_recipes_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(%(href="#{professional_patients_path}"))
+      expect(response.body).to include(%(aria-label="#{I18n.t("professional.patients.index.title")}"))
+      expect(response.body).to include("<svg")
+    end
   end
 end

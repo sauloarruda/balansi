@@ -60,9 +60,53 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
       recipe: recipe,
       user_id: user.id,
       user_language: user.language,
+      recipe_context: [],
       persist: false,
       force: true
     )
+  end
+
+  it "passes referenced recipe nutrition to the analysis context" do
+    referenced_recipe = create(
+      :recipe,
+      patient: patient,
+      name: "Rice bowl",
+      portion_size_grams: 220,
+      calories: 410,
+      proteins: 24.5,
+      carbs: 52.25,
+      fats: 9.75
+    )
+    recipe = patient.recipes.build
+
+    allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, recipe_context:, **|
+      expect(recipe_context).to eq([
+        {
+          recipe_name: referenced_recipe.name,
+          portion_size_grams: 220.0,
+          calories_per_portion: 410.0,
+          proteins_per_portion: 24.5,
+          carbs_per_portion: 52.25,
+          fats_per_portion: 9.75
+        }
+      ])
+
+      recipe.assign_attributes(calories: 430, proteins: 25.5, carbs: 56.25, fats: 10.75)
+      instance_double(ActiveInteraction::Base, valid?: true)
+    end
+
+    result = described_class.run(
+      recipe: recipe,
+      user: user,
+      attributes: recipe_parameters(
+        valid_attributes.merge(
+          ingredients: "Chicken and @[Rice bowl](recipe:#{referenced_recipe.id})"
+        )
+      )
+    )
+
+    expect(result).to be_valid
+    expect(recipe).to be_persisted
   end
 
   it "analyzes and saves nutrition when values are missing" do
@@ -85,6 +129,7 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
       recipe: recipe,
       user_id: user.id,
       user_language: user.language,
+      recipe_context: [],
       persist: false,
       force: true
     )
@@ -139,6 +184,7 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
       recipe: recipe,
       user_id: user.id,
       user_language: user.language,
+      recipe_context: [],
       persist: false,
       force: true
     )

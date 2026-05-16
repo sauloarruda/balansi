@@ -58,6 +58,15 @@ RSpec.describe Recipes::SearchInteraction, type: :interaction do
     expect(result).to contain_exactly(matching_recipe)
   end
 
+  it "matches recipe names regardless of accents" do
+    matching_recipe = create(:recipe, patient: patient, name: "Leite de amêndoas")
+    create(:recipe, patient: patient, name: "Leite de vaca")
+
+    result = described_class.run!(patient: patient, query: "amendoas")
+
+    expect(result).to contain_exactly(matching_recipe)
+  end
+
   it "strips blank space around the query" do
     recipe = create(:recipe, patient: patient, name: "Bolo de cenoura")
 
