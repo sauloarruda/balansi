@@ -32,7 +32,7 @@
 
 - if has_goals
   .flex.flex-col.sm:flex-row.items-center.gap-3
-    .flex.items-center.gap-1.5 data-controller="tooltip" data-tooltip-placement="top"
+    .flex.items-center.gap-1.5 data-controller="popover-tooltip" data-popover-tooltip-placement="top"
       svg width=svg_size height=svg_size viewBox="0 0 36 36"
         g transform="rotate(-90 18 18)"
           circle.macro-ring-bg cx="18" cy="18" r="15.9" class=(carbs_over ? "over" : nil)
@@ -53,12 +53,12 @@
               span class=pct_color = "●"
             - else
               span class=pct_color = "▲"
-            span.text-xs class=pct_color = "#{carbs_display_pct}% da meta"
-      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-tooltip-target="tip"
+            span.text-xs class=pct_color = t("defaults.goal_percentage", percentage: carbs_display_pct)
+      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-popover-tooltip-target="tip" role="tooltip"
         = macro_tooltip_text(carbs, carbs_goal, t("defaults.carbs"))
         .tooltip-arrow
 
-    .flex.items-center.gap-1.5 data-controller="tooltip" data-tooltip-placement="top"
+    .flex.items-center.gap-1.5 data-controller="popover-tooltip" data-popover-tooltip-placement="top"
       svg width=svg_size height=svg_size viewBox="0 0 36 36"
         g transform="rotate(-90 18 18)"
           circle.macro-ring-bg cx="18" cy="18" r="15.9" class=(protein_over ? "over" : nil)
@@ -79,12 +79,12 @@
               span class=pct_color = "●"
             - else
               span class=pct_color = "▲"
-            span.text-xs class=pct_color = "#{protein_display_pct}% da meta"
-      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-tooltip-target="tip"
+            span.text-xs class=pct_color = t("defaults.goal_percentage", percentage: protein_display_pct)
+      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-popover-tooltip-target="tip" role="tooltip"
         = macro_tooltip_text(proteins, proteins_goal, t("defaults.protein"))
         .tooltip-arrow
 
-    .flex.items-center.gap-1.5 data-controller="tooltip" data-tooltip-placement="top"
+    .flex.items-center.gap-1.5 data-controller="popover-tooltip" data-popover-tooltip-placement="top"
       svg width=svg_size height=svg_size viewBox="0 0 36 36"
         g transform="rotate(-90 18 18)"
           circle.macro-ring-bg cx="18" cy="18" r="15.9" class=(fat_over ? "over" : nil)
@@ -105,8 +105,8 @@
               span class=pct_color = "●"
             - else
               span class=pct_color = "▲"
-            span.text-xs class=pct_color = "#{fat_display_pct}% da meta"
-      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-tooltip-target="tip"
+            span.text-xs class=pct_color = t("defaults.goal_percentage", percentage: fat_display_pct)
+      .tooltip.hidden.opacity-0.transition-opacity.duration-150.fixed.z-50.px-3.py-2.text-sm.font-medium.text-white.bg-gray-900.rounded-lg.shadow-lg data-popover-tooltip-target="tip" role="tooltip"
         = macro_tooltip_text(fats, fats_goal, t("defaults.fats"))
         .tooltip-arrow
 - else

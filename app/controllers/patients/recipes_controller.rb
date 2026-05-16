@@ -3,20 +3,22 @@ module Patients
     before_action :set_recipe, only: [ :show, :edit, :update, :destroy ]
 
     def index
-      @recipes = current_patient.recipes.includes(images: image_includes).order(created_at: :desc)
+      @recipes = current_patient.recipes.kept.includes(images: image_includes).order(created_at: :desc)
     end
 
     def show; end
 
     def new
-      @recipe = current_patient.recipes.build
+      @return_to = safe_return_to
+      @recipe = current_patient.recipes.build(recipe_params_from_query)
     end
 
     def create
+      @return_to = safe_return_to
       @recipe = current_patient.recipes.build
 
       if save_recipe
-        redirect_to patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created")
+        redirect_to(created_recipe_return_to.presence || patient_recipe_path(@recipe), notice: t("patient.recipes.messages.created"))
       else
         render :new, status: :unprocessable_entity
       end
@@ -33,17 +35,17 @@ module Patients
     end
 
     def destroy
-      @recipe.destroy!
+      @recipe.discard!
 
       redirect_to patient_recipes_path,
         status: :see_other,
-        notice: t("patient.recipes.messages.deleted")
+        notice: t("patient.recipes.messages.archived")
     end
 
     private
 
     def set_recipe
-      @recipe = current_patient.recipes.includes(images: image_includes).find(params[:id])
+      @recipe = current_patient.recipes.kept.includes(images: image_includes).find(params[:id])
     end
 
     def image_includes
@@ -63,6 +65,28 @@ module Patients
       )
     end
 
+    def recipe_params_from_query
+      return {} if params[:recipe].blank?
+
+      params.require(:recipe).permit(:name)
+    end
+
+    def safe_return_to
+      return if params[:return_to].blank?
+
+      url_from(params[:return_to].presence)
+    end
+
+    def created_recipe_return_to
+      return if @return_to.blank?
+
+      uri = URI.parse(@return_to)
+      query_params = Rack::Utils.parse_nested_query(uri.query)
+      query_params["created_recipe_mention_id"] = @recipe.id
+      uri.query = Rack::Utils.build_query(query_params)
+      uri.to_s
+    end
+
     def save_recipe
       result = ::Recipes::SaveInteraction.run(
         recipe: @recipe,
@@ -80,7 +104,7 @@ module Patients
     end
 
     def calculate_macros_with_ai?
-      ActiveModel::Type::Boolean.new.cast(params.dig(:recipe, :calculate_macros_with_ai))
+      ActiveModel::Type::Boolean.new.cast(params.dig(:recipe, :calculate_macros_with_ai)) || false
     end
   end
 end

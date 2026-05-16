@@ -42,36 +42,44 @@
   transform: rotate(45deg);
 }
 .tooltip[data-tooltip-placement="top"] .tooltip-arrow,
-.tooltip:not([data-tooltip-placement]) .tooltip-arrow {
+.tooltip[data-popper-placement^="top"] .tooltip-arrow,
+.tooltip:not([data-tooltip-placement]):not([data-popper-placement]) .tooltip-arrow {
   bottom: -4px;
   left: 50%;
   margin-left: -4px;
 }
 .tooltip[data-tooltip-placement="top"] .tooltip-arrow::before,
-.tooltip:not([data-tooltip-placement]) .tooltip-arrow::before {
+.tooltip[data-popper-placement^="top"] .tooltip-arrow::before,
+.tooltip:not([data-tooltip-placement]):not([data-popper-placement]) .tooltip-arrow::before {
   bottom: 0;
 }
-.tooltip[data-tooltip-placement="bottom"] .tooltip-arrow {
+.tooltip[data-tooltip-placement="bottom"] .tooltip-arrow,
+.tooltip[data-popper-placement^="bottom"] .tooltip-arrow {
   top: -4px;
   left: 50%;
   margin-left: -4px;
 }
-.tooltip[data-tooltip-placement="bottom"] .tooltip-arrow::before {
+.tooltip[data-tooltip-placement="bottom"] .tooltip-arrow::before,
+.tooltip[data-popper-placement^="bottom"] .tooltip-arrow::before {
   top: 0;
 }
-.tooltip[data-tooltip-placement="left"] .tooltip-arrow {
+.tooltip[data-tooltip-placement="left"] .tooltip-arrow,
+.tooltip[data-popper-placement^="left"] .tooltip-arrow {
   right: -4px;
   top: 50%;
   margin-top: -4px;
 }
-.tooltip[data-tooltip-placement="left"] .tooltip-arrow::before {
+.tooltip[data-tooltip-placement="left"] .tooltip-arrow::before,
+.tooltip[data-popper-placement^="left"] .tooltip-arrow::before {
   right: 0;
 }
-.tooltip[data-tooltip-placement="right"] .tooltip-arrow {
+.tooltip[data-tooltip-placement="right"] .tooltip-arrow,
+.tooltip[data-popper-placement^="right"] .tooltip-arrow {
   left: -4px;
   top: 50%;
   margin-top: -4px;
 }
-.tooltip[data-tooltip-placement="right"] .tooltip-arrow::before {
+.tooltip[data-tooltip-placement="right"] .tooltip-arrow::before,
+.tooltip[data-popper-placement^="right"] .tooltip-arrow::before {
   left: 0;
 }

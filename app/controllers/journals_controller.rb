@@ -33,7 +33,7 @@ class JournalsController < ApplicationController
 
   def load_journal_context(date)
     @journal = current_patient.journals.find_by(date: date) || current_patient.journals.build(date: date)
-    @meals = @journal.persisted? ? @journal.meals.order(:created_at) : Meal.none
+    @meals = @journal.persisted? ? @journal.meals.includes(meal_recipe_references: :recipe).order(:created_at) : Meal.none
     @exercises = @journal.persisted? ? @journal.exercises.order(:created_at) : Exercise.none
     @patient = current_patient
   end

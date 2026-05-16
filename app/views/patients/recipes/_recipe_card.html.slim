@@ -63,4 +63,4 @@
     = link_to t("patient.recipes.actions.view"), patient_recipe_path(recipe), class: "text-sm font-medium text-pink-700 hover:text-pink-900"
     .flex.items-center.gap-3
       = link_to t("patient.recipes.actions.edit"), edit_patient_recipe_path(recipe), class: "text-sm font-medium text-gray-700 hover:text-gray-900"
-      = button_to t("patient.recipes.actions.delete"), patient_recipe_path(recipe), method: :delete, class: "text-sm font-medium text-red-700 hover:text-red-900", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }
+      = button_to t("patient.recipes.actions.archive"), patient_recipe_path(recipe), method: :delete, class: "text-sm font-medium text-red-700 hover:text-red-900", form: { data: { turbo_confirm: t("defaults.confirm_delete") } }

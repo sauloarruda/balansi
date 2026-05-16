@@ -80,6 +80,8 @@ pt:
     minutes: "minutos"
     kcal_burned: "kcal queimadas"
     excess: "excesso"
+    missing: "faltando"
+    goal_percentage: "%{percentage}% da meta"
     item:
       one: "item"
       other: "itens"
@@ -297,6 +299,9 @@ pt:
       index:
         title: "Pacientes"
         empty: "Nenhum paciente vinculado ainda."
+        invite_link: "Copiar link de convite"
+        invite_link_copied: "Link de convite copiado."
+        invite_link_copy_failed: "Não foi possível copiar o link de convite."
         owner_badge: "Responsável"
         shared_badge: "Acesso compartilhado"
       show:
@@ -426,6 +431,15 @@ pt:
       loading: "Buscando..."
       no_results: "Nenhuma receita encontrada"
       error: "Não foi possível carregar receitas"
+      create_recipe: "Criar nova receita"
+    recipe_references:
+      title: "Receitas referenciadas"
+      label: "Receitas:"
+      portion_size: "Porção de %{grams} g"
+      deleted_recipe: "Receita excluída"
+      calories: "Calorias"
+      open_details: "Abrir detalhes da receita %{recipe}"
+      view_recipe: "Ver receita"
   meal:
     status:
       pending_llm: "Aguardando IA"
@@ -500,13 +514,16 @@ pt:
         update: "Atualizar receita"
         view: "Ver"
         edit: "Editar"
+        archive: "Arquivar"
         delete: "Excluir"
         delete_image: "Excluir imagem"
+        back: "Voltar"
         back_to_recipes: "Voltar para receitas"
         view_image: "Ver imagem completa da receita"
       messages:
         created: "Receita criada com sucesso."
         updated: "Receita atualizada com sucesso."
+        archived: "Receita arquivada com sucesso."
         deleted: "Receita excluída com sucesso."
         image_deleted: "Imagem da receita excluída com sucesso."
       errors:

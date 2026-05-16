@@ -37,9 +37,12 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
     }
   end
 
-  it "saves a recipe with manually provided nutrition without AI analysis" do
+  it "reanalyzes a recipe with manually provided nutrition when AI calculation is enabled" do
     recipe = patient.recipes.build
-    allow(Recipes::AnalyzeNutritionInteraction).to receive(:run)
+    allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+      recipe.assign_attributes(calories: 430, proteins: 25.5, carbs: 56.25, fats: 10.75)
+      instance_double(ActiveInteraction::Base, valid?: true)
+    end
 
     result = described_class.run(
       recipe: recipe,
@@ -49,8 +52,17 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
 
     expect(result).to be_valid
     expect(recipe).to be_persisted
-    expect(recipe.proteins).to eq(24.12)
-    expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+    expect(recipe.calories).to eq(430)
+    expect(recipe.proteins).to eq(25.5)
+    expect(recipe.carbs).to eq(56.25)
+    expect(recipe.fats).to eq(10.75)
+    expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+      recipe: recipe,
+      user_id: user.id,
+      user_language: user.language,
+      persist: false,
+      force: true
+    )
   end
 
   it "analyzes and saves nutrition when values are missing" do
@@ -73,7 +85,8 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
       recipe: recipe,
       user_id: user.id,
       user_language: user.language,
-      persist: false
+      persist: false,
+      force: true
     )
   end
 
@@ -92,6 +105,43 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
     expect(recipe).to be_persisted
     expect(recipe.calories).to be_nil
     expect(Recipes::AnalyzeNutritionInteraction).not_to have_received(:run)
+  end
+
+  it "reanalyzes nutrition for an existing recipe when AI calculation is enabled" do
+    recipe = create(
+      :recipe,
+      patient: patient,
+      calories: 450,
+      proteins: 24.12,
+      carbs: 60.25,
+      fats: 9.38
+    )
+    allow(Recipes::AnalyzeNutritionInteraction).to receive(:run) do |recipe:, persist:, **|
+      recipe.assign_attributes(calories: 390, proteins: 21.5, carbs: 48.75, fats: 8.25)
+      instance_double(ActiveInteraction::Base, valid?: true)
+    end
+
+    result = described_class.run(
+      recipe: recipe,
+      user: user,
+      attributes: recipe_parameters(
+        valid_attributes.slice(:name, :ingredients, :instructions, :portion_size_grams)
+      ),
+      calculate_macros_with_ai: true
+    )
+
+    expect(result).to be_valid
+    expect(recipe.reload.calories).to eq(390)
+    expect(recipe.proteins).to eq(21.5)
+    expect(recipe.carbs).to eq(48.75)
+    expect(recipe.fats).to eq(8.25)
+    expect(Recipes::AnalyzeNutritionInteraction).to have_received(:run).with(
+      recipe: recipe,
+      user_id: user.id,
+      user_language: user.language,
+      persist: false,
+      force: true
+    )
   end
 
   it "does not persist a new recipe when AI nutrition analysis fails" do
@@ -125,7 +175,8 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
       recipe: recipe,
       user: user,
       attributes: recipe_parameters(valid_attributes),
-      images: [ uploaded_recipe_image ]
+      images: [ uploaded_recipe_image ],
+      calculate_macros_with_ai: false
     )
 
     expect(result).to be_valid
@@ -142,7 +193,8 @@ RSpec.describe Recipes::SaveInteraction, type: :interaction do
         recipe: recipe,
         user: user,
         attributes: recipe_parameters(valid_attributes.merge(name: "Updated name")),
-        images: [ uploaded_recipe_image ]
+        images: [ uploaded_recipe_image ],
+        calculate_macros_with_ai: false
       )
     end.to raise_error(StandardError, "attach failed")
 

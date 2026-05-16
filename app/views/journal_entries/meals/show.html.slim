@@ -16,7 +16,7 @@ h1.text-3xl.font-bold.mb-6 = t("meals.show.heading")
 .bg-white.border.border-gray-200.rounded-lg.shadow-sm.p-6
   .mb-6.pb-4.border-b.border-gray-200
     h2.text-2xl.font-bold.text-gray-800.mb-2 = t("defaults.meal_type.#{@meal.meal_type}")
-    span.text-gray-600.italic = format_meal_description(@meal.description)
+    .text-gray-600.italic = format_meal_description(@meal.description, recipe_references: @meal.meal_recipe_references, link_recipes: true, patient_id: @meal.journal.patient_id)
 
   = form_with model: @meal, url: journal_meal_path(journal_date: @meal.journal.date.iso8601, id: @meal.id), method: :patch, local: true, class: "space-y-6" do |f|
     = render "shared/form_error_alert", form: f

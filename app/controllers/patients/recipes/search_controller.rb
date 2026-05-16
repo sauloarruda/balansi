@@ -11,6 +11,7 @@ module Patients
         ::Recipes::SearchInteraction.run!(
           patient: current_patient,
           query: params[:q].to_s,
+          recipe_id: params[:recipe_id].to_s,
           recent: recent_results?
         )
       end

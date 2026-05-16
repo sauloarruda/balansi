@@ -1,7 +1,7 @@
 module Patients
   class RecipeImagesController < ApplicationController
     def destroy
-      recipe = current_patient.recipes.find(params[:recipe_id])
+      recipe = current_patient.recipes.kept.find(params[:recipe_id])
       image = recipe.images.find(params[:id])
 
       image.destroy!

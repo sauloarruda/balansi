@@ -7,6 +7,7 @@ The **Recipes** feature enables users to create, manage, and reuse private food 
 In v1, the module introduces:
 - Private recipe creation and management (CRUD).
 - `@` mention recipe picker in the meal journal entry form.
+- Inline recipe creation from the meal mention picker, returning to the original meal form with the new recipe applied.
 - Automated portion calculations during meal analysis.
 - Image management using S3 with optimized variants.
 - Recipe visibility restricted to the creator (private only).
@@ -21,6 +22,7 @@ In v1, the module introduces:
 - Allow users to create private recipes with a name, instructions, list of ingredients, and portion size in grams.
 - Allow users to upload and manage recipe images (stored in S3 with optimized variants).
 - Enable quick logging of recipes in the meal journal using an `@` mention autocomplete picker.
+- Allow users to create a missing recipe directly from the mention picker without losing the partially filled meal form.
 - Automatically calculate the nutritional value of logged portions or gram amounts (e.g., if one yogurt portion is 200 g and the user logs 150 g, the system applies 75% of the portion macros).
 - Provide a responsive grid UI to manage the personal recipe library.
 - **Long-term Vision (Food Database):** Serve as a foundational building block for a tagged food database. By collecting user descriptions, macro information, and high-quality images, this module will gradually build a dataset to train future ML models for automated food image recognition.
@@ -54,9 +56,10 @@ In v1, the module introduces:
 
 - **Recipe Management (CRUD):** Name, Description/Instructions, Ingredients (free text), portion size in grams, macros per portion.
 - **Image Management:** Upload to S3 via ActiveStorage, displaying optimized variants.
-- **Journal Integration:** `@` mention picker in the `meal_description` text area on the "New Meal" form.
+- **Journal Integration:** `@` mention picker in meal description editors for creating or editing meal logs.
+- **Inline Recipe Creation:** If the desired recipe is not present in the picker, the user can create it and return to the meal form with the draft preserved and the new recipe already applied.
 - **Automated Calculation:** AI and system logic to parse "@My Recipe (1 portion)" and accurately map the correct macros.
-- **Professional Access:** Professionals viewing a Patient's Journal can see the referenced recipe details.
+- **Professional Access:** Professionals viewing a Patient's Journal can see referenced recipe snapshot details read-only.
 
 ---
 
@@ -85,6 +88,15 @@ In v1, the module introduces:
 - **FR-JNL-02:** Typing `@` followed by text must search the user's private recipes and display a dropdown/picker.
 - **FR-JNL-03:** Selecting a recipe from the picker must insert a structured reference (e.g., `@[Recipe Name](id)`) into the text.
 - **FR-JNL-04:** When processing the meal log via AI, the system must explicitly inject the recipe's contextual data (portion size in grams and per-portion macros) into the LLM prompt. This ensures the LLM understands the exact nutritional value to apply proportionally based on the user's logged amount.
+- **FR-JNL-05:** The recipe picker must provide a persistent "create new recipe" action. When used, the app must preserve the current meal form draft, open the recipe creation form, and return to the original meal form after creation.
+- **FR-JNL-06:** After returning from inline recipe creation, the editor must replace the pending typed `@...` mention with the newly created recipe's structured reference and visible chip.
+
+### 5.4 Journal Recipe Visibility
+
+- **FR-VIS-01:** Recipe mentions shown in patient and professional journals must be compact enough not to dominate the meal card.
+- **FR-VIS-02:** Referenced recipe details must be available from the recipe chip through a tooltip/popover containing at least the recipe name, portion size, calories, and macro breakdown.
+- **FR-VIS-03:** Patient journal views may link to the recipe detail page when the recipe still belongs to the patient.
+- **FR-VIS-04:** Professional journal views must show referenced recipe details read-only and must not expose recipe management links.
 
 ---
 
@@ -105,11 +117,20 @@ In v1, the module introduces:
 1. User clicks "Adicionar Refeição" on Today's Journal.
 2. In the "Descrição" text area, user types "Eu comi 1 porção de @"
 3. System shows a dropdown of user's recipes.
-4. User selects "Bolo de Banana". The text area updates to "Eu comi 1 porção de @Bolo de Banana".
+4. User selects "Bolo de Banana". The editor displays a compact recipe chip and stores a structured reference.
 5. User clicks "Analisar com IA".
 6. System parses the text, recognizes the recipe reference and the "1 porção" quantity.
 7. System calculates the macros from the logged amount and the recipe's portion size, then presents the review screen.
 8. User confirms and the meal is logged.
+
+### 6.3 Flow: Create a Recipe While Logging a Meal
+
+1. User opens a meal form and starts typing a recipe mention, for example `@bolo`.
+2. System shows the recipe picker with matching results and a persistent "Create new recipe" action.
+3. User clicks "Create new recipe".
+4. System saves the current meal form draft locally and opens the recipe creation form with the searched recipe name pre-filled.
+5. User creates the recipe.
+6. System returns to the original meal form, restores the draft fields, replaces the typed `@bolo` text with the new structured recipe reference, and renders the recipe chip.
 
 ---
 
@@ -174,8 +195,9 @@ In v1, the module introduces:
 - A user can create a recipe with an image and view it on a dedicated recipes page.
 - Images are correctly uploaded to S3 and served via optimized variants.
 - On the New Meal form, typing `@` triggers a dropdown of the user's saved recipes.
+- From the meal recipe picker, a user can create a new recipe, return to the original meal form, and see the new recipe already applied as a chip.
 - Logging a meal with a recipe reference correctly calculates the macros based on portions or gram amounts consumed.
-- Professionals can view the recipe details when reviewing a patient's meal log.
+- Patients and professionals can view referenced recipe details from compact meal chips; professional access is read-only.
 
 ---
 
@@ -186,6 +208,6 @@ In v1, the module introduces:
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2026-05-10
-**Status**: Draft
+**Document Version**: 1.1
+**Last Updated**: 2026-05-15
+**Status**: Implemented
